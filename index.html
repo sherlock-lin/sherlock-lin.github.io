@@ -259,6 +259,158 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/02/04/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-Netty%E6%9C%8D%E5%8A%A1%E5%90%AF%E5%8A%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="墨小雨の猫">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2023/02/04/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-Netty%E6%9C%8D%E5%8A%A1%E5%90%AF%E5%8A%A8/" itemprop="url">源码分析-Netty服务启动</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2023-02-04T22:24:51+08:00">
+                2023-02-04
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%80%9A%E4%BF%A1/" itemprop="url" rel="index">
+                    <span itemprop="name">通信</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>文章开始前，想先分享一下学习源码的心得</p>
+<p>第一，一定要先用起来，要知道这个组件有什么优缺点，有什么功能特性，这样你就能带着目的去看源码</p>
+<p>第二，根据使用该组件的简单案例或者Test进行入口进行调试，切忌直接下载看组件源码</p>
+<p>第三，调试的过程中前几遍不要死扣细节，大概清楚流程脉络并绘制流程图，等熟悉后再去攻克细的功能</p>
+<p>第四，重要的功能&#x2F;流程务必要输出文章，这个方式可以强迫你深入思考以及总结归纳，能大大加深理解以及记忆</p>
+<p>调试项目：<a target="_blank" rel="noopener" href="https://gitee.com/linchonghui/fucking-netty/tree/main/netty-helloworld">https://gitee.com/linchonghui/fucking-netty/tree/main/netty-helloworld</a></p>
+<p><em>基于Netty的版本为：4.1.42.Final</em></p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2023/02/04/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-Netty%E6%9C%8D%E5%8A%A1%E5%90%AF%E5%8A%A8/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://example.com/2022/10/09/%E5%B0%8F%E6%8F%90%E7%90%B4%E5%88%9D%E4%BD%93%E9%AA%8C/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -438,7 +590,7 @@
               
                 <a href="/archives/%20%7C%7C%20archive">
               
-                  <span class="site-state-item-count">1</span>
+                  <span class="site-state-item-count">2</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -449,7 +601,7 @@
               
               <div class="site-state-item site-state-categories">
                 
-                  <span class="site-state-item-count">1</span>
+                  <span class="site-state-item-count">2</span>
                   <span class="site-state-item-name">categories</span>
                 
               </div>
@@ -460,7 +612,7 @@
               
               <div class="site-state-item site-state-tags">
                 
-                  <span class="site-state-item-count">1</span>
+                  <span class="site-state-item-count">2</span>
                   <span class="site-state-item-name">tags</span>
                 
               </div>
