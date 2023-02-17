@@ -351,31 +351,17 @@
 
       
         
-          
-            <h4 id="写在前面"><a href="#写在前面" class="headerlink" title="写在前面"></a>写在前面</h4><p>不知道大家有没有深入思考过 缓存的本质是什么，或者说为什么要有缓存</p>
+          <h4 id="写在前面"><a href="#写在前面" class="headerlink" title="写在前面"></a>写在前面</h4><p>不知道大家有没有深入思考过 缓存的本质是什么，或者说为什么要有缓存</p>
 <p>当前我的答案是，因为<strong>资源是稀缺</strong>的。</p>
 <p>所有职业都是给别人提供服务的，程序员也不例外；程序员提供的服务就是将 <strong>业务逻辑</strong>运行在一台台主机上，这些主机是由 CPU(运行业务逻辑)+存储(内存、磁盘等存储业务数据以及业务逻辑代码)组成，然后咱们的客户通过网络来请求咱们的服务(主机)。</p>
 <p>在这个过程中，网络是有限的、主机数量也是有限的、CPU以及存储等等都是有限(稀缺)的，因此咱们在提供服务的时候就要用更多的手段在有限的成本上创造更多更好的服务，而<strong>缓存</strong>就是手段之一</p>
-<p>基本上咱们能想的软件都有缓存，比如 ***</p>
-<h4 id="Mybatis的缓存"><a href="#Mybatis的缓存" class="headerlink" title="Mybatis的缓存"></a>Mybatis的缓存</h4><p>缓存要解决的问题主要有两点</p>
-<ol>
-<li>节省资源(避免高频去访问底层真正的数据，其中可能会涉及到网络通信、磁盘扫描等资源损耗)</li>
-<li>加速响应(可以不需要访问底层真正数据的耗时，这个耗时一般会比较高)</li>
-</ol>
-<p>而Mybatis是一套连接咱们开发的软件和底层数据库的框架，对应的就是</p>
-<ol>
-<li>节省自身服务与数据库之间通信损耗、数据库解析Sql的CPU损耗甚至可能会有磁盘扫描的损耗等</li>
-<li>加速响应就是节约1这个过程中造成的耗时，可以很快响应咱们的客户</li>
-</ol>
-<p>Mybatis通过设计二级缓存来提升数据检索的效率，避免每次数据访问都要去访问数据库；一级缓存是SqlSession缓存，也叫本地缓存，由于用户都是通过SqlSession进行数据访问的，因此Mybatis会将数据缓存在SqlSession的本地缓存中，后续如果请求命中缓存则直接从本地读取；如果需要跨SqlSession查询缓存，则需要Mybatis的二级缓存，这样只要有一个用户查到数据就会存到二级缓存里，其他用户在查同样的数据时就会直接从二级缓存里面读取</p>
-<h4 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h4><p>一级缓存原理就是在SqlSession中持有一个Executor，每一个Executor中都有一个LocalCache的本地缓存；当用户查询数据时，Mybatis会根据用户的sql在LocalCache中查询缓存，命中则直接放回，否则再去查数据库并写到LocalCache中。</p>
-<p>所以一级缓存的生命周期是SqlSession，同时这个设计可能会存在脏读的问题</p>
-<p>二级缓存原理是使用CachingExecutor修饰了Executor，因此在查询一级缓存前会通过Executor进入CachingExecutor进行二级缓存查询；</p>
-<p>开启二级缓存后会导致它被多个SqlSession共享，所以它是全局缓存。因此查询流程是先查二级缓存，再查一级缓存最后查数据库</p>
-<p>二级缓存可以将缓存粒度控制在namespace级别，并且可以通过实现Cache接口来实现缓存的不同组合，对Cache的控制也更强</p>
-<p>多级缓存的设计很常见，比如Nacos、Eureka里面都有用到</p>
-<h4 id="源码解析"><a href="#源码解析" class="headerlink" title="源码解析"></a>源码解析</h4>
-          
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2023/02/18/Mybatis%E7%BC%93%E5%AD%98/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
