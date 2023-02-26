@@ -88,7 +88,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="http://example.com/2023/02/26/Pulsar%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/image-20230226005146243.png">
 <meta property="article:published_time" content="2023-02-25T16:35:29.000Z">
-<meta property="article:modified_time" content="2023-02-25T17:17:49.674Z">
+<meta property="article:modified_time" content="2023-02-26T04:22:51.589Z">
 <meta property="article:author" content="sherlock.lin">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="http://example.com/2023/02/26/Pulsar%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/image-20230226005146243.png">
@@ -358,7 +358,25 @@
 <li>配置存储：存储租户、命名域和其他需要全局一致的配置项</li>
 <li>每个集群都有自己集群内部的配置和协调信息，如归属信息、broker负载报告、BK的ledger信息(这个是BK本身依赖)等等</li>
 </ul>
-<h4 id="持久化存储"><a href="#持久化存储" class="headerlink" title="持久化存储"></a>持久化存储</h4><h4 id="代理"><a href="#代理" class="headerlink" title="代理"></a>代理</h4>
+<h4 id="持久化存储"><a href="#持久化存储" class="headerlink" title="持久化存储"></a>持久化存储</h4><p>Pulsar需要给应用程序提供数据保障，因此需要进行持久化。Pulsar用BK作为持久化存储，Pulsar以Ledger结构来将数据存在BK中</p>
+<p>Ledger是一个只追加的数据结构，并且只有一个写入器，这个写入器负责多个BK存储节点的写入。Ledger的条数会被复制到多个bookies</p>
+<p><strong>Ledger</strong></p>
+<ul>
+<li>Broker可以创建ledger，添加内容到ledger和关闭ledger</li>
+<li>当一个ledger被关闭后，只会以只读模式打开。除非是明确要写数据或者一些异常情况(写入器挂掉导致ledger关闭)</li>
+<li>当ledger中的数据不在有用时，整个ledger可以被删除(ledger分布是跨Bookies的)</li>
+</ul>
+<p>BK是分布式的预写日志(WAL)系统，特性有</p>
+<ul>
+<li>pulsar能够使用独立日志ledgers，可以随着事件推移给topic创建多个Ledgers</li>
+<li>为处理顺序消息提供有效的存储</li>
+<li>保证Ledgers的读一致性(即便有系统挂掉)</li>
+<li>提供不同Bookies之间均匀的IO分布特性</li>
+<li>在容量和吞吐量方面都具有水平伸缩性</li>
+<li>Bookies被设计成可以承载数千的并发读写ledgers。使用多个磁盘设备(一个用于日志，另一个用于一般存储)，这样Bookies可以将读写进行分隔开</li>
+</ul>
+<h4 id="代理"><a href="#代理" class="headerlink" title="代理"></a>代理</h4><p>Pulsar客户端和集群交互的常见方式是直连Pulsar brokers。但在某些场景下如网络隔离等导致无法直连，则可以使用Pulsar proxy作为解决方案，客户端与代理进行通信，代理再来跟brokers通信</p>
+
       
     </div>
     
