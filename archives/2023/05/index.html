@@ -81,7 +81,7 @@
 
 <meta property="og:type" content="website">
 <meta property="og:title" content="墨小雨の猫">
-<meta property="og:url" content="http://example.com/index.html">
+<meta property="og:url" content="http://example.com/archives/2023/05/index.html">
 <meta property="og:site_name" content="墨小雨の猫">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:author" content="sherlock.lin">
@@ -115,13 +115,13 @@
 
 
 
-  <link rel="canonical" href="http://example.com/"/>
+  <link rel="canonical" href="http://example.com/archives/2023/05/"/>
 
 
 
 
 
-  <title>墨小雨の猫</title>
+  <title>Archive | 墨小雨の猫</title>
   
 
 
@@ -140,8 +140,7 @@
     
   
 
-  <div class="container sidebar-position-left 
-  page-home">
+  <div class="container sidebar-position-left page-archive">
     <div class="headband"></div>
 
     <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
@@ -244,311 +243,75 @@
         <div class="content-wrap">
           <div id="content" class="content">
             
-  <section id="posts" class="posts-expand">
-    
+
+  
+  
+  
+  <div class="post-block archive">
+    <div id="posts" class="posts-collapse">
+      <span class="archive-move-on"></span>
+
+      <span class="archive-page-counter">
+        
+        
+        
+          
+        
+        Um..! 2 posts in total. Keep on posting.
+      </span>
+
       
 
-  
+        
+        
+        
 
-  
-  
-  
+        
+          
+          <div class="collection-title">
+            <h1 class="archive-year" id="archive-year-2023">2023</h1>
+          </div>
+        
+        
+
+        
 
   <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2023/05/16/RocketMQ%E7%B3%BB%E5%88%97-NameServer%E8%A7%A3%E6%9E%90/">
+    <header class="post-header">
 
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="墨小雨の猫">
-    </span>
-
-    
-      <header class="post-header">
-
+      <h2 class="post-title">
         
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2023/05/16/RocketMQ%E7%B3%BB%E5%88%97-NameServer%E8%A7%A3%E6%9E%90/" itemprop="url">RocketMQ系列-NameServer解析</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
+            <a class="post-title-link" href="/2023/05/16/RocketMQ%E7%B3%BB%E5%88%97-NameServer%E8%A7%A3%E6%9E%90/" itemprop="url">
               
-                <span class="post-meta-item-text">Posted on</span>
+                <span itemprop="name">RocketMQ系列-NameServer解析</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2023-05-16T21:33:44+08:00">
-                2023-05-16
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" itemprop="url" rel="index">
-                    <span itemprop="name">消息队列</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>RocketMQ主要由四部分组成</p>
-<ul>
-<li>Broker：处理消息读写以及存储</li>
-<li>Producer：写消息</li>
-<li>Comsumer：读消息</li>
-<li>NameServer</li>
-</ul>
-<p>对kafka或者pulsar了解的同学会好奇，一般MQ设计都是前三个角色构成，为什么这里会多个NameServer，是做什么的</p>
-<p>简单来说NameServer就是超级简化版的注册中心，等价于kafka、pulsar中zookeeper的作用</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2023/05/16/RocketMQ%E7%B3%BB%E5%88%97-NameServer%E8%A7%A3%E6%9E%90/#more" rel="contents">
-              Read more &raquo;
             </a>
-          </div>
-          <!--/noindex-->
         
+      </h2>
+
+      <div class="post-meta">
+        <time class="post-time" itemprop="dateCreated"
+              datetime="2023-05-16T21:33:44+08:00"
+              content="2023-05-16" >
+          05-16
+        </time>
+      </div>
+
+    </header>
+  </article>
+
+
+
       
+
     </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
   </div>
   
   
   
-  </article>
-
-
-    
-      
 
   
 
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/10/09/%E5%B0%8F%E6%8F%90%E7%90%B4%E5%88%9D%E4%BD%93%E9%AA%8C/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="墨小雨の猫">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2022/10/09/%E5%B0%8F%E6%8F%90%E7%90%B4%E5%88%9D%E4%BD%93%E9%AA%8C/" itemprop="url">小提琴初体验</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-10-09T10:30:58+08:00">
-                2022-10-09
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9F%B3%E4%B9%90/" itemprop="url" rel="index">
-                    <span itemprop="name">音乐</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h4 id="缘起"><a href="#缘起" class="headerlink" title="缘起"></a>缘起</h4><p>在虚度二十多个年头后，眼看距离三旬越来越近，时常感到阵阵空虚；学生时期在听说周围同学学乐器、看了《四月是你的谎言》之后也曾有过冲动想学门乐器，但最终都是不了了之。如今已快达而立之年，在国庆跟朋友去了趟桂林，看到漓江边不少的驻唱歌手，虽然没有挣很多钱，但能明显感觉到他们的豁达、潇洒。吹着江风，望着滚滚而来的江水，耳边响起了孔老夫子的“逝者如斯，不舍昼夜”，心中萌生了一个念头，既然结局都一样，那为什么不让自己的过程精彩一些呢？</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2022/10/09/%E5%B0%8F%E6%8F%90%E7%90%B4%E5%88%9D%E4%BD%93%E9%AA%8C/#more" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-  </section>
-
-  
 
 
           </div>

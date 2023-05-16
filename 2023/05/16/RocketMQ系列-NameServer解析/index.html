@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="RocketMQ," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="背景RocketMQ主要由四部分组成  Broker：处理消息读写以及存储 Producer：写消息 Comsumer：读消息 NameServer  对kafka或者pulsar了解的同学会好奇，一般MQ设计都是前三个角色构成，为什么这里会多个NameServer，是做什么的 简单来说NameServer就是超级简化版的注册中心，等价于kafka、pulsar中zookeeper的作用">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RocketMQ系列-NameServer解析">
+<meta property="og:url" content="http://example.com/2023/05/16/RocketMQ%E7%B3%BB%E5%88%97-NameServer%E8%A7%A3%E6%9E%90/index.html">
+<meta property="og:site_name" content="墨小雨の猫">
+<meta property="og:description" content="背景RocketMQ主要由四部分组成  Broker：处理消息读写以及存储 Producer：写消息 Comsumer：读消息 NameServer  对kafka或者pulsar了解的同学会好奇，一般MQ设计都是前三个角色构成，为什么这里会多个NameServer，是做什么的 简单来说NameServer就是超级简化版的注册中心，等价于kafka、pulsar中zookeeper的作用">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/2023/05/16/RocketMQ%E7%B3%BB%E5%88%97-NameServer%E8%A7%A3%E6%9E%90/image-20230516213454371.png">
+<meta property="article:published_time" content="2023-05-16T13:33:44.000Z">
+<meta property="article:modified_time" content="2023-05-16T13:37:41.387Z">
+<meta property="article:author" content="sherlock.lin">
+<meta property="article:tag" content="RocketMQ">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2023/05/16/RocketMQ%E7%B3%BB%E5%88%97-NameServer%E8%A7%A3%E6%9E%90/image-20230516213454371.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":true,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://example.com/2023/05/16/RocketMQ系列-NameServer解析/"/>
+
+
+
+
+
+  <title>RocketMQ系列-NameServer解析 | 墨小雨の猫</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">墨小雨の猫</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">记录探索技术中过程与思考</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/05/16/RocketMQ%E7%B3%BB%E5%88%97-NameServer%E8%A7%A3%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="墨小雨の猫">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">RocketMQ系列-NameServer解析</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2023-05-16T21:33:44+08:00">
+                2023-05-16
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" itemprop="url" rel="index">
+                    <span itemprop="name">消息队列</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv">访问次数：
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>次
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>RocketMQ主要由四部分组成</p>
+<ul>
+<li>Broker：处理消息读写以及存储</li>
+<li>Producer：写消息</li>
+<li>Comsumer：读消息</li>
+<li>NameServer</li>
+</ul>
+<p>对kafka或者pulsar了解的同学会好奇，一般MQ设计都是前三个角色构成，为什么这里会多个NameServer，是做什么的</p>
+<p>简单来说NameServer就是超级简化版的注册中心，等价于kafka、pulsar中zookeeper的作用</p>
+<span id="more"></span>
+
+<h5 id="为什么不直接采用C-x2F-S架构，还要分离一个注册中心？"><a href="#为什么不直接采用C-x2F-S架构，还要分离一个注册中心？" class="headerlink" title="为什么不直接采用C&#x2F;S架构，还要分离一个注册中心？"></a>为什么不直接采用C&#x2F;S架构，还要分离一个注册中心？</h5><p>因为在分布式场景下，处理真正请求的Server会部署在多台机器上，如果Client直接连接Server的话，当某台Server故障时Client如何在不重启服务的情况下感知或者想知道消息要发往哪台Server呢</p>
+<p>简单来说就是难以维护，业内比较好的解决方案时独立抽出一个注册中心，最主要的是保证自身可用性以及进行集群、元数据的管理</p>
+<h4 id="NamaServer架构"><a href="#NamaServer架构" class="headerlink" title="NamaServer架构"></a>NamaServer架构</h4><p>NameServer通过集群方式保证可用性，每个Broker实例启动后会定期往所有NameServer上报自身状态以及全量topic元数据</p>
+<p>NameServer通过在内存中维护Map来存储集群元数据，因此可以高效处理客户端查请求以及写Broker上报的元数据</p>
+<p>NameServer集群内部不进行任何通信，都提供同样的处理逻辑。大大降低了维护成本</p>
+<p>简单来说，NameServer简单高效实现了注册中心功能(仅11个类)，它通过Netty Server实例处理tcp请求</p>
+<h2 id="启动流程"><a href="#启动流程" class="headerlink" title="启动流程"></a>启动流程</h2><p>NameServer启动类：org.apache.rocketmq.namesrv.NamesrvStartup</p>
+<p>大致请求流程如下图</p>
+<p><img src="/2023/05/16/RocketMQ%E7%B3%BB%E5%88%97-NameServer%E8%A7%A3%E6%9E%90/image-20230516213454371.png" alt="image-20230516213454371"></p>
+<ol>
+<li>NamesrvStartup是服务启动入口，在通过脚本启动时本质就是调用这个类的main方法</li>
+<li>NamesrvStartup会创建并启动NamesrvController实例，NamesrvController才是启动流程最核心的类</li>
+<li>NamesrvController读取配置文件信息到内存</li>
+<li>初始化网络插件，主要是NettyRemotingServer和NettyRemotingClient这两个</li>
+<li>启动两个线程池，一个用于处理内部任务的defaultExecutor和处理请求的clientRequestExecutor</li>
+<li>注册Processor，Processor是处理客户端请求的对象</li>
+<li>启动ScheduleService用于执行三个定时任务，如定期扫描活跃broker以及打印性能指标以及配置</li>
+<li>启动NettyRemotingServer服务监听端口并处理请求</li>
+<li>启动NettyRemotingClient处理请求</li>
+<li>注册钩子函数，在JVM关闭时优雅的关闭线程池释放资源</li>
+</ol>
+<h5 id="其余重要类"><a href="#其余重要类" class="headerlink" title="其余重要类"></a>其余重要类</h5><p>NettyServerConfig：Netty配置类</p>
+<h2 id="路由注册、故障剔除、发现流程"><a href="#路由注册、故障剔除、发现流程" class="headerlink" title="路由注册、故障剔除、发现流程"></a>路由注册、故障剔除、发现流程</h2><p>NameServer主要作用就是给客户端(生产者和消费者)提供主题Topic和路由信息，因此需要存储路由信息以及集群元信息</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Map&lt;String<span class="comment">/* topic */</span>, Map&lt;String, QueueData&gt;&gt; topicQueueTable;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Map&lt;String<span class="comment">/* brokerName */</span>, BrokerData&gt; brokerAddrTable;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Map&lt;String<span class="comment">/* clusterName */</span>, Set&lt;String<span class="comment">/* brokerName */</span>&gt;&gt; clusterAddrTable;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Map&lt;BrokerAddrInfo<span class="comment">/* brokerAddr */</span>, BrokerLiveInfo&gt; brokerLiveTable;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Map&lt;BrokerAddrInfo<span class="comment">/* brokerAddr */</span>, List&lt;String&gt;<span class="comment">/* Filter Server */</span>&gt; filterServerTable;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Map&lt;String<span class="comment">/* topic */</span>, Map&lt;String<span class="comment">/*brokerName*/</span>, TopicQueueMappingInfo&gt;&gt; topicQueueMappingInfoTable;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>topicQueueTable：存储消息路由信息，消息发送时通过它进行负载均衡</li>
+<li>brokerAddrTable：存储broker地址，客户端通过它获取具体要连接的broker ip地址</li>
+<li>clusterAddrTable：存储集群信息</li>
+<li>brokerLiveTable：存储broker状态信息，每次收到心跳包时会替换该信息</li>
+<li>filterServerTable：用于消息过滤功能</li>
+<li>topicQueueMappingInfoTable：存储topic映射到broker的关系</li>
+</ul>
+<p>每个broker为每个主题默认创建4个读队列4个写队列。多个Broker组成一个集群，BrokerName由相同的多台Broker组成Master-Slave架构，brokerId为0代表Master，大于0表示Slave。BrokerLiveInfo中的lastUpdateTimestamp存储上次收到Broker心跳包的时间</p>
+<p>路由注册功能主要是由broker的心跳功能实现的，broker启动时会向集群中所有NameServer发送心跳包，并每隔30s更新一次</p>
+<p>NameServer会每隔10s扫描状态信息表，如果连续120s没有收到心跳包则移除该路由信息并关闭Socket连接</p>
+<h5 id="broker发送心跳包"><a href="#broker发送心跳包" class="headerlink" title="broker发送心跳包"></a>broker发送心跳包</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">BrokerController#start &#123;</span><br><span class="line">	...</span><br><span class="line">	scheduledFutures.add(<span class="built_in">this</span>.scheduledExecutorService.scheduleAtFixedRate(<span class="keyword">new</span> <span class="title class_">AbstractBrokerRunnable</span>(<span class="built_in">this</span>.getBrokerIdentity()) &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">run0</span><span class="params">()</span> &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    ...</span><br><span class="line">                    BrokerController.<span class="built_in">this</span>.registerBrokerAll(<span class="literal">true</span>, <span class="literal">false</span>, brokerConfig.isForceRegister());</span><br><span class="line">                &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">                   ...</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;, <span class="number">1000</span> * <span class="number">10</span>, Math.max(<span class="number">10000</span>, Math.min(brokerConfig.getRegisterNameServerPeriod(), <span class="number">60000</span>)), TimeUnit.MILLISECONDS));</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>broker启动时会启动一个线程池进行心跳包的上报，继续往下</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title function_">registerBrokerAll</span><span class="params">(<span class="keyword">final</span> <span class="type">boolean</span> checkOrderConfig, <span class="type">boolean</span> oneway, <span class="type">boolean</span> forceRegister)</span> &#123;</span><br><span class="line">  	...</span><br><span class="line">    doRegisterBrokerAll(checkOrderConfig, oneway, topicConfigWrapper);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">doRegisterBrokerAll</span><span class="params">(<span class="type">boolean</span> checkOrderConfig, <span class="type">boolean</span> oneway,</span></span><br><span class="line"><span class="params">                                   TopicConfigSerializeWrapper topicConfigWrapper)</span> &#123;</span><br><span class="line">  List&lt;RegisterBrokerResult&gt; registerBrokerResultList = <span class="built_in">this</span>.brokerOuterAPI.registerBrokerAll(</span><br><span class="line">    <span class="built_in">this</span>.brokerConfig.getBrokerClusterName(),</span><br><span class="line">    <span class="built_in">this</span>.getBrokerAddr(),</span><br><span class="line">    <span class="built_in">this</span>.brokerConfig.getBrokerName(),</span><br><span class="line">    <span class="built_in">this</span>.brokerConfig.getBrokerId(),</span><br><span class="line">    <span class="built_in">this</span>.getHAServerAddr(),</span><br><span class="line">    topicConfigWrapper,</span><br><span class="line">    <span class="built_in">this</span>.filterServerManager.buildNewFilterServerList(),</span><br><span class="line">    oneway,</span><br><span class="line">    <span class="built_in">this</span>.brokerConfig.getRegisterBrokerTimeoutMills(),</span><br><span class="line">    <span class="built_in">this</span>.brokerConfig.isEnableSlaveActingMaster(),</span><br><span class="line">    <span class="built_in">this</span>.brokerConfig.isCompressedRegister(),</span><br><span class="line">    <span class="built_in">this</span>.brokerConfig.isEnableSlaveActingMaster() ? <span class="built_in">this</span>.brokerConfig.getBrokerNotActiveTimeoutMillis() : <span class="literal">null</span>,</span><br><span class="line">    <span class="built_in">this</span>.getBrokerIdentity());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>逻辑也比较清晰，就一层层调用，在继续往下看</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> List&lt;RegisterBrokerResult&gt; <span class="title function_">registerBrokerAll</span><span class="params">()</span> &#123;</span><br><span class="line">			...</span><br><span class="line">      <span class="keyword">for</span> (<span class="keyword">final</span> String namesrvAddr : nameServerAddressList) &#123;</span><br><span class="line">       	<span class="type">RegisterBrokerResult</span> <span class="variable">result</span> <span class="operator">=</span> registerBroker(namesrvAddr, oneway, timeoutMills, requestHeader, body);               </span><br><span class="line">       &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"> <span class="keyword">private</span> RegisterBrokerResult <span class="title function_">registerBroker</span><span class="params">()</span> &#123;</span><br><span class="line">   	...</span><br><span class="line">    <span class="built_in">this</span>.remotingClient.invokeOneway(namesrvAddr, request, timeoutMills);</span><br><span class="line">   	...</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">invokeOneway</span><span class="params">(String addr, RemotingCommand request, <span class="type">long</span> timeoutMillis)</span>  &#123;</span><br><span class="line">        <span class="keyword">final</span> <span class="type">Channel</span> <span class="variable">channel</span> <span class="operator">=</span> <span class="built_in">this</span>.getAndCreateChannel(addr);</span><br><span class="line">        <span class="type">String</span> <span class="variable">channelRemoteAddr</span> <span class="operator">=</span> RemotingHelper.parseChannelRemoteAddr(channel);</span><br><span class="line">        <span class="keyword">if</span> (channel != <span class="literal">null</span> &amp;&amp; channel.isActive()) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                doBeforeRpcHooks(channelRemoteAddr, request);</span><br><span class="line">                <span class="built_in">this</span>.invokeOnewayImpl(channel, request, timeoutMillis);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (RemotingSendRequestException e) &#123;</span><br><span class="line">                LOGGER.warn(<span class="string">&quot;invokeOneway: send request exception, so close the channel[&#123;&#125;]&quot;</span>, channelRemoteAddr);</span><br><span class="line">                <span class="built_in">this</span>.closeChannel(addr, channel);</span><br><span class="line">                <span class="keyword">throw</span> e;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="built_in">this</span>.closeChannel(addr, channel);</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">RemotingConnectException</span>(channelRemoteAddr);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">invokeOnewayImpl</span><span class="params">(<span class="keyword">final</span> Channel channel, <span class="keyword">final</span> RemotingCommand request, <span class="keyword">final</span> <span class="type">long</span> timeoutMillis)</span>&#123;</span><br><span class="line">        ...</span><br><span class="line">        channel.writeAndFlush(request).addListener((ChannelFutureListener);</span><br><span class="line">        ...</span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在invokeOnewayImpl方法中可以看到，broker就是将心跳包封装成RemotingCommand对象，并通过Netty的Channel将该对象写过去</p>
+<p>这里的channel其实是前面broker跟NameServer所建立起来的Netty通信通道，因此此时只需要往里面write数据NameServer就能收到</p>
+<h5 id="NameServer处理心跳包"><a href="#NameServer处理心跳包" class="headerlink" title="NameServer处理心跳包"></a>NameServer处理心跳包</h5><p>DefaultRequestProcessor负责解析网络请求，这个就是NameServer启动时注册的Processor对象</p>
+<p>DefaultRequestProcessor会将RequestCode.REGISTER_BROKER类型请求转发到RouteInfoManager#registerBroker</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">this</span>.lock.writeLock().lockInterruptibly();</span><br><span class="line"></span><br><span class="line"><span class="type">BrokerData</span> <span class="variable">brokerData</span> <span class="operator">=</span> <span class="built_in">this</span>.brokerAddrTable.get(brokerName);</span><br><span class="line"><span class="keyword">if</span> (<span class="literal">null</span> == brokerData) &#123;</span><br><span class="line">  registerFirst = <span class="literal">true</span>;</span><br><span class="line">  brokerData = <span class="keyword">new</span> <span class="title class_">BrokerData</span>(clusterName, brokerName, <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;&gt;());</span><br><span class="line">  <span class="built_in">this</span>.brokerAddrTable.put(brokerName, brokerData);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<ol>
+<li>路由注册需要加写锁，防止并发修改RouteInfoManager中的路由表</li>
+<li>如果是第一次注册则直接新增，否则更新数据结构</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>在读RocketMQ代码后，有一个很明显的感觉就是在一些“不太重要”的地方RocketMQ团队采用比较简单的设计来实现</p>
+<p>比如 NameServer的设计、以及RocketMQ角色之间的通信不用rpc，而是直接用netty进行</p>
+<p>我觉得这样设计是聪明的，简单意味着不容易出错，社区能够将更多精力投入到RocketMQ的新功能开发上</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/RocketMQ/" rel="tag"># RocketMQ</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/10/09/%E5%B0%8F%E6%8F%90%E7%90%B4%E5%88%9D%E4%BD%93%E9%AA%8C/" rel="next" title="小提琴初体验">
+                <i class="fa fa-chevron-left"></i> 小提琴初体验
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%83%8C%E6%99%AF"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E7%9B%B4%E6%8E%A5%E9%87%87%E7%94%A8C-x2F-S%E6%9E%B6%E6%9E%84%EF%BC%8C%E8%BF%98%E8%A6%81%E5%88%86%E7%A6%BB%E4%B8%80%E4%B8%AA%E6%B3%A8%E5%86%8C%E4%B8%AD%E5%BF%83%EF%BC%9F"><span class="nav-number">1.0.0.1.</span> <span class="nav-text">为什么不直接采用C&#x2F;S架构，还要分离一个注册中心？</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#NamaServer%E6%9E%B6%E6%9E%84"><span class="nav-number">1.0.1.</span> <span class="nav-text">NamaServer架构</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">启动流程</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%85%B6%E4%BD%99%E9%87%8D%E8%A6%81%E7%B1%BB"><span class="nav-number">2.0.0.1.</span> <span class="nav-text">其余重要类</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B7%AF%E7%94%B1%E6%B3%A8%E5%86%8C%E3%80%81%E6%95%85%E9%9A%9C%E5%89%94%E9%99%A4%E3%80%81%E5%8F%91%E7%8E%B0%E6%B5%81%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">路由注册、故障剔除、发现流程</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#broker%E5%8F%91%E9%80%81%E5%BF%83%E8%B7%B3%E5%8C%85"><span class="nav-number">3.0.0.1.</span> <span class="nav-text">broker发送心跳包</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#NameServer%E5%A4%84%E7%90%86%E5%BF%83%E8%B7%B3%E5%8C%85"><span class="nav-number">3.0.0.2.</span> <span class="nav-text">NameServer处理心跳包</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">sherlock.lin</span>
+
+  
+</div>
+
+
+
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+          <span id="scrollpercent"><span>0</span>%</span>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
