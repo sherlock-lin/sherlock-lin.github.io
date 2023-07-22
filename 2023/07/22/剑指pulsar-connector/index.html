@@ -93,7 +93,7 @@
 <meta property="og:image" content="http://example.com/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/image-20230722153356323.png">
 <meta property="og:image" content="http://example.com/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/image-20230722153454391.png">
 <meta property="article:published_time" content="2023-07-22T07:01:12.000Z">
-<meta property="article:modified_time" content="2023-07-22T07:50:05.093Z">
+<meta property="article:modified_time" content="2023-07-22T07:55:29.409Z">
 <meta property="article:author" content="sherlock.lin">
 <meta property="article:tag" content="pulsar">
 <meta name="twitter:card" content="summary">
@@ -419,22 +419,11 @@
 <p>通过查看pulsar consumer看到成功消费了数据</p>
 <p><img src="/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/image-20230722153454391.png" alt="image-20230722153454391"></p>
 <h4 id="IO-Connector-开发"><a href="#IO-Connector-开发" class="headerlink" title="IO Connector 开发"></a>IO Connector 开发</h4><p>除了提供大量与外部系统交互的IO Connector，pulsar也允许用户根据自己的场景来开发自己的Connector</p>
-<ul>
-<li>消息序列化</li>
-<li>pipeline稳定性<ul>
-<li>IO connector无法连接外部系统</li>
-<li>连接失败需要重试几次</li>
-<li>当source&#x2F;sink遇到错误时应该如何处理</li>
-</ul>
-</li>
-<li>错误处理<ul>
-<li>错误配置</li>
-<li>source或sink不可用</li>
-<li>网络分区</li>
-</ul>
-</li>
-</ul>
-<h4 id="疑问"><a href="#疑问" class="headerlink" title="疑问"></a>疑问</h4><h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p>本章主要介绍了pulsar三大拓展点之一的 IO Connector，分别</p>
+<p>&#x2F;&#x2F;todo </p>
+<p>Connector开发需要注意以下一些问题，如 消息序列化、Connector稳定性、错误处理</p>
+<p>其中稳定性问题主要分为：IO connector无法连接外部系统、连接失败需要重试几次以及当source&#x2F;sink遇到错误时应该如何处理</p>
+<p>错误处理分为：错误配置、source或sink不可用以及网络分区</p>
+<h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p>本章主要从应用的角度介绍了pulsar三大拓展点之一的 IO Connector，后面会从源码的角度分析pulsar这块的设计</p>
 
       
     </div>
@@ -605,7 +594,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AF%BC%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">导言</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#IO-Connector-%E4%BB%8B%E7%BB%8D"><span class="nav-number">2.</span> <span class="nav-text">IO Connector 介绍</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#IO-Connector-%E4%BD%BF%E7%94%A8"><span class="nav-number">3.</span> <span class="nav-text">IO Connector 使用</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#IO-Connector-%E5%BC%80%E5%8F%91"><span class="nav-number">4.</span> <span class="nav-text">IO Connector 开发</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%96%91%E9%97%AE"><span class="nav-number">5.</span> <span class="nav-text">疑问</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">6.</span> <span class="nav-text">总结</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AF%BC%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">导言</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#IO-Connector-%E4%BB%8B%E7%BB%8D"><span class="nav-number">2.</span> <span class="nav-text">IO Connector 介绍</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#IO-Connector-%E4%BD%BF%E7%94%A8"><span class="nav-number">3.</span> <span class="nav-text">IO Connector 使用</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#IO-Connector-%E5%BC%80%E5%8F%91"><span class="nav-number">4.</span> <span class="nav-text">IO Connector 开发</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a></li></ol></div>
             
 
           </div>
