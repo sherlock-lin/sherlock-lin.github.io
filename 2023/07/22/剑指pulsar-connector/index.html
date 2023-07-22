@@ -68,7 +68,7 @@
 
 
 
-  <meta name="keywords" content="小提琴," />
+  <meta name="keywords" content="pulsar," />
 
 
 
@@ -79,18 +79,25 @@
 
 
 
-<meta name="description" content="缘起在虚度二十多个年头后，眼看距离三旬越来越近，时常感到阵阵空虚；学生时期在听说周围同学学乐器、看了《四月是你的谎言》之后也曾有过冲动想学门乐器，但最终都是不了了之。如今已快达而立之年，在国庆跟朋友去了趟桂林，看到漓江边不少的驻唱歌手，虽然没有挣很多钱，但能明显感觉到他们的豁达、潇洒。吹着江风，望着滚滚而来的江水，耳边响起了孔老夫子的“逝者如斯，不舍昼夜”，心中萌生了一个念头，既然结局都一样，那为">
+<meta name="description" content="导言pulsar提供的三个开发拓展点：function、IO connector、schema registry。目的都是拓展pulsar的应用场景，让用户更容易解决特定场景的问题。而本篇主要从三部分组成，分别是对pulsar IO connector的介绍、使用以及自定义自己的connector">
 <meta property="og:type" content="article">
-<meta property="og:title" content="小提琴初体验">
-<meta property="og:url" content="http://example.com/2022/10/09/%E5%B0%8F%E6%8F%90%E7%90%B4%E5%88%9D%E4%BD%93%E9%AA%8C/index.html">
+<meta property="og:title" content="剑指pulsar-connector">
+<meta property="og:url" content="http://example.com/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/index.html">
 <meta property="og:site_name" content="墨小雨の猫">
-<meta property="og:description" content="缘起在虚度二十多个年头后，眼看距离三旬越来越近，时常感到阵阵空虚；学生时期在听说周围同学学乐器、看了《四月是你的谎言》之后也曾有过冲动想学门乐器，但最终都是不了了之。如今已快达而立之年，在国庆跟朋友去了趟桂林，看到漓江边不少的驻唱歌手，虽然没有挣很多钱，但能明显感觉到他们的豁达、潇洒。吹着江风，望着滚滚而来的江水，耳边响起了孔老夫子的“逝者如斯，不舍昼夜”，心中萌生了一个念头，既然结局都一样，那为">
+<meta property="og:description" content="导言pulsar提供的三个开发拓展点：function、IO connector、schema registry。目的都是拓展pulsar的应用场景，让用户更容易解决特定场景的问题。而本篇主要从三部分组成，分别是对pulsar IO connector的介绍、使用以及自定义自己的connector">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2022-10-09T02:30:58.000Z">
-<meta property="article:modified_time" content="2022-11-19T04:19:13.463Z">
+<meta property="og:image" content="http://example.com/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/image-20230722150318368.png">
+<meta property="og:image" content="http://example.com/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/image-20230722150336127.png">
+<meta property="og:image" content="http://example.com/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/image-20230722150350631.png">
+<meta property="og:image" content="http://example.com/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/image-20230722152700928.png">
+<meta property="og:image" content="http://example.com/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/image-20230722153356323.png">
+<meta property="og:image" content="http://example.com/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/image-20230722153454391.png">
+<meta property="article:published_time" content="2023-07-22T07:01:12.000Z">
+<meta property="article:modified_time" content="2023-07-22T07:50:05.093Z">
 <meta property="article:author" content="sherlock.lin">
-<meta property="article:tag" content="小提琴">
+<meta property="article:tag" content="pulsar">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/image-20230722150318368.png">
 
 
 
@@ -120,13 +127,13 @@
 
 
 
-  <link rel="canonical" href="http://example.com/2022/10/09/小提琴初体验/"/>
+  <link rel="canonical" href="http://example.com/2023/07/22/剑指pulsar-connector/"/>
 
 
 
 
 
-  <title>小提琴初体验 | 墨小雨の猫</title>
+  <title>剑指pulsar-connector | 墨小雨の猫</title>
   
 
 
@@ -263,7 +270,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/10/09/%E5%B0%8F%E6%8F%90%E7%90%B4%E5%88%9D%E4%BD%93%E9%AA%8C/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="">
@@ -280,7 +287,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">小提琴初体验</h1>
+          <h1 class="post-title" itemprop="name headline">剑指pulsar-connector</h1>
         
 
         <div class="post-meta">
@@ -292,8 +299,8 @@
               
                 <span class="post-meta-item-text">Posted on</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-10-09T10:30:58+08:00">
-                2022-10-09
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2023-07-22T15:01:12+08:00">
+                2023-07-22
               </time>
             
 
@@ -315,8 +322,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9F%B3%E4%B9%90/" itemprop="url" rel="index">
-                    <span itemprop="name">音乐</span>
+                  <a href="/categories/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" itemprop="url" rel="index">
+                    <span itemprop="name">消息队列</span>
                   </a>
                 </span>
 
@@ -357,20 +364,77 @@
       
 
       
-        <h4 id="缘起"><a href="#缘起" class="headerlink" title="缘起"></a>缘起</h4><p>在虚度二十多个年头后，眼看距离三旬越来越近，时常感到阵阵空虚；学生时期在听说周围同学学乐器、看了《四月是你的谎言》之后也曾有过冲动想学门乐器，但最终都是不了了之。如今已快达而立之年，在国庆跟朋友去了趟桂林，看到漓江边不少的驻唱歌手，虽然没有挣很多钱，但能明显感觉到他们的豁达、潇洒。吹着江风，望着滚滚而来的江水，耳边响起了孔老夫子的“逝者如斯，不舍昼夜”，心中萌生了一个念头，既然结局都一样，那为什么不让自己的过程精彩一些呢？</p>
+        <h4 id="导言"><a href="#导言" class="headerlink" title="导言"></a>导言</h4><p>pulsar提供的三个开发拓展点：function、IO connector、schema registry。目的都是拓展pulsar的应用场景，让用户更容易解决特定场景的问题。而本篇主要从三部分组成，分别是对pulsar IO connector的介绍、使用以及自定义自己的connector</p>
 <span id="more"></span>
 
-<p>小提琴🎻一直是我心中的白月光，觉得很神圣但是一说到自己身上基本上就是锯木头了，即便从没接触过。因此现在非常想尝试一下</p>
-<h4 id="缘续"><a href="#缘续" class="headerlink" title="缘续"></a>缘续</h4><p>在回到深圳后，立马报了个小提琴体验课。在期待中等来了老师，老师比想象中的要亲和一些，先是闲聊了一下balabala的，比如“为什么想学琴呀”、“为什么会觉得小提琴很难”等等之类的。然后开始学习持琴、持弓，在老师的指导下，我拉的音意外的干净、没有想象中的锯木头声音，连老师都觉得有点惊讶。那一瞬间多巴胺立马充斥着大脑，那一瞬间觉得相见恨晚，不过现在也不晚哈哈哈，毕竟我学小提琴不是为了考级、不是为了上什么音乐学院、更不是取悦别人。只是单纯的喜欢这种通过操作这种看起来一点生机都没有的“物品”发出有感情的声音，心里就能得到极大的满足，当然若是能演奏出一些喜欢的曲子那就更好了</p>
-<p>小提琴的话是逛了某乎后，最后权衡之下选择的VLINS TL824，看大部分人的评价都说不错，现在还在路上，很期待跟她的第一次见面</p>
-<h4 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h4><p>对于其他想学小提琴的小伙伴，主要有两点需要注意的</p>
+<h4 id="IO-Connector-介绍"><a href="#IO-Connector-介绍" class="headerlink" title="IO Connector 介绍"></a>IO Connector 介绍</h4><p>如今这个时代是个数据爆炸的时代，数据会分散在多个数据库中，因此与其他数据孤岛的打通、频繁的跟外部系统交互是每个消息组件都面临的问题，例如跟数据库、文件系统、本地文件、其他消息系统。Pulsar为了方便跟外部系统做交互，通过 IO connector拓展了应用场景，跟其他计算&#x2F;存储引擎进行了另一种打通方式，用于解决Pulsar跟周边系统的集成问题，帮助用户高效解决问题。</p>
+<p>pulsar提供一系列与外部系统交互的connector，如hdfs、es、kafka、mysql等，同时也支持开发者根据自己的业务场景自定义自己的connector。</p>
+<p><strong>什么是IO conecotor</strong></p>
+<p>pulsar通过IO connector框架给用户提供了从外部系统移动数据进出pulsar的简单方式，只需要去实现pulsar提供的API接口实现读写逻辑即可。pulsar提供了两种类型的connector，分别是source和sink，前者实现读取逻辑，后者实现写到外部系统的逻辑。两者有一个共同的实现方法open，用于跟外部系统建立网络连接，除此之外source还有一个方法read用于实现读取逻辑，同理，sink也有一个write方法用于实现写到外部系统的逻辑。IO connector默认在broker上启动，它们的关系如下图所示</p>
+<img src="/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/image-20230722150318368.png" alt="image-20230722150318368" style="zoom:50%;">
+
+<p>当数据被写入pulsar的topic时，就会调用connector sink中的write方法的逻辑来写入外部系统，write方法的入参是Record<T>接口，用户可以实现它来实现想要传输的对象类型，其中主要要实现两个方法分别是ack和fail，用于设置数据写入成功以及失败的结果处理逻辑。</T></p>
+<img src="/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/image-20230722150336127.png" alt="image-20230722150336127" style="zoom:50%;">
+
+<p>当需要将外部系统数据导入pulsar时，可以实现Source<T>接口的read方法来编辑自己的数据导入逻辑</T></p>
+<img src="/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/image-20230722150350631.png" alt="image-20230722150350631" style="zoom:50%;">
+
+<p>除了Source<T>接口，pulsar还提供了另外一个PushSource<T>抽象类；跟前者不同的是，这个接口会内置一个阻塞队列，外部数据写进来时会先写到阻塞队列中，并在符合条件时将数据批量写到topic中，这无疑大幅提升了数据写入的吞吐量</T></T></p>
+<h4 id="IO-Connector-使用"><a href="#IO-Connector-使用" class="headerlink" title="IO Connector 使用"></a>IO Connector 使用</h4><p>上面介绍了IO Connector的理论，但所谓实践出真知，这节咱们就实在的搞一把，看看它是怎么玩的。这里以 io-file为例子</p>
+<ol>
+<li>下载依赖包并保存在pulsar包的connectors文件夹下</li>
+</ol>
+<p>pulsar集群默认没有connector，如果要使用对应的connector应自行下载并放到对应的目录下</p>
+<p>curl -O <a target="_blank" rel="noopener" href="https://mirrors.tuna.tsinghua.edu.cn/apache/pulsar/pulsar-2.8.4/connectors/pulsar-io-file-2.8.4.nar">https://mirrors.tuna.tsinghua.edu.cn/apache/pulsar/pulsar-2.8.4/connectors/pulsar-io-file-2.8.4.nar</a>   </p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mkdir connectors</span><br><span class="line">mv pulsar-io-file-2.8.4.nar connectors</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>启动集群</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">bin/pulsar standalone</span><br><span class="line">//可以通过此指令来查询目标connector是否被正常加载到pulsar集群里</span><br><span class="line">curl -s http://localhost:8080/admin/v2/functions/connectors</span><br></pre></td></tr></table></figure>
+
+<p>正常情况下会如下情况所示</p>
+<p><img src="/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/image-20230722152700928.png" alt="image-20230722152700928"></p>
+<ol start="3">
+<li>启动IO Connector</li>
+</ol>
+<p>在启动之前要编写connector的配置，配置支持json和yaml</p>
+<p>新建配置文件 <em>file-connector.yaml</em></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">configs:</span></span><br><span class="line">    <span class="attr">inputDirectory:</span> <span class="string">&quot;/tmp/data&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>并通过以下命令启动 IO Connector</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">./bin/pulsar-admin sources localrun \</span><br><span class="line">   --archive /opt/install/apache-pulsar-2.8.0/connectors/pulsar-io-file-2.8.4.nar \</span><br><span class="line">   --name file-test \</span><br><span class="line">   --destination-topic-name  pulsar-file-test \</span><br><span class="line">   --source-config-file /opt/install/apache-pulsar-2.8.0/tmp/file-connector.yaml</span><br></pre></td></tr></table></figure>
+
+
+
+<ol start="4">
+<li>测试验证</li>
+</ol>
+<p>在Connector启动后，咱们就可以开始验证了</p>
+<p>启动pulsar客户端监听topic，这样当有数据进来就会打印出来</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./bin/pulsar-client consume -s file-test -n 0 pulsar-file-test</span><br></pre></td></tr></table></figure>
+
+<p>往此目录下写入数据</p>
+<p><img src="/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/image-20230722153356323.png" alt="image-20230722153356323"></p>
+<p>通过查看pulsar consumer看到成功消费了数据</p>
+<p><img src="/2023/07/22/%E5%89%91%E6%8C%87pulsar-connector/image-20230722153454391.png" alt="image-20230722153454391"></p>
+<h4 id="IO-Connector-开发"><a href="#IO-Connector-开发" class="headerlink" title="IO Connector 开发"></a>IO Connector 开发</h4><p>除了提供大量与外部系统交互的IO Connector，pulsar也允许用户根据自己的场景来开发自己的Connector</p>
 <ul>
-<li><p>第一是选琴要慎重，不要选太便宜的，会消磨你的兴趣和打击你的心理</p>
+<li>消息序列化</li>
+<li>pipeline稳定性<ul>
+<li>IO connector无法连接外部系统</li>
+<li>连接失败需要重试几次</li>
+<li>当source&#x2F;sink遇到错误时应该如何处理</li>
+</ul>
 </li>
-<li><p>第二是务必选个老师，虽说一节课的费用不便宜，但是也不用很频繁的上课，大部分自己练，一个月上三四节课让老师指导一下就好了</p>
+<li>错误处理<ul>
+<li>错误配置</li>
+<li>source或sink不可用</li>
+<li>网络分区</li>
+</ul>
 </li>
 </ul>
-<p>当然，以上只是我这几天看攻略的心得哈哈哈。最终，希望也相信自己可以坚持下去！</p>
+<h4 id="疑问"><a href="#疑问" class="headerlink" title="疑问"></a>疑问</h4><h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p>本章主要介绍了pulsar三大拓展点之一的 IO Connector，分别</p>
 
       
     </div>
@@ -388,7 +452,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/%E5%B0%8F%E6%8F%90%E7%90%B4/" rel="tag"># 小提琴</a>
+            <a href="/tags/pulsar/" rel="tag"># pulsar</a>
           
         </div>
       
@@ -401,15 +465,15 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
+              <a href="/2023/07/22/%E6%B5%85%E8%B0%88AQS/" rel="next" title="浅谈AQS">
+                <i class="fa fa-chevron-left"></i> 浅谈AQS
+              </a>
+            
           </div>
 
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2023/05/16/RocketMQ%E7%B3%BB%E5%88%97-NameServer%E8%A7%A3%E6%9E%90/" rel="prev" title="RocketMQ系列-NameServer解析">
-                RocketMQ系列-NameServer解析 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -541,7 +605,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%BC%98%E8%B5%B7"><span class="nav-number">1.</span> <span class="nav-text">缘起</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%BC%98%E7%BB%AD"><span class="nav-number">2.</span> <span class="nav-text">缘续</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">小结</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AF%BC%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">导言</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#IO-Connector-%E4%BB%8B%E7%BB%8D"><span class="nav-number">2.</span> <span class="nav-text">IO Connector 介绍</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#IO-Connector-%E4%BD%BF%E7%94%A8"><span class="nav-number">3.</span> <span class="nav-text">IO Connector 使用</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#IO-Connector-%E5%BC%80%E5%8F%91"><span class="nav-number">4.</span> <span class="nav-text">IO Connector 开发</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%96%91%E9%97%AE"><span class="nav-number">5.</span> <span class="nav-text">疑问</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">6.</span> <span class="nav-text">总结</span></a></li></ol></div>
             
 
           </div>
