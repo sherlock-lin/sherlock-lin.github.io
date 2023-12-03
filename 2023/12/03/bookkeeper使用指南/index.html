@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="bookkeeper pulsar," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="引言一般来说学习某个组件从官网切入是最好的，但奈何bookkeeper的官方文档太简洁了，对新手极度不友好，因此作为一名bk爱好者决定写这篇post作为官方文档的补充，大家可以先阅读官方文档后再回过头来看本篇进行补充 https:&#x2F;&#x2F;bookkeeper.apache.org&#x2F;docs&#x2F;overview&#x2F;">
+<meta property="og:type" content="article">
+<meta property="og:title" content="bookkeeper使用指南">
+<meta property="og:url" content="http://example.com/2023/12/03/bookkeeper%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97/index.html">
+<meta property="og:site_name" content="少年游侠客">
+<meta property="og:description" content="引言一般来说学习某个组件从官网切入是最好的，但奈何bookkeeper的官方文档太简洁了，对新手极度不友好，因此作为一名bk爱好者决定写这篇post作为官方文档的补充，大家可以先阅读官方文档后再回过头来看本篇进行补充 https:&#x2F;&#x2F;bookkeeper.apache.org&#x2F;docs&#x2F;overview&#x2F;">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-12-03T09:40:50.000Z">
+<meta property="article:modified_time" content="2023-12-03T09:42:18.947Z">
+<meta property="article:author" content="sherlock.lin">
+<meta property="article:tag" content="bookkeeper pulsar">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":true,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://example.com/2023/12/03/bookkeeper使用指南/"/>
+
+
+
+
+
+  <title>bookkeeper使用指南 | 少年游侠客</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">少年游侠客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">记录探索技术中过程与思考</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/12/03/bookkeeper%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="少年游侠客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">bookkeeper使用指南</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2023-12-03T17:40:50+08:00">
+                2023-12-03
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8/" itemprop="url" rel="index">
+                    <span itemprop="name">分布式存储</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-eye"></i> 本文章阅读次数：
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>次
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h4 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h4><p>一般来说学习某个组件从官网切入是最好的，但奈何bookkeeper的官方文档太简洁了，对新手极度不友好，因此作为一名bk爱好者决定写这篇post作为官方文档的补充，大家可以先阅读官方文档后再回过头来看本篇进行补充 <a target="_blank" rel="noopener" href="https://bookkeeper.apache.org/docs/overview/">https://bookkeeper.apache.org/docs/overview/</a></p>
+<span id="more"></span>
+
+<h4 id="指令"><a href="#指令" class="headerlink" title="指令"></a>指令</h4><p>当前bookkeeper的版本是4.16.3，目前支持 43个指令，这里打算对其进行分类来说明，分为常用、查询、删除这三类</p>
+<p>先额外介绍下这两条指令</p>
+<blockquote>
+<p>bookkeeper shell: 列出bk支持的所有指令<br>bookkeeper shell help 指令：查询指定指令的官方说明</p>
+</blockquote>
+<p><strong>常用指令</strong></p>
+<p>常用的指令有以下这些</p>
+<blockquote>
+<p>listbookies、bookieinfo、listledgers、listunderreplicated、metaformat、simpletest、readledger、deleteledger、readjournal、readlog、readlogmetadata、recover</p>
+</blockquote>
+<p><strong>listbookies</strong> </p>
+<p>显示bookies列表信息，可以通过参数来指定显示读写模式&#x2F;只读模式的bookies</p>
+<blockquote>
+<p>bookkeeper shell listbookies -a</p>
+<p>-a：显示所有的bookies</p>
+<p>-ro：只显示只读的bookies</p>
+<p>-rw：只显示支持读写的bookies</p>
+</blockquote>
+<p>打印信息如下，可以看到我的bk集群中三个节点的ip、端口以及主机名</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">16:40:22,014 INFO  All Bookies :</span><br><span class="line">16:40:22,033 INFO  Resolved 1 as 192.168.53.101:3181</span><br><span class="line">16:40:22,033 INFO  BookieID:1, IP:192.168.53.101, Port:3181, Hostname:node01</span><br><span class="line">16:40:22,033 INFO  Resolved 2 as 192.168.53.102:3181</span><br><span class="line">16:40:22,036 INFO  BookieID:2, IP:192.168.53.102, Port:3181, Hostname:node02</span><br><span class="line">16:40:22,036 INFO  Resolved 3 as 192.168.53.103:3181</span><br><span class="line">16:40:22,036 INFO  BookieID:3, IP:192.168.53.103, Port:3181, Hostname:node03</span><br><span class="line">16:40:22,141 INFO  Session: 0xff8c2ed3f7e30001 closed</span><br></pre></td></tr></table></figure>
+
+<p><strong>bookieinfo</strong></p>
+<p>显示bookie节点的资源信息，如所在的机器磁盘总空间以及空闲空间等资源信息</p>
+<blockquote>
+<p> bookkeeper shell bookieinfo</p>
+</blockquote>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">17:32:00,796 INFO  Free disk space info:</span><br><span class="line">17:32:00,796 INFO  Resolved 1 as 192.168.53.101:3181</span><br><span class="line">17:32:00,799 INFO  BookieID:1, IP:192.168.53.101, Port:3181, Hostname:node01:   Free: 6941503488(6.941GB)       Total: 37688381440(37.688GB)</span><br><span class="line">17:32:00,799 INFO  Resolved 2 as 192.168.53.102:3181</span><br><span class="line">17:32:00,799 INFO  BookieID:2, IP:192.168.53.102, Port:3181, Hostname:node02:   Free: 23355883520(23.355GB)     Total: 37688381440(37.688GB)</span><br><span class="line">17:32:00,799 INFO  Resolved 3 as 192.168.53.103:3181</span><br><span class="line">17:32:00,799 INFO  BookieID:3, IP:192.168.53.103, Port:3181, Hostname:node03:   Free: 31105638400(31.105GB)     Total: 37688381440(37.688GB)</span><br><span class="line">17:32:00,801 INFO  Total free disk space in the cluster:        61403025408(61.403GB)</span><br><span class="line">17:32:00,801 INFO  Total disk capacity in the cluster:  113065144320(113.065GB)</span><br></pre></td></tr></table></figure>
+
+<p><strong>listledgers</strong></p>
+<p>显示ledger列表信息，</p>
+<blockquote>
+<p>bookkeeper shell listledgers </p>
+<p>-bookieid：仅显示某个bookie实例上的ledger信息<br>-m：打印ledger元信息</p>
+</blockquote>
+<p>bookkeeper shell listledgers 输出结果如下，可以看到当前bk集群有三个ledger</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">16:44:40,144 INFO  ledgerID: 1</span><br><span class="line">16:44:40,144 INFO  ledgerID: 2</span><br><span class="line">16:44:40,144 INFO  ledgerID: 3</span><br></pre></td></tr></table></figure>
+
+<p>bookkeeper shell listledgers -m 输出结果</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">16:55:11,003 INFO  ledgerID: 1</span><br><span class="line">16:55:11,009 INFO  LedgerMetadata&#123;formatVersion=3, ensembleSize=3, writeQuorumSize=2, ackQuorumSize=2, state=CLOSED, length=100000, lastEntryId=999, digestType=CRC32C, password=base64:, ensembles=&#123;0=[1, 3, 2]&#125;, customMetadata=&#123;&#125;&#125;</span><br><span class="line">16:55:11,009 INFO  ledgerID: 2</span><br><span class="line">16:55:11,009 INFO  LedgerMetadata&#123;formatVersion=3, ensembleSize=3, writeQuorumSize=2, ackQuorumSize=2, state=CLOSED, length=100000, lastEntryId=999, digestType=CRC32C, password=base64:, ensembles=&#123;0=[2, 1, 3]&#125;, customMetadata=&#123;&#125;&#125;</span><br><span class="line">16:55:11,009 INFO  ledgerID: 3</span><br><span class="line">16:55:11,009 INFO  LedgerMetadata&#123;formatVersion=3, ensembleSize=3, writeQuorumSize=2, ackQuorumSize=2, state=CLOSED, length=100000, lastEntryId=999, digestType=CRC32C, password=base64:, ensembles=&#123;0=[3, 2, 1]&#125;, customMetadata=&#123;&#125;&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>listunderreplicated</strong></p>
+<p>显示还被bk集群标记为没完成复制的ledger，生产环境用的比较频繁</p>
+<blockquote>
+<p>bookkeeper shell listunderreplicated</p>
+<p>-excludingmissingreplica   排除某个bk实例<br>-missingreplica <arg>           指定显示某个bk实例信息<br>-printmissingreplica             Whether to print missingreplicas list?<br>-printreplicationworkerid        Whether to print replicationworkerid?</arg></p>
+</blockquote>
+<p><strong>metaformat</strong></p>
+<p>格式化bk集群的元数据，相当于初始化整个集群，生产环境慎用</p>
+<blockquote>
+<p>bookkeeper shell metaformat</p>
+</blockquote>
+<p><strong>simpletest</strong></p>
+<p>非常适合初学者的一个指令，往bk集群导测试数据，通过此命令可以创建一个新的Ledger，并写入一批Entites</p>
+<blockquote>
+<p>bookkeeper shell simpletest</p>
+<p>-a,–ackQuorum <arg>     Ack quorum size (default 2)<br>-e,–ensemble <arg>      Ensemble size (default 3)<br>-n,–numEntries <arg>    指定写入多少条消息，默认1000条<br>-w,–writeQuorum <arg>   Write quorum size (default 2)</arg></arg></arg></arg></p>
+</blockquote>
+<p>通过输出信息可看到新创建了一个ID为4的Ledger</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">17:10:36,563 INFO  Ledger ID: 4</span><br><span class="line">17:10:36,586 INFO  SSE4.2 CRC32C provider initialized</span><br><span class="line">17:10:38,568 INFO  378 entries written</span><br><span class="line">17:10:40,568 INFO  891 entries written</span><br><span class="line">17:10:40,966 INFO  1000 entries written to ledger 4</span><br></pre></td></tr></table></figure>
+
+<p><strong>readledger</strong> </p>
+<p>从指定Ledger中读取数据并打印到命令行</p>
+<blockquote>
+<p>bookkeeper shell readledger -ledgerid 2</p>
+<p>bookkeeper shell readledger -ledgerid 2 -firstentryid 949 -lastentryid 999</p>
+<p>-b,–bookie：从指定的bk实例中打印消息<br>-fe,–firstentryid：指定从第几条消息开始打印<br>-l,–ledgerid：从指定的ledger中打印消息<br>-le,–lastentryid：指定截止打印到哪条消息<br>-m：打印消息体内容<br>-r,–force-recovery        Ensure the ledger is properly closed before reading</p>
+</blockquote>
+<p> bookkeeper shell readledger -ledgerid 2  输出结果如下，可以看到此ledger里有一千条消息</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">....</span><br><span class="line">17:24:06,774 INFO  --------- Lid=2, Eid=995, EntrySize=99600 ---------</span><br><span class="line">17:24:06,775 INFO  --------- Lid=2, Eid=996, EntrySize=99700 ---------</span><br><span class="line">17:24:06,775 INFO  --------- Lid=2, Eid=997, EntrySize=99800 ---------</span><br><span class="line">17:24:06,776 INFO  --------- Lid=2, Eid=998, EntrySize=99900 ---------</span><br><span class="line">17:24:06,777 INFO  --------- Lid=2, Eid=999, EntrySize=100000 ---------</span><br></pre></td></tr></table></figure>
+
+<p><strong>deleteledger</strong></p>
+<p>删除ledger指令</p>
+<blockquote>
+<p>bookkeeper shell deleteledger -ledgerid 0 -force</p>
+</blockquote>
+<p><strong>readjournal</strong></p>
+<p><strong>readlog</strong></p>
+<p><strong>readlogmetadata</strong></p>
+<p><strong>recover</strong></p>
+<h4 id="部署"><a href="#部署" class="headerlink" title="部署"></a>部署</h4><p>建议在官网进行bk服务的下载以及安装，<a target="_blank" rel="noopener" href="https://bookkeeper.apache.org/releases">https://bookkeeper.apache.org/releases</a></p>
+<p><strong>服务启动</strong></p>
+<p>启动bk前一定要启动zookeeper，否则会启动失败，因为bk依赖zookeeper来存储元数据</p>
+<p>创建运行脚本 bkCluster.sh，具体内容如下，可通过bkCluster.sh start&#x2F;stop 进行集群的快速启动和关闭</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">!/bin/sh</span></span><br><span class="line">case $1 in </span><br><span class="line">&quot;start&quot;)&#123;</span><br><span class="line">for host in node01 node02 node03 </span><br><span class="line">do</span><br><span class="line">  ssh $host &quot;source /etc/profile;/opt/install/bookkeeper-server-4.14.0/bin/bookkeeper-daemon.sh start bookie&quot;   </span><br><span class="line">  echo &quot;$host bk is running...&quot;  </span><br><span class="line">done  </span><br><span class="line">&#125;;;</span><br><span class="line"></span><br><span class="line">&quot;stop&quot;)&#123;</span><br><span class="line">for host in node01 node02 node03 </span><br><span class="line">do</span><br><span class="line">  ssh $host &quot;source /etc/profile;/opt/install/bookkeeper-server-4.14.0/bin/bookkeeper-daemon.sh stop bookie&quot;  </span><br><span class="line">  echo &quot;$host bk is stopping...&quot;  </span><br><span class="line">done</span><br><span class="line">&#125;;;</span><br><span class="line">esac</span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h4><ol>
+<li>启动报错</li>
+</ol>
+<blockquote>
+<p>ERROR - [main:Bookie@490] - There are directories without a cookie, and this is neither a new environment, nor is storage expansion enabled. Empty directories are [&#x2F;tmp&#x2F;bk-txn&#x2F;current, &#x2F;tmp&#x2F;bk-data&#x2F;current]</p>
+</blockquote>
+<p>如果是新手部署环境遇到此问题的话，可以通过初始化元数据进行解决，执行 bookkeeper  shell metaformat 后再重新启动下服务即可</p>
+<p>执行一些指令例如 bookkeeper shell whoisauditor 报以下的错</p>
+<blockquote>
+<p>Exception in thread “main” com.google.common.util.concurrent.UncheckedExecutionException: KeeperErrorCode &#x3D; NoNode for &#x2F;ledgers&#x2F;underreplication&#x2F;auditorelection</p>
+</blockquote>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/bookkeeper-pulsar/" rel="tag"># bookkeeper pulsar</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2023/12/02/%E5%89%91%E6%8C%87pulsar%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%86%99%E5%85%A5%E6%B5%81%E7%A8%8B/" rel="next" title="剑指pulsar之数据写入流程">
+                <i class="fa fa-chevron-left"></i> 剑指pulsar之数据写入流程
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">6</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8C%87%E4%BB%A4"><span class="nav-number">2.</span> <span class="nav-text">指令</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%83%A8%E7%BD%B2"><span class="nav-number">3.</span> <span class="nav-text">部署</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98"><span class="nav-number">4.</span> <span class="nav-text">常见问题</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="copyright">&copy; <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">sherlock.lin</span>
+<!--
+  
+</div>
+
+
+
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+-->
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-users"></i> 你是来访的第
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      位小伙伴
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-users-crown"></i> 总访问量
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+          <span id="scrollpercent"><span>0</span>%</span>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
