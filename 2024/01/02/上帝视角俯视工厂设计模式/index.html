@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="软件设计," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="引言本篇聊聊设计模式中的简单工厂、工厂方法、抽象工厂设计模式，争取在看完这篇后不会再傻傻分不清以及能够应用在实际项目中">
+<meta property="og:type" content="article">
+<meta property="og:title" content="上帝视角俯视工厂设计模式">
+<meta property="og:url" content="http://example.com/2024/01/02/%E4%B8%8A%E5%B8%9D%E8%A7%86%E8%A7%92%E4%BF%AF%E8%A7%86%E5%B7%A5%E5%8E%82%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/index.html">
+<meta property="og:site_name" content="少年游侠客">
+<meta property="og:description" content="引言本篇聊聊设计模式中的简单工厂、工厂方法、抽象工厂设计模式，争取在看完这篇后不会再傻傻分不清以及能够应用在实际项目中">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/2024/01/02/%E4%B8%8A%E5%B8%9D%E8%A7%86%E8%A7%92%E4%BF%AF%E8%A7%86%E5%B7%A5%E5%8E%82%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/image-20240102195110649.png">
+<meta property="og:image" content="http://example.com/2024/01/CodeRepository/coding-interview-university/study-note/picture/%E4%B8%8A%E5%B8%9D%E8%A7%86%E8%A7%92%E4%BF%AF%E8%A7%86%E5%B7%A5%E5%8E%82%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/image-20240102195832227.png">
+<meta property="og:image" content="http://example.com/2024/01/02/%E4%B8%8A%E5%B8%9D%E8%A7%86%E8%A7%92%E4%BF%AF%E8%A7%86%E5%B7%A5%E5%8E%82%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/image-20240102201812625.png">
+<meta property="og:image" content="http://example.com/2024/01/02/%E4%B8%8A%E5%B8%9D%E8%A7%86%E8%A7%92%E4%BF%AF%E8%A7%86%E5%B7%A5%E5%8E%82%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/image-20240102202725300.png">
+<meta property="og:image" content="http://example.com/2024/01/02/%E4%B8%8A%E5%B8%9D%E8%A7%86%E8%A7%92%E4%BF%AF%E8%A7%86%E5%B7%A5%E5%8E%82%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/image-20240102203025699.png">
+<meta property="og:image" content="http://example.com/2024/01/02/%E4%B8%8A%E5%B8%9D%E8%A7%86%E8%A7%92%E4%BF%AF%E8%A7%86%E5%B7%A5%E5%8E%82%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/image-20240102204945466.png">
+<meta property="article:published_time" content="2024-01-02T14:05:32.000Z">
+<meta property="article:modified_time" content="2024-01-02T14:07:50.355Z">
+<meta property="article:author" content="sherlock.lin">
+<meta property="article:tag" content="软件设计">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2024/01/02/%E4%B8%8A%E5%B8%9D%E8%A7%86%E8%A7%92%E4%BF%AF%E8%A7%86%E5%B7%A5%E5%8E%82%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/image-20240102195110649.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":true,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://example.com/2024/01/02/上帝视角俯视工厂设计模式/"/>
+
+
+
+
+
+  <title>上帝视角俯视工厂设计模式 | 少年游侠客</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">少年游侠客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">记录探索技术中过程与思考</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2024/01/02/%E4%B8%8A%E5%B8%9D%E8%A7%86%E8%A7%92%E4%BF%AF%E8%A7%86%E5%B7%A5%E5%8E%82%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="少年游侠客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">上帝视角俯视工厂设计模式</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2024-01-02T22:05:32+08:00">
+                2024-01-02
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/" itemprop="url" rel="index">
+                    <span itemprop="name">设计模式</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-eye"></i> 本文章阅读次数：
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>次
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h4 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h4><p>本篇聊聊设计模式中的简单工厂、工厂方法、抽象工厂设计模式，争取在看完这篇后不会再傻傻分不清以及能够应用在实际项目中</p>
+<span id="more"></span>
+
+<h4 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h4><p>以一个咱们都熟悉的场景举个例子，我们平时都会戴口罩，用来过滤一些普通病毒，大致的设计如下图，每当有一个新的用户需要用到口罩时，都自己new一个普通口罩</p>
+<img src="/2024/01/02/%E4%B8%8A%E5%B8%9D%E8%A7%86%E8%A7%92%E4%BF%AF%E8%A7%86%E5%B7%A5%E5%8E%82%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/image-20240102195110649.png" alt="image-20240102195110649" style="zoom:50%;">
+
+<p>那么现在新冠来了，经过研究发现N95口罩可以更好的抵御新冠，那么要怎么改呢，大致设计如下图</p>
+<img src="/2024/01/02/%E4%B8%8A%E5%B8%9D%E8%A7%86%E8%A7%92%E4%BF%AF%E8%A7%86%E5%B7%A5%E5%8E%82%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/../../CodeRepository/coding-interview-university/study-note/picture/上帝视角俯视工厂设计模式/image-20240102195832227.png" alt="image-20240102195832227" style="zoom:50%;">
+
+<p>就是对每一个使用普通口罩的用户改为N95口罩。假设这里的用户很多有上百个，那对应到代码就是我们要去上百个地方进行代码改动，这个改动成本以及风险都是比较大的，如果后续又有效果更好的口罩呢，是不是这么一想就觉得头都大了，这些问题也是切切实实的发生在我们的工作中。以下是以Java实现的案例</p>
+<p>对应的普通口罩实现</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Main</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="type">CommonFaceMask</span> <span class="variable">commonFaceMask1</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">CommonFaceMask</span>();</span><br><span class="line">        commonFaceMask1.filterViruses();</span><br><span class="line"></span><br><span class="line">        <span class="type">CommonFaceMask</span> <span class="variable">commonFaceMask2</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">CommonFaceMask</span>();</span><br><span class="line">        commonFaceMask2.filterViruses();</span><br><span class="line"></span><br><span class="line">        <span class="type">CommonFaceMask</span> <span class="variable">commonFaceMask3</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">CommonFaceMask</span>();</span><br><span class="line">        commonFaceMask3.filterViruses();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">CommonFaceMask</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">CommonFaceMask</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;创建了一个新的口罩&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">filterViruses</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;过滤普通的病毒&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>对应的N95口罩实现</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Main</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="comment">//CommonFaceMask commonFaceMask1 = new CommonFaceMask();</span></span><br><span class="line">        <span class="type">N95FaceMask</span> <span class="variable">commonFaceMask1</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">N95FaceMask</span>();</span><br><span class="line">        commonFaceMask1.filterViruses();</span><br><span class="line"></span><br><span class="line">        <span class="comment">//CommonFaceMask commonFaceMask2 = new CommonFaceMask();</span></span><br><span class="line">        <span class="type">N95FaceMask</span> <span class="variable">commonFaceMask2</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">N95FaceMask</span>();</span><br><span class="line">        commonFaceMask2.filterViruses();</span><br><span class="line"></span><br><span class="line">        <span class="comment">//CommonFaceMask commonFaceMask3 = new CommonFaceMask();</span></span><br><span class="line">        <span class="type">N95FaceMask</span> <span class="variable">commonFaceMask3</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">N95FaceMask</span>();</span><br><span class="line">        commonFaceMask3.filterViruses();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">N95FaceMask</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">N95FaceMask</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;创建了一个新的N95口罩&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">filterViruses</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;过滤新冠病毒&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过上述代码能够清晰的感知到，所有类似的变动可能会导致大幅的代码适配工作；但是别担心，让我们来看看三个不同的工厂模式分别是怎么解决这个问题的</p>
+<h4 id="简单工厂"><a href="#简单工厂" class="headerlink" title="简单工厂"></a>简单工厂</h4><p>通过思考我们能够发现，之所以会有这么大的改动是因为用户跟口罩之间是强依赖关系，口罩的变动会影响到每一个用户，解决强依赖的方式是什么？本质上都是通过在中间层加入一个代理也就是今天咱们要讨论的“工厂”，引入后的图如下</p>
+<img src="/2024/01/02/%E4%B8%8A%E5%B8%9D%E8%A7%86%E8%A7%92%E4%BF%AF%E8%A7%86%E5%B7%A5%E5%8E%82%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/image-20240102201812625.png" alt="image-20240102201812625" style="zoom:50%;">
+
+<p>由上图能够清晰的看到用户不再依赖具体的口罩类型，只需要由工厂统一返回即可，工厂返回什么类型的口罩用户不关心，用户只需要按照口罩的“使用方式”来使用即可，这样如果口罩类型有变动，只需要通知这家工厂即可，无需影响到用户(本身也不需要)。</p>
+<p>因此我们可知，在设计程序时我们不该面向实现细节，应该面向抽象，例如用口罩的时候其实我们关心的不是口罩是怎么制作、什么牌子的，只关心它能不能过滤病毒、细菌对吧？因此我们提炼抽象出一个口罩接口(也就是口罩的“使用方式”)，这个接口有一个filterViruses方法就是过滤病毒，所有口罩都要实现这个接口并实现改方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">FaceMask</span> &#123;</span><br><span class="line">    <span class="keyword">void</span> <span class="title function_">filterViruses</span><span class="params">()</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">N95FaceMask</span> <span class="keyword">implements</span> <span class="title class_">FaceMask</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">N95FaceMask</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;创建了一个新的N95口罩&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">filterViruses</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;过滤新冠病毒&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">CommonFaceMask</span> <span class="keyword">implements</span> <span class="title class_">FaceMask</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">CommonFaceMask</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;创建了一个新的普通口罩&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">filterViruses</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;过滤普通的普通病毒&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>接下来看看工厂类的实现</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">FaceMaskFactory</span> &#123;</span><br><span class="line">    <span class="comment">//在某些场景就是要跟口罩的型号绑定，那么也可以通过指定口罩的名称来进行获取</span></span><br><span class="line">    <span class="keyword">public</span> FaceMask <span class="title function_">createFaceMask</span><span class="params">(String faceMaskName)</span> &#123;</span><br><span class="line">        <span class="keyword">switch</span> (faceMaskName) &#123;</span><br><span class="line">            <span class="keyword">case</span> <span class="string">&quot;Common&quot;</span>:</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">CommonFaceMask</span>();</span><br><span class="line">            <span class="keyword">case</span> <span class="string">&quot;N95&quot;</span>:</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">N95FaceMask</span>();</span><br><span class="line">            <span class="keyword">default</span>:</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">CommonFaceMask</span>();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">  	<span class="comment">//这里根据读取配置动态决定，这里为了演示先硬编码为 N95</span></span><br><span class="line">    <span class="keyword">public</span> FaceMask <span class="title function_">createFaceMask</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">faceMaskName</span> <span class="operator">=</span> <span class="string">&quot;N95&quot;</span>;</span><br><span class="line">        <span class="keyword">switch</span> (faceMaskName) &#123;</span><br><span class="line">            <span class="keyword">case</span> <span class="string">&quot;Common&quot;</span>:</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">CommonFaceMask</span>();</span><br><span class="line">            <span class="keyword">case</span> <span class="string">&quot;N95&quot;</span>:</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">N95FaceMask</span>();</span><br><span class="line">            <span class="keyword">default</span>:</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">CommonFaceMask</span>();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>再来看看具体使用方式</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Main</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="type">FaceMaskFactory</span> <span class="variable">faceMaskFactory</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">FaceMaskFactory</span>();</span><br><span class="line"></span><br><span class="line">        <span class="type">FaceMask</span> <span class="variable">faceMask1</span> <span class="operator">=</span> faceMaskFactory.createFaceMask();</span><br><span class="line">        faceMask1.filterViruses();</span><br><span class="line"></span><br><span class="line">        <span class="type">FaceMask</span> <span class="variable">faceMask2</span> <span class="operator">=</span> faceMaskFactory.createFaceMask();</span><br><span class="line">        faceMask2.filterViruses();</span><br><span class="line"></span><br><span class="line">        <span class="type">FaceMask</span> <span class="variable">faceMask3</span> <span class="operator">=</span> faceMaskFactory.createFaceMask();</span><br><span class="line">        faceMask3.filterViruses();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以上就是简单工厂模式的实现，它实现了对象创建和使用的职责分离，或者说将对象创建的权力收敛到工厂类里面了。客户端不知道也不需要知道所获取的对象是怎么创建的以及怎么初始化的，只需要按照对象的接口规范进行使用即可，这个场景非常广泛，例如我们无需关心灯泡是什么品牌多少瓦，只要能按照规范拧进灯座就能亮，不需要知道汽车的发动机是怎么制造汽车是怎么设计只需要按照规范踩动油门汽车就能行驶等等</p>
+<p>通过结合配置文件的方式，即便要替换新的口罩类型，可以在不修改客户端代码的情况下实现同时也在一定程度上提高了系统的灵活性，这也是工作中会经常用到的。除此之外通过工厂模式可以很好的进行监控以及管理对象。缺点是在产品类型比较多或者有些产品的创建&#x2F;初始化逻辑比较多，可能会造成工厂逻辑过于复杂，不利于系统的拓展维护，为了解决这个问题出了工厂方法模式</p>
+<p>痛点：简单工厂模式虽然实现简单理解简单且很好解耦了客户端跟对象的关系，但它将过多的逻辑集中在一个工厂类里，当这些逻辑扩张时，这个工厂类会变得很臃肿且难以维护，另一方面，在涉及到新建对象逻辑变动时会频繁的改动这里的代码，一旦出了问题影响的范围会很广泛</p>
+<h4 id="工厂方法"><a href="#工厂方法" class="headerlink" title="工厂方法"></a>工厂方法</h4><p>接下来看看工厂方法的实现，既然简单工厂方法的瓶颈在工厂类，那么对它进行抽象下，定义一个工厂接口，只负责工厂的定义，具体工厂的实现逻辑延迟到子类。这样本质上将一家工厂改为按业务划分为多家工厂，通过工厂接口定义了工厂生产什么，工厂实现类再做具体的实现逻辑</p>
+<img src="/2024/01/02/%E4%B8%8A%E5%B8%9D%E8%A7%86%E8%A7%92%E4%BF%AF%E8%A7%86%E5%B7%A5%E5%8E%82%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/image-20240102202725300.png" alt="image-20240102202725300" style="zoom:50%;">
+
+<p>通过这种方式避免了过多逻辑集中在一个工厂类中，而是针对产品类型纬度进行划分，不同的产品类型有自己的独立工厂，这样即便后续有新的产品也不会影响到普通工厂和N95工厂，只需增加新的工厂实现类即可</p>
+<p>代码实现如下</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">FaceMask</span> &#123;</span><br><span class="line">    <span class="keyword">void</span> <span class="title function_">filterViruses</span><span class="params">()</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">N95FaceMask</span> <span class="keyword">implements</span> <span class="title class_">FaceMask</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">N95FaceMask</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;创建了一个新的N95口罩&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">filterViruses</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;过滤新冠病毒&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">CommonFaceMask</span> <span class="keyword">implements</span> <span class="title class_">FaceMask</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">CommonFaceMask</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;创建了一个新的普通口罩&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">filterViruses</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;过滤普通的普通病毒&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>工厂类的实现</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">IFactory</span> &#123;</span><br><span class="line">     FaceMask <span class="title function_">createFaceMask</span><span class="params">()</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">N95Factory</span> <span class="keyword">implements</span> <span class="title class_">IFactory</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> FaceMask <span class="title function_">createFaceMask</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">N95FaceMask</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">CommonFactory</span> <span class="keyword">implements</span> <span class="title class_">IFactory</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> FaceMask <span class="title function_">createFaceMask</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">CommonFaceMask</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>使用方式</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Main</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="type">IFactory</span> <span class="variable">iFactory1</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">N95Factory</span>();</span><br><span class="line">        <span class="type">FaceMask</span> <span class="variable">faceMask1</span> <span class="operator">=</span> iFactory1.createFaceMask();</span><br><span class="line">        faceMask1.filterViruses();</span><br><span class="line">        <span class="type">FaceMask</span> <span class="variable">faceMask2</span> <span class="operator">=</span> iFactory1.createFaceMask();</span><br><span class="line">        faceMask2.filterViruses();</span><br><span class="line">        <span class="type">FaceMask</span> <span class="variable">faceMask3</span> <span class="operator">=</span> iFactory1.createFaceMask();</span><br><span class="line">        faceMask3.filterViruses();</span><br><span class="line"></span><br><span class="line">        <span class="type">IFactory</span> <span class="variable">iFactory2</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">CommonFactory</span>();</span><br><span class="line">        <span class="type">FaceMask</span> <span class="variable">faceMask4</span> <span class="operator">=</span> iFactory2.createFaceMask();</span><br><span class="line">        faceMask4.filterViruses();</span><br><span class="line">        <span class="type">FaceMask</span> <span class="variable">faceMask5</span> <span class="operator">=</span> iFactory2.createFaceMask();</span><br><span class="line">        faceMask5.filterViruses();</span><br><span class="line">        <span class="type">FaceMask</span> <span class="variable">faceMask6</span> <span class="operator">=</span> iFactory2.createFaceMask();</span><br><span class="line">        faceMask6.filterViruses();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过这里能够清晰的看到，已经创建好的工厂逻辑不会再进行变动，如果有新的产品，只需要根据工厂接口定义的规范实现对应产品的工厂类即可。这样设计符合开闭原则，面向修改关闭，面向拓展开放。将原来集中在一个工厂类的臃肿逻辑拆分到多个“各司其职”的工厂实现类中，提升了可读性以及可维护性，并大幅降低了由于新的改动影响之前实现逻辑的情况</p>
+<p>痛点：虽然工厂方法模式解决了简单工厂模式的臃肿以及相互影响的问题，但是每次有新的产品时不仅要创建对应的产品类，还要创建对应的产品工厂类，也会导致过多的产品工厂类，增加系统的复杂度</p>
+<p>以上就是工厂方法设计模式，我们想想，如果现在不仅要生产口罩，还要生产其他的例如消毒酒精的话要如何实现呢，如果还是基于工厂方法设计模式的话可能要单独给酒精创建工厂并针对不同的酒精创建对应的工厂实现类，那有同学要问了，能否复用下工厂呢？是可以的这也是接下来要聊的抽象工厂模式</p>
+<h4 id="抽象工厂模式"><a href="#抽象工厂模式" class="headerlink" title="抽象工厂模式"></a>抽象工厂模式</h4><p>通过上述我们可以发现每一个产品都会有对应的产品对象类以及对应的工厂类，久而久之可能会诞生过多的工厂类增加系统的复杂度。那能不能做下“合并”呢，可以从业务场景出发进行划分，例如这里就按规格进行划分，高规格的工厂负责生产N95口罩和75度的酒精，低规格的工厂负责生产普通口罩和60度的酒精。这样划分是不是跟我们生活中的工厂更相似、效率更高些？</p>
+<img src="/2024/01/02/%E4%B8%8A%E5%B8%9D%E8%A7%86%E8%A7%92%E4%BF%AF%E8%A7%86%E5%B7%A5%E5%8E%82%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/image-20240102203025699.png" alt="image-20240102203025699" style="zoom:50%;">
+
+<p>代码实现如下，首先是创建口罩相关的接口以及实现类</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">FaceMask</span> &#123;</span><br><span class="line">    <span class="keyword">void</span> <span class="title function_">filterViruses</span><span class="params">()</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">N95FaceMask</span> <span class="keyword">implements</span> <span class="title class_">FaceMask</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">N95FaceMask</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;创建了一个新的N95口罩&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">filterViruses</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;过滤新冠病毒&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">CommonFaceMask</span> <span class="keyword">implements</span> <span class="title class_">FaceMask</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">CommonFaceMask</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;创建了一个新的普通口罩&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">filterViruses</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;过滤普通的普通病毒&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>接着是创建酒精相关的接口以及实现类</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">Alcohol</span> &#123;</span><br><span class="line">    <span class="keyword">void</span> <span class="title function_">disinfect</span><span class="params">()</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Alcohol60</span> <span class="keyword">implements</span> <span class="title class_">Alcohol</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">Alcohol60</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;创建了一个60度的酒精&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">disinfect</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;开始消毒，能杀死普通的病毒&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Alcohol75</span> <span class="keyword">implements</span> <span class="title class_">Alcohol</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">Alcohol75</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;创建了一个75度的酒精&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">disinfect</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;开始消毒，能杀死新冠的病毒&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>再接下来是创建工厂以及工厂实现类</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">IFactory</span> &#123;</span><br><span class="line">    FaceMask <span class="title function_">createFaceMask</span><span class="params">()</span>;</span><br><span class="line">    Alcohol <span class="title function_">createAlcohol</span><span class="params">()</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">LowLevelFactory</span> <span class="keyword">implements</span> <span class="title class_">IFactory</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> FaceMask <span class="title function_">createFaceMask</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">CommonFaceMask</span>();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> Alcohol <span class="title function_">createAlcohol</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">Alcohol60</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">HighLevelFactory</span> <span class="keyword">implements</span> <span class="title class_">IFactory</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> FaceMask <span class="title function_">createFaceMask</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">N95FaceMask</span>();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> Alcohol <span class="title function_">createAlcohol</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">Alcohol75</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>最后看看使用场景</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Main</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="type">IFactory</span> <span class="variable">iFactory1</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">LowLevelFactory</span>();</span><br><span class="line">        <span class="type">FaceMask</span> <span class="variable">faceMask1</span> <span class="operator">=</span> iFactory1.createFaceMask();</span><br><span class="line">        <span class="type">Alcohol</span> <span class="variable">alcohol1</span> <span class="operator">=</span> iFactory1.createAlcohol();</span><br><span class="line">        faceMask1.filterViruses();</span><br><span class="line">        alcohol1.disinfect();</span><br><span class="line">        System.out.println(<span class="string">&quot;=================&quot;</span>);</span><br><span class="line">        <span class="type">IFactory</span> <span class="variable">iFactory2</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">HighLevelFactory</span>();</span><br><span class="line">        <span class="type">FaceMask</span> <span class="variable">faceMask2</span> <span class="operator">=</span> iFactory2.createFaceMask();</span><br><span class="line">        <span class="type">Alcohol</span> <span class="variable">alcohol2</span> <span class="operator">=</span> iFactory2.createAlcohol();</span><br><span class="line">        faceMask2.filterViruses();</span><br><span class="line">        alcohol2.disinfect();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p>是不是回过神来好奇为啥原先的new方式变成了这么复杂的方式，让咱们捋一捋，首先咱们内心要切记一件事，就是每一个设计都是为了解决一个问题，把问题捋清楚了就不怕了。大致的梳理如下</p>
+<img src="/2024/01/02/%E4%B8%8A%E5%B8%9D%E8%A7%86%E8%A7%92%E4%BF%AF%E8%A7%86%E5%B7%A5%E5%8E%82%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/image-20240102204945466.png" alt="image-20240102204945466" style="zoom:50%;">
+
+<p>大致的演变方式如上图，无需死记硬背，理解就好</p>
+<p><strong>相同点</strong></p>
+<p>三个工厂模式的共同点就是解耦客户端和对象的创建关系，通过引入工厂这么一个中介，产品的创建&#x2F;初始化逻辑不必再强依赖客户端并这些逻辑分散在项目的各个地方，所有产品创建的变动都不会导致客户端的改动，工厂已经将这些逻辑统一管理起来了，因此基本上所有变动例如增加新的产品、产品实现变更等只需要跟工厂打交道即可。客户端只需要按照这个产品的规范来用即可，这样客户端就能专注于自己的业务逻辑，对象创建相关的就想给工厂统一管理。这个设计不就像极了生活中的用户、工厂、产品之间的角色吗</p>
+<p><strong>场景</strong></p>
+<p>平时开发代码中像一些存数据的对象以及逻辑简单且不容易变动的场景，使用new即可</p>
+<p>创建的对象逻辑比较复杂且可能会涉及到变动的时候，例如数据持久化逻辑的对象，可能是写本地磁盘、数据库或者通过网络存储这种，最好用用简单工厂类进行统一管理</p>
+<p>当场景涉及比较复杂时，例如数据有可能存myql、也有可能存oracle或其他，同时还有很多复杂的操作，此时就该进行划分，针对不同的存储引擎设计对应的工厂类，方便后期的扩展以及维护</p>
+<p>抽象工厂设计模式相对少见，具体参考上面的实例结合实际的场景权衡使用的利弊</p>
+<p>以上就是工厂设计模式的全部，建议读者全部都自己实现一遍找找“感觉”和差异，如果有追求的朋友可以读读这几种工厂实现的源码，这样会对它们有更深刻的理解，码字画图不易，觉得写的不错的朋友别忘了点个赞，感谢</p>
+<h4 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h4><ol>
+<li><p><a target="_blank" rel="noopener" href="https://xie.infoq.cn/article/88c926822394aa1c80847dd2a">https://xie.infoq.cn/article/88c926822394aa1c80847dd2a</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://refactoringguru.cn/design-patterns/abstract-factory">https://refactoringguru.cn/design-patterns/abstract-factory</a></p>
+</li>
+</ol>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1/" rel="tag"># 软件设计</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2024/01/02/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E5%A4%A7%E7%BA%B2/" rel="next" title="设计模式大纲">
+                <i class="fa fa-chevron-left"></i> 设计模式大纲
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">15</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%83%8C%E6%99%AF"><span class="nav-number">2.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%AE%80%E5%8D%95%E5%B7%A5%E5%8E%82"><span class="nav-number">3.</span> <span class="nav-text">简单工厂</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%B7%A5%E5%8E%82%E6%96%B9%E6%B3%95"><span class="nav-number">4.</span> <span class="nav-text">工厂方法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8A%BD%E8%B1%A1%E5%B7%A5%E5%8E%82%E6%A8%A1%E5%BC%8F"><span class="nav-number">5.</span> <span class="nav-text">抽象工厂模式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">6.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">7.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="copyright">&copy; <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">sherlock.lin</span>
+<!--
+  
+</div>
+
+
+
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+-->
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-users"></i> 你是来访的第
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      位小伙伴
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-users-crown"></i> 总访问量
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+          <span id="scrollpercent"><span>0</span>%</span>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
