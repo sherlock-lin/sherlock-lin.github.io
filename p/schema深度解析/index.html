@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="Schema深度解析">
 <meta property='og:description' content="一、引言 关于Pulsar Schema，咱们要想想以下几个问题\nPulsar 中的 Schema 是什么？ Pulsar Schema Registry的作用是什么？ 怎么使用？ 原理是什么？ 二、Schema 是什么 Schema是定义结构化数据和二进制字节数组之间转换的逻辑，Pulsar的消息是以非结构化的二进制数组进行存储的，Schema只有在读写时才会被应用于数据上，因此生产者和消费者需要对Schema达成一致。Pulsar通过Schema Registry作为一个中央仓库存储Schema信息，它可以协调生产者和消费者保证相同的Schema，它可以存储多个版本的Schema，支持不同的兼容性配置以及根据兼容性的要求进行Schema的演进。Pulsar将Schema存储在Bookie上，Schema的写入、读取都通过Broker和Bookie交互，这个逻辑跟消息的读写操作是一只的，因此不需要额外考虑Schema的可用性和可靠性问题，因此整体看Pulsar实现Schema Registry的方式非常优雅\n">
 <meta property='og:url' content='https://sherlock-lin.github.io/p/schema%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/'>
-<meta property='og:site_name' content='夏洛克-lin'>
+<meta property='og:site_name' content='夏洛克-林'>
 <meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-09-20T10:34:56&#43;08:00'/><meta property='article:modified_time' content='2024-09-20T10:34:56&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/schema%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/image-20240308104136110.png' />
 <meta name="twitter:title" content="Schema深度解析">
 <meta name="twitter:description" content="一、引言 关于Pulsar Schema，咱们要想想以下几个问题\nPulsar 中的 Schema 是什么？ Pulsar Schema Registry的作用是什么？ 怎么使用？ 原理是什么？ 二、Schema 是什么 Schema是定义结构化数据和二进制字节数组之间转换的逻辑，Pulsar的消息是以非结构化的二进制数组进行存储的，Schema只有在读写时才会被应用于数据上，因此生产者和消费者需要对Schema达成一致。Pulsar通过Schema Registry作为一个中央仓库存储Schema信息，它可以协调生产者和消费者保证相同的Schema，它可以存储多个版本的Schema，支持不同的兼容性配置以及根据兼容性的要求进行Schema的演进。Pulsar将Schema存储在Bookie上，Schema的写入、读取都通过Broker和Bookie交互，这个逻辑跟消息的读写操作是一只的，因此不需要额外考虑Schema的可用性和可靠性问题，因此整体看Pulsar实现Schema Registry的方式非常优雅\n"><meta name="twitter:card" content="summary_large_image">
@@ -70,8 +70,8 @@
         
         
         <div class="site-meta">
-            <h1 class="site-name"><a href="/">夏洛克-lin</a></h1>
-            <h2 class="site-description">一个读书狂魔的博客，用于记录学习、思考心得~</h2>
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
         </div>
     </header><ol class="menu-social">
             
@@ -310,11 +310,11 @@
     
     <header class="article-category">
         
-            <a href="/categories/pulsar/" >
+            <a href="/categories/pulsar/" style="background-color: #2a9d8f; color: #fff;">
                 Pulsar
             </a>
         
-            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" >
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
                 大数据
             </a>
         

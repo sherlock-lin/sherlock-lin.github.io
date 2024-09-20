@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
     <channel>
-        <title>Categories on 夏洛克-lin</title>
+        <title>Categories on 夏洛克-林</title>
         <link>https://sherlock-lin.github.io/categories/</link>
-        <description>Recent content in Categories on 夏洛克-lin</description>
+        <description>Recent content in Categories on 夏洛克-林</description>
         <generator>Hugo -- gohugo.io</generator>
         <language>zh-cn</language>
         <copyright>sherlock-lin</copyright>
@@ -13,7 +13,7 @@
         <pubDate>Fri, 20 Sep 2024 10:34:56 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/categories/pulsar/</guid>
-        <description></description>
+        <description>&lt;img src="https://sherlock-lin.github.io/categories/pulsar/hutomo-abrianto-l2jk-uxb1BY-unsplash.jpg" alt="Featured image of post Pulsar" /&gt;</description>
         </item>
         <item>
         <title>大数据</title>
@@ -21,47 +21,7 @@
         <pubDate>Fri, 20 Sep 2024 10:34:56 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/</guid>
-        <description></description>
-        </item>
-        <item>
-        <title>Test</title>
-        <link>https://sherlock-lin.github.io/categories/test/</link>
-        <pubDate>Wed, 09 Sep 2020 00:00:00 +0000</pubDate>
-        
-        <guid>https://sherlock-lin.github.io/categories/test/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/categories/test/hutomo-abrianto-l2jk-uxb1BY-unsplash.jpg" alt="Featured image of post Test" /&gt;</description>
-        </item>
-        <item>
-        <title>测试</title>
-        <link>https://sherlock-lin.github.io/categories/%E6%B5%8B%E8%AF%95/</link>
-        <pubDate>Wed, 09 Sep 2020 00:00:00 +0000</pubDate>
-        
-        <guid>https://sherlock-lin.github.io/categories/%E6%B5%8B%E8%AF%95/</guid>
-        <description></description>
-        </item>
-        <item>
-        <title>Syntax</title>
-        <link>https://sherlock-lin.github.io/categories/syntax/</link>
-        <pubDate>Mon, 11 Mar 2019 00:00:00 +0000</pubDate>
-        
-        <guid>https://sherlock-lin.github.io/categories/syntax/</guid>
-        <description></description>
-        </item>
-        <item>
-        <title>Themes</title>
-        <link>https://sherlock-lin.github.io/categories/themes/</link>
-        <pubDate>Mon, 11 Mar 2019 00:00:00 +0000</pubDate>
-        
-        <guid>https://sherlock-lin.github.io/categories/themes/</guid>
-        <description></description>
-        </item>
-        <item>
-        <title>Test With Whitespaces</title>
-        <link>https://sherlock-lin.github.io/categories/test-with-whitespaces/</link>
-        <pubDate>Sat, 09 Mar 2019 00:00:00 +0000</pubDate>
-        
-        <guid>https://sherlock-lin.github.io/categories/test-with-whitespaces/</guid>
-        <description></description>
+        <description>&lt;img src="https://sherlock-lin.github.io/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/hutomo-abrianto-l2jk-uxb1BY-unsplash.jpg" alt="Featured image of post 大数据" /&gt;</description>
         </item>
         
     </channel>
