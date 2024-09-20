@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="引言 任何东西都有生命周期，就像沙丁鱼罐头🥫也会过期一样，咱们的消息本身也是有生命周期的，因此像Pulsar这样的流平台/消息队列也提供了Retention、Backlog和TTL机制。\n">
+<title>你真的了解Pulsar的消息保留、积压、TTL策略吗</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E4%BD%A0%E7%9C%9F%E7%9A%84%E4%BA%86%E8%A7%A3pulsar%E7%9A%84%E6%B6%88%E6%81%AF%E4%BF%9D%E7%95%99%E7%A7%AF%E5%8E%8Bttl%E7%AD%96%E7%95%A5%E5%90%97/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="你真的了解Pulsar的消息保留、积压、TTL策略吗">
+<meta property='og:description' content="引言 任何东西都有生命周期，就像沙丁鱼罐头🥫也会过期一样，咱们的消息本身也是有生命周期的，因此像Pulsar这样的流平台/消息队列也提供了Retention、Backlog和TTL机制。\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E4%BD%A0%E7%9C%9F%E7%9A%84%E4%BA%86%E8%A7%A3pulsar%E7%9A%84%E6%B6%88%E6%81%AF%E4%BF%9D%E7%95%99%E7%A7%AF%E5%8E%8Bttl%E7%AD%96%E7%95%A5%E5%90%97/'>
+<meta property='og:site_name' content='夏洛克-lin'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-09-20T10:34:57&#43;08:00'/><meta property='article:modified_time' content='2024-09-20T10:34:57&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E4%BD%A0%E7%9C%9F%E7%9A%84%E4%BA%86%E8%A7%A3pulsar%E7%9A%84%E6%B6%88%E6%81%AF%E4%BF%9D%E7%95%99%E7%A7%AF%E5%8E%8Bttl%E7%AD%96%E7%95%A5%E5%90%97/image-20240331085922332.png' />
+<meta name="twitter:title" content="你真的了解Pulsar的消息保留、积压、TTL策略吗">
+<meta name="twitter:description" content="引言 任何东西都有生命周期，就像沙丁鱼罐头🥫也会过期一样，咱们的消息本身也是有生命周期的，因此像Pulsar这样的流平台/消息队列也提供了Retention、Backlog和TTL机制。\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E4%BD%A0%E7%9C%9F%E7%9A%84%E4%BA%86%E8%A7%A3pulsar%E7%9A%84%E6%B6%88%E6%81%AF%E4%BF%9D%E7%95%99%E7%A7%AF%E5%8E%8Bttl%E7%AD%96%E7%95%A5%E5%90%97/image-20240331085922332.png' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-lin</a></h1>
+            <h2 class="site-description">一个读书狂魔的博客，用于记录学习、思考心得~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li>
+      <ol>
+        <li>
+          <ol>
+            <li><a href="#引言">引言</a></li>
+            <li><a href="#默认清理机制">默认清理机制</a></li>
+            <li><a href="#retention机制">Retention机制</a></li>
+            <li><a href="#backlog-限额机制">Backlog 限额机制</a></li>
+            <li><a href="#time-to-live-ttl">Time to live (TTL)</a></li>
+            <li><a href="#综合">综合</a></li>
+            <li><a href="#参考资料">参考资料</a></li>
+          </ol>
+        </li>
+      </ol>
+    </li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/%E4%BD%A0%E7%9C%9F%E7%9A%84%E4%BA%86%E8%A7%A3pulsar%E7%9A%84%E6%B6%88%E6%81%AF%E4%BF%9D%E7%95%99%E7%A7%AF%E5%8E%8Bttl%E7%AD%96%E7%95%A5%E5%90%97/">
+                <img src="/p/%E4%BD%A0%E7%9C%9F%E7%9A%84%E4%BA%86%E8%A7%A3pulsar%E7%9A%84%E6%B6%88%E6%81%AF%E4%BF%9D%E7%95%99%E7%A7%AF%E5%8E%8Bttl%E7%AD%96%E7%95%A5%E5%90%97/image-20240331085922332_hu15470779301091747491.png"
+                        srcset="/p/%E4%BD%A0%E7%9C%9F%E7%9A%84%E4%BA%86%E8%A7%A3pulsar%E7%9A%84%E6%B6%88%E6%81%AF%E4%BF%9D%E7%95%99%E7%A7%AF%E5%8E%8Bttl%E7%AD%96%E7%95%A5%E5%90%97/image-20240331085922332_hu15470779301091747491.png 800w, /p/%E4%BD%A0%E7%9C%9F%E7%9A%84%E4%BA%86%E8%A7%A3pulsar%E7%9A%84%E6%B6%88%E6%81%AF%E4%BF%9D%E7%95%99%E7%A7%AF%E5%8E%8Bttl%E7%AD%96%E7%95%A5%E5%90%97/image-20240331085922332_hu454606606282768277.png 1600w"
+                        width="800" 
+                        height="364" 
+                        loading="lazy"
+                        alt="Featured image of post 你真的了解Pulsar的消息保留、积压、TTL策略吗" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/%E4%BD%A0%E7%9C%9F%E7%9A%84%E4%BA%86%E8%A7%A3pulsar%E7%9A%84%E6%B6%88%E6%81%AF%E4%BF%9D%E7%95%99%E7%A7%AF%E5%8E%8Bttl%E7%AD%96%E7%95%A5%E5%90%97/">你真的了解Pulsar的消息保留、积压、TTL策略吗</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2024-09-20</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 5 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h4 id="引言">引言
+</h4><p>任何东西都有生命周期，就像沙丁鱼罐头🥫也会过期一样，咱们的消息本身也是有生命周期的，因此像Pulsar这样的流平台/消息队列也提供了Retention、Backlog和TTL机制。</p>
+<h4 id="默认清理机制">默认清理机制
+</h4><p>任何机制的出现都是有背景的，因此我们要先了解这三个机制出现之前的情况，才能分析出它们具体分别解决的事什么问题。首先看下图，生产者往Broker不断往Broker中写入消息，这些消息在Broker中会按照顺序从左到右进行存储的，新写入的消息是不断的在左边进行新增。消费者也是从右往左进行消费的，在Broker中会维持一个游标记录消费的情况，通过此游标Broker才可以对消息进去区分，哪些消息是可清理回收的，哪些消息是目前还不能清理回收的。这个默认清理机制符合我们使用消息队列的一部分业务场景</p>
+<img src="image-20240331085922332.png" alt="image-20240331085922332" style="zoom:50%;" />
+<h4 id="retention机制">Retention机制
+</h4><p>在咱们理解了默认清理机制时，我们会有个疑问🤔️，如果消息一被成功消费就被删除，那么如果Broker的下游处理有问题需要从头消费或者从指定的某个位置消费的话，目前的清理机制是完成没办法支持的。而Pulsar设计的目标是一个大一统的流平台/消息队列，肯定是不允许这种情况的出现，因此引入了Retention机制。</p>
+<p>通过下图可以看到消息发布订阅过程，在默认的清理机制中游标右侧的消息是允许被删除的，但是配置Retention的情况则会按照机制进行保存一段时间。而Cursor游标左边的这些消息表示还没被消费者消费，因此即便没有配置 Retention机制这些消息也不会被删除。Retention 支持数据大小维度以及时间维度两种方式进行配置，不过它目前仅支持针对Namespace级别进行生效。</p>
+<img src="image-20240331091248731.png" alt="image-20240331091248731" style="zoom:50%;" />
+<p>在设置Retentio机制时可以通过<code>defaultRetentionSizeInMB</code>和<code>defaultRetentionTimeInMinutes</code>同时进行配置，此时会有以下几种情况</p>
+<div class="table-wrapper"><table>
+  <thead>
+      <tr>
+          <th style="text-align: left">时间维度</th>
+          <th style="text-align: left">文件大小为度</th>
+          <th style="text-align: left">消息保留效果</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: left">-1</td>
+          <td style="text-align: left">-1</td>
+          <td style="text-align: left">永久保存</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">-1</td>
+          <td style="text-align: left">&gt;0</td>
+          <td style="text-align: left">基于数据大小进行保留</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">&gt;0</td>
+          <td style="text-align: left">-1</td>
+          <td style="text-align: left">基于时间进行保留</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">0</td>
+          <td style="text-align: left">0</td>
+          <td style="text-align: left">默认配置，当消息被消费后不会被保留</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">0</td>
+          <td style="text-align: left">&gt;0</td>
+          <td style="text-align: left">无效配置</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">&gt;0</td>
+          <td style="text-align: left">0</td>
+          <td style="text-align: left">无效配置</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">&gt;0</td>
+          <td style="text-align: left">&gt;0</td>
+          <td style="text-align: left">当消息已经被消费或者没有消费者订阅时，满足其中一个条件的则不被保留</td>
+      </tr>
+  </tbody>
+</table></div>
+<h4 id="backlog-限额机制">Backlog 限额机制
+</h4><p>Retention机制解决了消息“提前”删除的问题，那么可以高枕无忧了吗？让我们来想想下面这种场景，就是未被成功消费的消息是会一直保留在Pulsar中的，那么如果写入速度一直远大于消费速度，是不是就相当于一个蓄水池入水速度远大于出水速度，最终这个池子会满一样，Pulsar的磁盘也会被打满从而影响服务的稳定性。</p>
+<p>Backlog的原理其实不复杂，相当于在蓄水池中标记一个水位线，当蓄水池的高度到达这条水位线时则触发报警，工作人员根据这个报警来做出相对应的处理。Pulsar其实也是一样，假如我们配置Backlog限额的大小是两条消息的大小，那么如下图，此时如果已经有两条消息未被消费，再有一条新的消息进行尝试写入，就会触发Pulsar的报警策略进行处理。</p>
+<img src="image-20240331094008739.png" alt="image-20240331094008739" style="zoom:50%;" />
+<p>积压警报策略有以下三种</p>
+<ul>
+<li>producer_request_hold：生产者会暂时等待一段时间，并在之后重新进行消息发送</li>
+<li>producer_exception：向生产者抛出异常，让生产者进行处理如停止或暂停往Pulsar进行消息的写入</li>
+<li>consumer_backlog_eviction：Broker会清理一些积压的数据</li>
+</ul>
+<p>Backlog 机制是针对Namespace级别限额，同样是支持通过数据大小以及时间两种维度配置。</p>
+<h4 id="time-to-live-ttl">Time to live (TTL)
+</h4><p>看起来Retention和Backlog机制已经基本满足我们的使用了，那么为啥还要加一个TTL呢？是社区闲着没事干整那么多东西吗，答案显然不是的。我们再来想想生活中的某些场景，如果在我们的业务场景中消息是有时效性的，例如股票最新的价格，如果这个价格信息是通过Pulsar进行传递的，那么如果这条消息及时没有被消费，在10分钟后它的价值理论上就没有那么高了，因为还会有源源不断的最新价格信息写入Pulsar，而用户更加关心的是最新的价格。因此根据业务场景给消息配置上TTL，可以更有利于Pulsar进行消息的回收以及资源的释放。通过下图我们可以看到，每一条消息都有一个“蜡烛”标记它的生命周期</p>
+<img src="image-20240331100100527.png" alt="image-20240331100100527" style="zoom:50%;" />
+<p>当这条消息上面的蜡烛燃尽时，即便这条消息还没有被消费，游标依然会移动到它左边将其标记为允许被删除，因为此时对于业务来说这条消息已经属于没有价值，没有在Pulsar继续保留的必要。可以看到这种方式相比Backlog的方式更加稳妥，因为这不依赖于消费者的消费情况</p>
+<img src="image-20240331100408359.png" alt="image-20240331100408359" style="zoom:50%;" />
+<h4 id="综合">综合
+</h4><ol>
+<li>对于Pulsar存储而言，Backlog和TTL机制可以防止磁盘被耗尽；而Retention机制会占用磁盘来保留未来可能还会用到的消息。</li>
+<li>对于影响范围而言，Retention机制仅针对已经成功消费的消息，Backlog和TTL仅针对未被成功消费的消息。</li>
+<li>整体流程就是，在过了Retention配置的时间，已被成功消费的消息就会被删除；如果Pulsar的消息超过了Backlog限额则Pulsar会停止接收来自生产者的消息直到有更多可用的空间，因此针对消息数据配置TTL是可以非常好的保护Backlog限额的。</li>
+<li>Pulsar物理存储的大小应该满足Retention和Backlog的总和，在设计集群时应该把消息需要保留多久、允许多少积压等考虑进去。</li>
+<li>除此之外Pulsar支持分层存储，会将冷数据迁移到更加廉价的外部系统中存储，此时配置的策略会依然有效，因此应该考虑全面。</li>
+</ol>
+<p>以上就是Pulsar Retention、Backlog和TTL机制的核心，可以满足流平台/消息队列的使用场景</p>
+<h4 id="参考资料">参考资料
+</h4><ol>
+<li>
+<p><a class="link" href="https://pulsar.apache.org/docs/next/cookbooks-retention-expiry/"  target="_blank" rel="noopener"
+    >官方文档</a></p>
+</li>
+<li>
+<p><a class="link" href="https://medium.com/kafkaesqueio/understanding-pulsar-message-ttl-backlog-and-retention-2c38ddecf868"  target="_blank" rel="noopener"
+    >Understanding Pulsar Message TTL, Backlog, and Retention</a></p>
+</li>
+<li>
+<p><a class="link" href="https://blog.csdn.net/qq_27818541/article/details/106504722"  target="_blank" rel="noopener"
+    >Apache Pulsar 之 TTL 与 Retention 策略</a></p>
+</li>
+</ol>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+     
+    
+        
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>

@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="一、Pulsar客户端简析 pulsar服务是经典的C/S架构，由客户端和服务端构成。服务端提供处理读写请求服务，客户端负责发起读写请求。pulsar将客户端按照读写分成了生产者和消费者，但是无论怎么分，它们本质上都是Pulsar客户端并有很多相同的地方，本篇就针对客户端进行分析。\n">
+<title>PulsarClient源码解析</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="PulsarClient源码解析">
+<meta property='og:description' content="一、Pulsar客户端简析 pulsar服务是经典的C/S架构，由客户端和服务端构成。服务端提供处理读写请求服务，客户端负责发起读写请求。pulsar将客户端按照读写分成了生产者和消费者，但是无论怎么分，它们本质上都是Pulsar客户端并有很多相同的地方，本篇就针对客户端进行分析。\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/'>
+<meta property='og:site_name' content='夏洛克-lin'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-09-20T10:34:21&#43;08:00'/><meta property='article:modified_time' content='2024-09-20T10:34:21&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651.png' />
+<meta name="twitter:title" content="PulsarClient源码解析">
+<meta name="twitter:description" content="一、Pulsar客户端简析 pulsar服务是经典的C/S架构，由客户端和服务端构成。服务端提供处理读写请求服务，客户端负责发起读写请求。pulsar将客户端按照读写分成了生产者和消费者，但是无论怎么分，它们本质上都是Pulsar客户端并有很多相同的地方，本篇就针对客户端进行分析。\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651.png' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-lin</a></h1>
+            <h2 class="site-description">一个读书狂魔的博客，用于记录学习、思考心得~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#一pulsar客户端简析">一、Pulsar客户端简析</a></li>
+    <li><a href="#二创建客户端对象">二、创建客户端对象</a>
+      <ol>
+        <li><a href="#1创建流程">1、创建流程</a></li>
+      </ol>
+    </li>
+    <li><a href="#三创建网络连接池">三、创建网络连接池</a>
+      <ol>
+        <li><a href="#1-初始化">1. 初始化</a></li>
+        <li><a href="#2-工作流程">2. 工作流程</a></li>
+        <li><a href="#3-小结">3. 小结</a></li>
+      </ol>
+    </li>
+    <li><a href="#四其他功能">四、其他功能</a>
+      <ol>
+        <li><a href="#1-lookupservice">1. LookupService</a></li>
+        <li><a href="#2-memorylimitcontroller">2. MemoryLimitController</a></li>
+        <li><a href="#3-线程池">3. 线程池</a></li>
+      </ol>
+    </li>
+    <li><a href="#五总结">五、总结</a></li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">
+                <img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651_hu16452811171809744413.png"
+                        srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651_hu16452811171809744413.png 800w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651_hu16145534154080172485.png 1600w"
+                        width="800" 
+                        height="551" 
+                        loading="lazy"
+                        alt="Featured image of post PulsarClient源码解析" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">PulsarClient源码解析</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2024-09-20</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 7 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="一pulsar客户端简析">一、Pulsar客户端简析
+</h2><p>pulsar服务是经典的C/S架构，由客户端和服务端构成。服务端提供处理读写请求服务，客户端负责发起读写请求。pulsar将客户端按照读写分成了生产者和消费者，但是无论怎么分，它们本质上都是Pulsar客户端并有很多相同的地方，本篇就针对客户端进行分析。</p>
+<p>下图是客户端的组成部分</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651.png"
+	width="597"
+	height="411"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651_hu11410679199034989283.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651_hu13206718389126136331.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240715212010651"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="145"
+		data-flex-basis="348px"
+	
+></p>
+<ol>
+<li>
+<p>ConnectionPool连接池(值得深挖)</p>
+<p>连接池是客户端的核心，维护着跟服务端的TCP连接，客户端的读写(生产者/消费者)都强依赖网络连接，因为最后数据还是要通过底层的网络进行通信</p>
+</li>
+<li>
+<p>LookupService</p>
+<p>具有路有属性的客户端角色，负责查找Topic归属的Broker节点</p>
+</li>
+<li>
+<p>线程池</p>
+<ol>
+<li>
+<p>事件线程池</p>
+</li>
+<li>
+<p>外部线程池</p>
+</li>
+<li>
+<p>内部线程池</p>
+</li>
+</ol>
+</li>
+</ol>
+<h2 id="二创建客户端对象">二、创建客户端对象
+</h2><h3 id="1创建流程">1、创建流程
+</h3><p>先看看下面一段代码</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715213854794.png"
+	width="2066"
+	height="782"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715213854794_hu11816197355143134158.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715213854794_hu5523794216323436390.png 1024w"
+	loading="lazy"
+	
+		alt="生产者样例代码"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="264"
+		data-flex-basis="634px"
+	
+></p>
+<p>这是通过生产者写数据到Pulsar服务端的case，相信大家不会感到陌生，其中34行就是创建客户端的逻辑，因此就从这里进行跟踪</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715214127066.png"
+	width="1346"
+	height="160"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715214127066_hu17878455826163643770.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715214127066_hu17428859303033397795.png 1024w"
+	loading="lazy"
+	
+		alt="PulsarClient#builder"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="841"
+		data-flex-basis="2019px"
+	
+></p>
+<p>通过跟踪PulsarClient.builder方法可以看到这是一个静态方法，可以看到返回值是ClientBuilder对象，具体实现逻辑咱们先不关心，咱们只需要知道这个方法会创建一个ClientBuilder就够了，结合之前的创建的逻辑可以知道最终会走到ClientBuilder#build方法</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715215335556.png"
+	width="2528"
+	height="624"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715215335556_hu4680673860447691714.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715215335556_hu13195103751695705384.png 1024w"
+	loading="lazy"
+	
+		alt="ClientBuilder#build"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="405"
+		data-flex-basis="972px"
+	
+></p>
+<p>build方法中核心就是50行的通过PulsarClientImpl构造函数创建客户端对象，其他的都是一些配置校验工作。下面就直接进入PulsarClientImpl的构造函数进行分析</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715220456402.png"
+	width="1360"
+	height="1713"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715220456402_hu4273681838403983949.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715220456402_hu11934903890829173591.png 1024w"
+	loading="lazy"
+	
+		alt="PulsarClientImpl构造函数"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="79"
+		data-flex-basis="190px"
+	
+></p>
+<p>这个构造方法虽然逻辑不少，但实际上重要的就是201行的初始化</p>
+<h2 id="三创建网络连接池">三、创建网络连接池
+</h2><h3 id="1-初始化">1. 初始化
+</h3><p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716144229847.png"
+	width="1275"
+	height="74"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716144229847_hu10022979054794751121.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716144229847_hu12213548504836185642.png 1024w"
+	loading="lazy"
+	
+		alt="ConnectionPool构造函数"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1722"
+		data-flex-basis="4135px"
+	
+></p>
+<p>这里的ClientCnx对象非常重要，后面再细讲。现在先继续跟踪构造函数的逻辑</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716144443670.png"
+	width="1278"
+	height="1081"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716144443670_hu12853424957518397982.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716144443670_hu11870231030574824281.png 1024w"
+	loading="lazy"
+	
+		alt="ConnectionPool构造函数"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="118"
+		data-flex-basis="283px"
+	
+></p>
+<p>这里初始化了Netty客户端，在跟外部创建网络连接时直接通过Netty客户端进行即可。客户端初始化阶段，网络连接池基本上就做了这些事，那么它是怎么工作的呢，让我们来往下看</p>
+<h3 id="2-工作流程">2. 工作流程
+</h3><p>在创建生产者对象时，会走到PulsarClientImpl#getConnection这个方法，从这里开始进行分析</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716150347627.png"
+	width="1301"
+	height="183"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716150347627_hu5335529753649283584.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716150347627_hu12077341662623260190.png 1024w"
+	loading="lazy"
+	
+		alt="PulsarClientImpl#getConnection"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="710"
+		data-flex-basis="1706px"
+	
+></p>
+<p>此方法第一行是通过Lookup服务查找Topic归属的Broker节点信息，Lookup相关的感兴趣的可以看 <a class="link" href="https://mp.weixin.qq.com/s?__biz=MzU4OTk0ODc1NQ==&amp;mid=2247484022&amp;idx=1&amp;sn=1098acb29558e3f067baa0101b62554f&amp;chksm=fdc4f04acab3795c2d3451cd0fecba3eaddea50be7898f33ba199637d2394e2386ff7bdf2338&amp;token=2082773986&amp;lang=zh_CN#rd"  target="_blank" rel="noopener"
+    >Apache Pulsar源码解析之Lookup机制</a> 这篇文章，在969行会将Lookup查到的Broker地址进行创建网络连接</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716155009862.png"
+	width="1288"
+	height="126"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716155009862_hu8721458146572122709.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716155009862_hu8127810092075942318.png 1024w"
+	loading="lazy"
+	
+		alt="PulsarClientImpl#getConnection"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1022"
+		data-flex-basis="2453px"
+	
+></p>
+<p>可以看到获取网络连接方法最终会调用ConnectionPool类的方法进行获取</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716155240478.png"
+	width="1280"
+	height="728"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716155240478_hu15890361702240661320.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716155240478_hu10141213194004655281.png 1024w"
+	loading="lazy"
+	
+		alt="ConnectionPool#getConnection"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="175"
+		data-flex-basis="421px"
+	
+></p>
+<p>这里会根据参数randomKey(Broker IP地址)进行网络连接的复用，如果还没创建的话则进行创建，同时检查清理不可用的网络连接进行释放</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716162501530.png"
+	width="1281"
+	height="680"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716162501530_hu14174860767846040231.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716162501530_hu16407152179389494344.png 1024w"
+	loading="lazy"
+	
+		alt="ConnectionPool#createConnection"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="188"
+		data-flex-basis="452px"
+	
+></p>
+<p>调用createConnection方法进行连接创建，同时也在通道创建通道成功后绑定监听器，在通道被关闭时一起关闭当前的网络连接。</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716165441031.png"
+	width="1279"
+	height="490"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716165441031_hu3519535433370199042.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716165441031_hu15499434885954785596.png 1024w"
+	loading="lazy"
+	
+		alt="ConnectionPool#createConnection"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="261"
+		data-flex-basis="626px"
+	
+></p>
+<p>将unresolvedPhysicalAddress解析出正确的地址，现在还不太清楚已经有了logicalAddress(目标Broker地址)，还解析这个的用途是什么</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716165732246.png"
+	width="1284"
+	height="786"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716165732246_hu8636560299134393540.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716165732246_hu16983181243499683456.png 1024w"
+	loading="lazy"
+	
+		alt="ConnectionPool#connectToResolvedAddresses"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="163"
+		data-flex-basis="392px"
+	
+></p>
+<p>调用connectToAddress方法创建网络连接，如果出现异常时，如果服务端在Lookup阶段返回不止一个地址，那么就尝试跟下一个地址创建网络连接</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716163741276.png"
+	width="1279"
+	height="415"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716163741276_hu12105893502126375613.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716163741276_hu7259782645406320568.png 1024w"
+	loading="lazy"
+	
+		alt="ConnectionPool#connectToAddress"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="308"
+		data-flex-basis="739px"
+	
+></p>
+<p>这里应该就很熟悉了，就是通过Netty客户端创建跟目标Broker节点的TCP连接。</p>
+<h3 id="3-小结">3. 小结
+</h3><p>连接池是一个ConcurrentHashMap，key是IP+端口，value是ClientCnx来缓存这些连接。ClientCnx除了管理连接还管理所有的业务命令，例如发送消息是Send命令，服务端会对应一个handleSend方法来处理这个命令。</p>
+<p>连接池是客户端最重要的内容，无论是生产者还是消费者在创建的时候，都会去连接池获取/创建跟Broker的网络连接，后续的数据读写本质上都是通过Netty的channel进行的，因此可见它是相当重要的。连接池的设计将网络连接跟其他读写功能剥离开来达到职责分离的效果，同时通过池化概念，在多个生产者/消费者情况下不仅节约了网络连接的创建，同时还提升网络连接创建的性能(复用思路)。</p>
+<h2 id="四其他功能">四、其他功能
+</h2><h3 id="1-lookupservice">1. LookupService
+</h3><p>Lookup机制工作逻辑在 <a class="link" href="https://mp.weixin.qq.com/s?__biz=MzU4OTk0ODc1NQ==&amp;mid=2247484022&amp;idx=1&amp;sn=1098acb29558e3f067baa0101b62554f&amp;chksm=fdc4f04acab3795c2d3451cd0fecba3eaddea50be7898f33ba199637d2394e2386ff7bdf2338&amp;token=2082773986&amp;lang=zh_CN#rd"  target="_blank" rel="noopener"
+    >Apache Pulsar源码解析之Lookup机制</a> 这篇文章已经说明了，这里主要一起看看它的创建逻辑。在PulsarClientImpl构造函数中，我们能看到以下代码</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716175013649.png"
+	width="1297"
+	height="181"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716175013649_hu14518300645729513639.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716175013649_hu9851554769193661896.png 1024w"
+	loading="lazy"
+	
+		alt="PulsarClientImpl构造函数"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="716"
+		data-flex-basis="1719px"
+	
+></p>
+<p>Pulsar支持两种Lookup实现，一种是通过http协议去跟服务端通信，另一种是通过二进制方式查询(性能更好)。本次就跟着比较常见的http方式进行分析</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716175523842.png"
+	width="1288"
+	height="151"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716175523842_hu14777965857090243722.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716175523842_hu299945831601804294.png 1024w"
+	loading="lazy"
+	
+		alt="HttpLookupService#构造函数"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="852"
+		data-flex-basis="2047px"
+	
+></p>
+<p>通过构造函数可以看到是通过创建HttpClient对象进行的，这里我一开始以为是用的开源的HttpClient就没继续跟，后来在调试的时候跟进去才发现，这是Pulsar 自定义对象</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716175834970.png"
+	width="1377"
+	height="651"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716175834970_hu14050712519667947581.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716175834970_hu6517699553773470421.png 1024w"
+	loading="lazy"
+	
+		alt="HttpClient构造函数"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="211"
+		data-flex-basis="507px"
+	
+></p>
+<p>跟踪进去看，其他都是赋值、安全检查的工作，核心在161行的httpClient创建。  这里可以看到是创建的AsyncHttpClient对象，这是一个封装Netty的async-http-client-2.12.1.jar的外部包，这是支持异步处理的高性能HTTP工具包</p>
+<h3 id="2-memorylimitcontroller">2. MemoryLimitController
+</h3><p>由于MemoryLimitController的内容不多，就看看它的创建以及工作流程</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716183103606.png"
+	width="1295"
+	height="102"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716183103606_hu6481861356456972134.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716183103606_hu12979483834406873890.png 1024w"
+	loading="lazy"
+	
+		alt="PulsarClientImpl构造函数"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1269"
+		data-flex-basis="3047px"
+	
+></p>
+<p>在PulsarClientImpl的构造函数中可以看到会调用MemoryLimitController构造函数进行创造，从这里进去分析</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716183330350.png"
+	width="1274"
+	height="127"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716183330350_hu7444495992315662397.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716183330350_hu1401845268335140800.png 1024w"
+	loading="lazy"
+	
+		alt="MemoryLimitController构造函数"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1003"
+		data-flex-basis="2407px"
+	
+></p>
+<p>构造逻辑很简单，就只有赋值操作，到这里就成功创建MemoryLimitController对象了，那就再看看它是怎么工作的吧。MemoryLimitController的核心工作逻辑是checkTrigger方法</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716184114648.png"
+	width="1273"
+	height="233"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716184114648_hu12876752081294053359.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716184114648_hu3171673580603985748.png 1024w"
+	loading="lazy"
+	
+		alt="MemoryLimitController#checkTrigger"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="546"
+		data-flex-basis="1311px"
+	
+></p>
+<p>这里会调用trigger的run方法，这个trigger的逻辑其实就是创建MemoryLimitController的构造方法第三个参数，也就是上面的reduceConsumerReceiverQueueSize方法，那么继续跟踪</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716184321815.png"
+	width="1300"
+	height="130"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716184321815_hu1792466870363744462.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716184321815_hu16170509689335060438.png 1024w"
+	loading="lazy"
+	
+		alt="PulsarClientImpl#reduceConsumerReceiverQueueSize"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1000"
+		data-flex-basis="2400px"
+	
+></p>
+<p>循环调用所有的消费者的reduceCurrentReceiverQueueSize方法，也就是说MemoryLimitController目前只能限制消费者的内存。</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716184502516.png"
+	width="1316"
+	height="260"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716184502516_hu12204823169863712848.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716184502516_hu13806252421139196374.png 1024w"
+	loading="lazy"
+	
+		alt="ConsumerBase#reduceCurrentReceiverQueueSize"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="506"
+		data-flex-basis="1214px"
+	
+></p>
+<p>这里的限制逻辑相当于将所有消费者的接收队列的容量减半，避免队列中的数据占用过多内存。由此可见MemoryLimitController目前做的还是比较小范围的内存控制，并且整体逻辑并不复杂。</p>
+<h3 id="3-线程池">3. 线程池
+</h3><p>客户端对象初始化时候，会创建三个线程池，现在就来分析下它们的用途</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716185103767.png"
+	width="1294"
+	height="240"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716185103767_hu15978890912358599346.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716185103767_hu8384624857223159557.png 1024w"
+	loading="lazy"
+	
+		alt="PulsarClientImpl构造函数"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="539"
+		data-flex-basis="1294px"
+	
+></p>
+<p>首先是externalExecutorProvider线程池通过查看调用的方法，可以看到是被消费者使用，里面的工作线程主要是用于消费服务端的消息</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716185212427.png"
+	width="1831"
+	height="216"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716185212427_hu3434627599839741086.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716185212427_hu12042818894243467682.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240716185212427"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="847"
+		data-flex-basis="2034px"
+	
+></p>
+<p>再来看看internalExecutorProvider线程池，可以看到是用来是一些跟偏向Pulsar系统层面的工作</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716185502823.png"
+	width="1274"
+	height="386"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716185502823_hu7363873261420337578.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716185502823_hu939161670653277538.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240716185502823"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="330"
+		data-flex-basis="792px"
+	
+></p>
+<p>至于scheduledExecutorProvider相信就更简单了，顾名思义都是处理一些周期性的任务，例如下面的周期性的同步Topic分区信息到客户端</p>
+<p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716185621967.png"
+	width="1300"
+	height="203"
+	srcset="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716185621967_hu11338911780860313927.png 480w, /p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716185621967_hu17506677190038963883.png 1024w"
+	loading="lazy"
+	
+		alt="PulsarClientImpl#getPartitionedTopicMetadata"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="640"
+		data-flex-basis="1536px"
+	
+></p>
+<h2 id="五总结">五、总结
+</h2><ol>
+<li>PulsarClient中的EventLoopGroup负责创建TCP连接，ConnectionPool对象负责管理连接，在创建ConnectionPool对象时会通过EventLoopGroup创建连接。</li>
+<li>PulsarClient使用Netty来创建TCP连接，并管理一个连接池和两个线程池，所有Producer和Consumer都会复用PulsarClient的连接池和线程池，这样可以避免客户端创建过多的连接和线程。因此通常一个进程中只创建一个PulsarClient，每个Topic可以自己单独创建Producer和Consumer。</li>
+<li>由于Broker使用了Reactor模型，单线程只负责转发事件，而数据的读取、解码、处理等都是在工作线程中完成的，也就是服务端所有请求都是异步完成的；客户端Producer/Consumer都是异步的，因此不存在单连接的性能问题。</li>
+<li>PulsarClient默认只会与每个Broker建立一个连接，如果觉得不够可以通过配置来调大。</li>
+<li>ClientCnx非常重要，这是netty的入队处理逻辑类。后续会专门针对这个类进行解析</li>
+</ol>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+     
+    
+        
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>

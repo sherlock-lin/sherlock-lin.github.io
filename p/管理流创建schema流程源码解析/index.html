@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="这是一个副标题">
+<title>管理流创建schema流程源码解析</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="管理流创建schema流程源码解析">
+<meta property='og:description' content="这是一个副标题">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/'>
+<meta property='og:site_name' content='夏洛克-lin'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2021-09-20T10:02:55&#43;08:00'/><meta property='article:modified_time' content='2021-09-20T10:02:55&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801111546500.png' />
+<meta name="twitter:title" content="管理流创建schema流程源码解析">
+<meta name="twitter:description" content="这是一个副标题"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801111546500.png' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-lin</a></h1>
+            <h2 class="site-description">一个读书狂魔的博客，用于记录学习、思考心得~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#一简析">一、简析</a>
+      <ol>
+        <li>
+          <ol>
+            <li><a href="#客户端">客户端</a></li>
+            <li><a href="#服务端">服务端</a></li>
+            <li><a href="#小结">小结</a></li>
+          </ol>
+        </li>
+      </ol>
+    </li>
+    <li><a href="#二客户端源码解析">二、客户端源码解析</a>
+      <ol>
+        <li>
+          <ol>
+            <li><a href="#源码跟踪">源码跟踪</a></li>
+            <li><a href="#小结-1">小结</a></li>
+          </ol>
+        </li>
+      </ol>
+    </li>
+    <li><a href="#三服务端源码解析">三、服务端源码解析</a>
+      <ol>
+        <li>
+          <ol>
+            <li><a href="#源码跟踪-1">源码跟踪</a></li>
+            <li><a href="#小结-2">小结</a></li>
+          </ol>
+        </li>
+      </ol>
+    </li>
+    <li><a href="#四其他">四、其他</a>
+      <ol>
+        <li>
+          <ol>
+            <li><a href="#序列化对象创建流程">序列化对象创建流程</a></li>
+            <li><a href="#getschemacompatibilitystrategyasyncwithoutauth方法">getSchemaCompatibilityStrategyAsyncWithoutAuth方法</a></li>
+          </ol>
+        </li>
+      </ol>
+    </li>
+    <li><a href="#五总结">五、总结</a></li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">
+                <img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801111546500_hu4354155557490672000.png"
+                        srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801111546500_hu4354155557490672000.png 800w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801111546500_hu12193508658411373864.png 1600w"
+                        width="800" 
+                        height="401" 
+                        loading="lazy"
+                        alt="Featured image of post 管理流创建schema流程源码解析" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">管理流创建schema流程源码解析</a>
+        </h2>
+    
+        
+        <h3 class="article-subtitle">
+            这是一个副标题
+        </h3>
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2021-09-20</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 9 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="一简析">一、简析
+</h2><p>schema是pulsar重要的功能之一，现在就一起从源码的视角看下管理流创建schema时客户端和服务端的表现</p>
+<img src="image-20240801111546500.png" alt="schema新建流程图" style="zoom:50%;" />
+<h4 id="客户端">客户端
+</h4><p>客户端主要经历以下四个步骤</p>
+<ol>
+<li>
+<p>创建Schema实例</p>
+<p>根据数据类型创建相对应的实例，例如Avro创建AvroSchema、JSON创建JSONSchema等</p>
+</li>
+<li>
+<p>获取处理Schema的对象</p>
+<p>管理流PulsarAdmin对象获取SchemasImpl对象，这个对象是专门处理所有schema相关的操作。除此之外PulsarAdmin对象还维护着Clusters、Brokers、Tenants等等管理维护集群的重要对象，通过这些对象可以很好的管理维护Pulsar集群</p>
+</li>
+<li>
+<p>构造SchemaInfo</p>
+<p>通过Schema实例创建其对应的SchemaInfo信息，里面就包括这个schema的名字、schema的结构化信息、schema类型等等，最后SchemaInfo这个对象会转成字符串发到服务端</p>
+</li>
+<li>
+<p>发送HTTP请求</p>
+<p>通过post请求将数据发到服务端，这里是通过Java Rest库<code>javax.ws.rs-api</code>进行处理的</p>
+</li>
+</ol>
+<h4 id="服务端">服务端
+</h4><p>服务端主要经历以下四个步骤</p>
+<ol>
+<li>
+<p>参数格式校验</p>
+<ul>
+<li>校验租户、命名空间的是否有效(判空、是否有特殊字符)</li>
+<li>从缓存中根据Topic获取其对应的TopicName对象</li>
+</ul>
+</li>
+<li>
+<p>权限校验</p>
+<ul>
+<li>判断是否是Topic的owner</li>
+<li>判断当前用户是否有操作当前Topic的权限</li>
+</ul>
+</li>
+<li>
+<p>SchemaRegistry注册schema</p>
+<p>SchemaRegistryService是服务端处理所有schema相关的对象，而schema相关的读写操作是依赖它的成员SchemaStorage进行处理的，SchemaStorage的最终是通过Bookkeeper客户端对象发送写请求</p>
+</li>
+<li>
+<p>写Bookkeeper</p>
+<p>通过LedgerHandle对象向Bookkeeper服务端发送写请求</p>
+</li>
+</ol>
+<h4 id="小结">小结
+</h4><p>schame新建流程概括起来就是，客户端构造schema信息，服务端负责schema校验，bookkeeper负责schema的存储</p>
+<h2 id="二客户端源码解析">二、客户端源码解析
+</h2><h4 id="源码跟踪">源码跟踪
+</h4><p>下面是通过管理流创建schema的样例代码，核心就是通过PulsarAdmin.schemas获取schema对象，这个schema对象负责所有客户端跟schema相关的操作，包括schema的增删改查等。通过方法的第二个参数可以看到是通过Schema接口提供的静态方法AVRO来构造Avro格式的schema对象，除此之外Schema接口还提供了诸如JSON、KeyValue、PROTOBUF等静态方法提供对应数据格式的schema对象，这里如果将这块构造schema对象逻辑抽成简单工厂模式可能会更合适些</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729172837581.png"
+	width="1236"
+	height="110"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729172837581_hu14890125510219316635.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729172837581_hu17409074404300204285.png 1024w"
+	loading="lazy"
+	
+		alt="PulsarAdmin#schemas"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1123"
+		data-flex-basis="2696px"
+	
+></p>
+<p>接下来就进入createSchema方法，顾名思义可以知道这个方法就是用于创建schema的，第一个参数是topic，第二个参数是SchemaInfo对象，这个对象包含了所有要新建的schema信息，这里会将它转换为PostSchemaPayload对象传递给下一个方法。PostSchemaPayload是用来请求到服务端的参数</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729173005511.png"
+	width="1229"
+	height="108"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729173005511_hu7180577664643573155.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729173005511_hu18445689225004285794.png 1024w"
+	loading="lazy"
+	
+		alt="SchemasImpl#createSchema"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1137"
+		data-flex-basis="2731px"
+	
+></p>
+<p>这个方法并不会有返回值，sync方法是处理异步结果对象，它在正常写成功情况下不会做任何操作，但如果有什么错误会往外抛出异常。这里核心逻辑是在createSchemaAsync方法</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729173024061.png"
+	width="1226"
+	height="106"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729173024061_hu17267696047294698750.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729173024061_hu13682707279377374573.png 1024w"
+	loading="lazy"
+	
+		alt="SchemasImpl#createSchema"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1156"
+		data-flex-basis="2775px"
+	
+></p>
+<p>可以看到这个方法的返回值是个异步对象，146行这里会获取当前topic对应的TopicName对象，并通过schemaPath方法构造WebTarget对象，这个对象中就包含着要请求的HTTP地址，主要是根据当前Topic的版本来决定请求服务端哪个版本的处理方法。除此之外还可以看到有通过Entity.json方法将PostSchemaPayload对象转换为HTTP请求的参数对象，转换逻辑是<code>javax.ws.rs-api</code>这个网络库封装的，就不进行跟踪了</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729173055476.png"
+	width="1235"
+	height="133"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729173055476_hu714247660217932986.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729173055476_hu17454513801596529388.png 1024w"
+	loading="lazy"
+	
+		alt="SchemasImpl#createSchemaAsync"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="928"
+		data-flex-basis="2228px"
+	
+></p>
+<p>这里就是客户端最后发送的地方，request方法中还会发送前的安全相关检查，async方法基本上就说明本次HTTP请求是异步的，而post方法也能看得出，这是一个POST类型的HTTP请求，再往后就是将请求发送出去了</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729173158356.png"
+	width="1247"
+	height="482"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729173158356_hu4891121595876301352.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729173158356_hu18345316698464425745.png 1024w"
+	loading="lazy"
+	
+		alt="BaseResource#asyncPostRequest"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="258"
+		data-flex-basis="620px"
+	
+></p>
+<p>不知是否有人好奇参数WebTarget长什么样子，通过通过调试可以看到值为</p>
+<p><code>/admin/v2/schemas/public/test-namespace-jytixthzgatgirem/test-multi-version-schema-one/schema</code></p>
+<p>此值仅供学习参考，具体这个值的构造逻辑如下</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731181945601.png"
+	width="1239"
+	height="216"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731181945601_hu15371243072153598565.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731181945601_hu12432210051391367248.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240731181945601"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="573"
+		data-flex-basis="1376px"
+	
+></p>
+<h4 id="小结-1">小结
+</h4><p>简单归纳如下</p>
+<ul>
+<li>通过Schema接口构造对应数据格式的schema对象，由此对象可得到schema相关的元信息SchemaInfo</li>
+<li>构造请求目标的HTTP地址</li>
+<li>通过<code>javax.ws.rs-api</code>提供的库发送异步HTTP请求到服务端</li>
+</ul>
+<h2 id="三服务端源码解析">三、服务端源码解析
+</h2><h4 id="源码跟踪-1">源码跟踪
+</h4><p>服务端的接收逻辑在SchemasResource类，这个类在<code>org.apache.pulsar.broker.admin</code>包下，这个包下全是处理管理流相关的操作，如果有做pulsar平台化需求的，这个包下的相关逻辑值得一读。</p>
+<p>再来看看postSchema方法，首先是validateTopicName方法，这个方法就是对入参进行判空、是否有特殊字符做检查；接下来就是核心方法postSchemaAsync，通过方法名可以推断出这是个异步处理schema写请求的方法</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729194959541.png"
+	width="1234"
+	height="429"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729194959541_hu9333317064984100276.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729194959541_hu7436403967037463318.png 1024w"
+	loading="lazy"
+	
+		alt="SchemasResource#postSchema"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="287"
+		data-flex-basis="690px"
+	
+></p>
+<p>postSchemaAsync方法看似复杂，实际上核心的就是133行，其余的方法大概说一下，validateOwnershipAndOperationAsync方法主要检查当前用户是否有新建schema的操作权限，getSchemaCompatibilityStrategyAsyncWithoutAuth方法相对复杂一些，放到后面详细讲解。那么再看回133行，其中getSchemaRegistryService方法获取的是SchemaRegistryServiceImpl对象，顾名思义可以知道Pulsar的SchemaResistry相关的功能都是由它进行处理，现在先看它的putSchemaIfAbsent方法</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729195104746.png"
+	width="1231"
+	height="651"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729195104746_hu6860522986621189885.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729195104746_hu5683074286350072344.png 1024w"
+	loading="lazy"
+	
+		alt="SchemasResourceBase#postSchemaAsync"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="189"
+		data-flex-basis="453px"
+	
+></p>
+<p>SchemaStorage对象是SchemaRegistryServiceImpl的核心成员，负责schema存储相关的操作。在新建schema时会调用它的put方法进行创建；这里有个trimDeletedSchemaAndGetList方法，如果put方法在创建schema时有任何异常，则此方法会去删除该新建的schema，避免写&quot;一半&quot;的情况发生，某种意义上这也是一种回滚的设计。</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729195352645.png"
+	width="1250"
+	height="1295"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729195352645_hu10874364139532262699.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729195352645_hu1336243845419764441.png 1024w"
+	loading="lazy"
+	
+		alt="SchemaRegistryServiceImpl#putSchemaIfAbsent"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="96"
+		data-flex-basis="231px"
+	
+></p>
+<p>这里的getAll方法很重要，会根据schema的id来查询是否已经存在当前schema，有的话则将版本号加1。处理完之后就调用put方法</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729195443408.png"
+	width="1236"
+	height="350"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729195443408_hu12846998180265435131.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729195443408_hu3964362823798182133.png 1024w"
+	loading="lazy"
+	
+		alt="SchemaStorage#put"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="353"
+		data-flex-basis="847px"
+	
+></p>
+<p>这里没什么逻辑，继续往下跟踪</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729195537689.png"
+	width="1227"
+	height="112"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729195537689_hu6762093260933959404.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729195537689_hu15225946068801744943.png 1024w"
+	loading="lazy"
+	
+		alt="BookkeeperSchemaStorage#put"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1095"
+		data-flex-basis="2629px"
+	
+></p>
+<p>getSchemaLocator方法会构造LocatorEntry对象，调用putSchema</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729195712122.png"
+	width="1234"
+	height="133"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729195712122_hu14148882716286125861.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729195712122_hu9409580567747890812.png 1024w"
+	loading="lazy"
+	
+		alt="BookkeeperSchemaStorage#putSchema"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="927"
+		data-flex-basis="2226px"
+	
+></p>
+<p>由于是初次创建schema，因此直接走到337行；如果这个topic已经创建过schema则会读取之前的schema信息再新增，同时把版本号自增</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731200801015.png"
+	width="1235"
+	height="486"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731200801015_hu174001734197143982.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731200801015_hu5512279534387556761.png 1024w"
+	loading="lazy"
+	
+		alt="BookkeeperSchemaStorage#putSchema"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="254"
+		data-flex-basis="609px"
+	
+></p>
+<p>在这里可以看得到构造IndexEntry对象，这是消息的索引对象，后续用来加速查询schema</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731200730426.png"
+	width="1238"
+	height="674"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731200730426_hu3231925097935001500.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731200730426_hu13901611195092240727.png 1024w"
+	loading="lazy"
+	
+		alt="BookkeeperSchemaStorage#createNewSchema"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="183"
+		data-flex-basis="440px"
+	
+></p>
+<p>这个方法的内容就很眼熟了(bookkeeper相关内容)，createLedger方法会先创建这个Ledger</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731201404943.png"
+	width="1236"
+	height="431"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731201404943_hu2841471455828782876.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731201404943_hu6589055934649886670.png 1024w"
+	loading="lazy"
+	
+		alt="BookkeeperSchemaStorage#addNewSchemaEntryToStore"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="286"
+		data-flex-basis="688px"
+	
+></p>
+<p>在576行可以看到最终调用bookkeeper创建这个Ledger</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731202132664.png"
+	width="1233"
+	height="566"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731202132664_hu7916272927182690835.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731202132664_hu14928556797184222805.png 1024w"
+	loading="lazy"
+	
+		alt="BookkeeperSchemaStorage#createLedger"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="217"
+		data-flex-basis="522px"
+	
+></p>
+<p>再来看看addEntry方法，这里核心也是调用bookkeeper的ledgerHandle进行数据写入</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731202346518.png"
+	width="1231"
+	height="326"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731202346518_hu7739461529183748137.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240731202346518_hu12616295482118472857.png 1024w"
+	loading="lazy"
+	
+		alt="BookkeeperSchemaStorage#addEntry"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="377"
+		data-flex-basis="906px"
+	
+></p>
+<p>这个方法是属于Bookkeeper客户端的逻辑了，通过方法注释可以看到，这个方法负责将数据异步写入到一个打开的Ledger。Bookkeeper相关的逻辑后续在单独写post进行讲解</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729200042625.png"
+	width="1255"
+	height="235"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729200042625_hu6656097128619094946.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729200042625_hu4417995524592391187.png 1024w"
+	loading="lazy"
+	
+		alt="LedgerHandle#asyncAddEntry"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="534"
+		data-flex-basis="1281px"
+	
+></p>
+<h4 id="小结-2">小结
+</h4><p>简单归纳如下</p>
+<ol>
+<li>参数格式校验、操作权限校验</li>
+<li>查询当前Topic是否已经创建过schema，有则以插入时版本号自增</li>
+<li>如果是初次创建Schema，则调用bookkeeper创建Ledger</li>
+<li>往这个Schema对应的Ledger内插入schema元数据信息</li>
+</ol>
+<h2 id="四其他">四、其他
+</h2><h4 id="序列化对象创建流程">序列化对象创建流程
+</h4><p>现在再专门来看看序列化对象的创建过程，回到开头管理流创建schema的地方，Schema.AVRO方法是咱们本次要看的</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801102718485.png"
+	width="1233"
+	height="110"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801102718485_hu14963862710218495265.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801102718485_hu6990902464296639079.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240801102718485"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1120"
+		data-flex-basis="2690px"
+	
+></p>
+<p>通过注释可以看到，此静态方法是创建一个Avro类型的schema对象，getDefaultImplementation方法是获取实现类(饿汉单例设计模式)，而newAvroSchema方法才是本次要看的</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801102903039.png"
+	width="1251"
+	height="242"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801102903039_hu14063280269861355559.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801102903039_hu13120795949518626679.png 1024w"
+	loading="lazy"
+	
+		alt="Schema#AVRO"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="516"
+		data-flex-basis="1240px"
+	
+></p>
+<p>继续往下跟踪</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801102954265.png"
+	width="1250"
+	height="77"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801102954265_hu2672557962094153403.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801102954265_hu7267046351725128187.png 1024w"
+	loading="lazy"
+	
+		alt="PulsarClientImplementationBindingImpl#newAvroSchema"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1623"
+		data-flex-basis="3896px"
+	
+></p>
+<p>获取对应处理的类加载器，并通过对应的类加载器创建AvroSchema实例</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103112168.png"
+	width="1251"
+	height="378"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103112168_hu3047202715909193560.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103112168_hu16004224346820283583.png 1024w"
+	loading="lazy"
+	
+		alt="AvroSchema#of"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="330"
+		data-flex-basis="794px"
+	
+></p>
+<p>54行是核心，其他的都是赋值操作</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103216385.png"
+	width="1240"
+	height="214"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103216385_hu9024172701109897611.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103216385_hu13078275138435241623.png 1024w"
+	loading="lazy"
+	
+		alt="AvroSchema#构造函数"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="579"
+		data-flex-basis="1390px"
+	
+></p>
+<p>super调用父类构造函数做赋值操作，还是继续看</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103232236.png"
+	width="1222"
+	height="106"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103232236_hu12395913581899964245.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103232236_hu2752148747983998185.png 1024w"
+	loading="lazy"
+	
+		alt="AvroBaseStructSchema#构造函数"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1152"
+		data-flex-basis="2766px"
+	
+></p>
+<p>继续跟踪parse逻辑</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103300148.png"
+	width="1219"
+	height="131"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103300148_hu13101872139125344676.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103300148_hu17453622755438741720.png 1024w"
+	loading="lazy"
+	
+		alt="SchemaUtil#parseAvroSchema"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="930"
+		data-flex-basis="2233px"
+	
+></p>
+<p>FACTORY.createParser方法是jackson的方法，用于创建JsonParser对象的；因此继续跟踪parse方法</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103350160.png"
+	width="1258"
+	height="245"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103350160_hu5714447918147911590.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103350160_hu14860525000776647599.png 1024w"
+	loading="lazy"
+	
+		alt="Schema#parse"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="513"
+		data-flex-basis="1232px"
+	
+></p>
+<p>1471行可以看到返回了我们想要的Schema对象，那么Schema.parse方法就是重中之重</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103451599.png"
+	width="1265"
+	height="348"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103451599_hu899493848410194812.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801103451599_hu12838368326752257493.png 1024w"
+	loading="lazy"
+	
+		alt="Schema#parse"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="363"
+		data-flex-basis="872px"
+	
+></p>
+<p>这个方法是核心，本身会递归的进行解析赋值给schema对象</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801104702548.png"
+	width="1262"
+	height="2957"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801104702548_hu1637957763600468048.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801104702548_hu12860479379243776259.png 1024w"
+	loading="lazy"
+	
+		alt="Schema#parse"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="42"
+		data-flex-basis="102px"
+	
+></p>
+<p>相信读者读到这里也好奇schema长什么样，因此提供下图让读者感受下，能大概推测得出来这里已经涵盖了schema的结构信息了</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801104410337.png"
+	width="1495"
+	height="665"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801104410337_hu13566068487357294807.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801104410337_hu2949028046730697756.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240801104410337"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="224"
+		data-flex-basis="539px"
+	
+></p>
+<h4 id="getschemacompatibilitystrategyasyncwithoutauth方法">getSchemaCompatibilityStrategyAsyncWithoutAuth方法
+</h4><p>AdminResource#getSchemaCompatibilityStrategyAsyncWithoutAuth方法是在服务端处理schema创建请求阶段会调用的方法，现在就一起跟踪看看</p>
+<p>731行和739行分别是获取Topic级别和Namespace级别的schema兼容策略，如果没有定义则默认自动更新。例如Topic A之前已经创建过schema1，那么如果此时再发起schema2创建请求，则服务端会继续保存并且生效schema2，只不过它的版本号会进行累加，当然，也可以配置为不支持schema策略不支持更新，一旦确定了后就不允许再变更</p>
+<p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801110732825.png"
+	width="1237"
+	height="668"
+	srcset="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801110732825_hu2422932672083748491.png 480w, /p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801110732825_hu6961848120915382542.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240801110732825"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="185"
+		data-flex-basis="444px"
+	
+></p>
+<h2 id="五总结">五、总结
+</h2><p>相信大家对schema创建的流程已经很清楚了，再次简单归纳下</p>
+<ol>
+<li>客户端根据用户定义的结构信息创建对应的Schema对象，并将结构信息以HTTP请求发给服务端</li>
+<li>服务端检测并根据Schema兼容策略做相对应的处理，一般情况下会调用Bookkeeper创建Ledger以及Entry</li>
+<li>Bookkeeper将此Schema数据持久化到磁盘，相当于Schema信息会被Bookkeeper当作一条消息进行存储</li>
+</ol>
+<p>这基本上就是全部内容，当然细节感兴趣的小伙伴可以自行跟踪代码，相信你会有更多收获～</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+     
+    
+        
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>

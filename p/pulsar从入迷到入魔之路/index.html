@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="一、引言 系统学习Pulsar的大纲\n二、正文 下图是我绘制的Pulsar大纲 (由于时间缘故花的比较粗糙，这张图会不定期更新)\n三、学习大纲 一、Pulsar Client 二、生产者 Pulsar消息路由深入剖析 三、消费者 四、Topic pulsar原来是这样操作topic的 五、Function Pulsar3.2 Function的介绍与使用 Pulsar IO实战 Worker调度管理器原理解析 六、Schema Registry Pulsar Schema使用原理介绍 七、存储管理 详解bookkeeper AutoRecovery机制 八、综合 九、高可用 四、学习资料 官方文档\n">
+<title>Pulsar从入迷到入魔之路</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/pulsar%E4%BB%8E%E5%85%A5%E8%BF%B7%E5%88%B0%E5%85%A5%E9%AD%94%E4%B9%8B%E8%B7%AF/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="Pulsar从入迷到入魔之路">
+<meta property='og:description' content="一、引言 系统学习Pulsar的大纲\n二、正文 下图是我绘制的Pulsar大纲 (由于时间缘故花的比较粗糙，这张图会不定期更新)\n三、学习大纲 一、Pulsar Client 二、生产者 Pulsar消息路由深入剖析 三、消费者 四、Topic pulsar原来是这样操作topic的 五、Function Pulsar3.2 Function的介绍与使用 Pulsar IO实战 Worker调度管理器原理解析 六、Schema Registry Pulsar Schema使用原理介绍 七、存储管理 详解bookkeeper AutoRecovery机制 八、综合 九、高可用 四、学习资料 官方文档\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/pulsar%E4%BB%8E%E5%85%A5%E8%BF%B7%E5%88%B0%E5%85%A5%E9%AD%94%E4%B9%8B%E8%B7%AF/'>
+<meta property='og:site_name' content='夏洛克-lin'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-09-20T10:34:56&#43;08:00'/><meta property='article:modified_time' content='2024-09-20T10:34:56&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/pulsar%E4%BB%8E%E5%85%A5%E8%BF%B7%E5%88%B0%E5%85%A5%E9%AD%94%E4%B9%8B%E8%B7%AF/image-20240316103554735.png' />
+<meta name="twitter:title" content="Pulsar从入迷到入魔之路">
+<meta name="twitter:description" content="一、引言 系统学习Pulsar的大纲\n二、正文 下图是我绘制的Pulsar大纲 (由于时间缘故花的比较粗糙，这张图会不定期更新)\n三、学习大纲 一、Pulsar Client 二、生产者 Pulsar消息路由深入剖析 三、消费者 四、Topic pulsar原来是这样操作topic的 五、Function Pulsar3.2 Function的介绍与使用 Pulsar IO实战 Worker调度管理器原理解析 六、Schema Registry Pulsar Schema使用原理介绍 七、存储管理 详解bookkeeper AutoRecovery机制 八、综合 九、高可用 四、学习资料 官方文档\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/pulsar%E4%BB%8E%E5%85%A5%E8%BF%B7%E5%88%B0%E5%85%A5%E9%AD%94%E4%B9%8B%E8%B7%AF/image-20240316103554735.png' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-lin</a></h1>
+            <h2 class="site-description">一个读书狂魔的博客，用于记录学习、思考心得~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#一引言">一、引言</a></li>
+    <li><a href="#二正文">二、正文</a></li>
+    <li><a href="#三学习大纲">三、学习大纲</a>
+      <ol>
+        <li>
+          <ol>
+            <li><a href="#一pulsar-client">一、Pulsar Client</a></li>
+            <li><a href="#二生产者">二、生产者</a></li>
+            <li><a href="#三消费者">三、消费者</a></li>
+            <li><a href="#四topic">四、Topic</a></li>
+            <li><a href="#五function">五、Function</a></li>
+            <li><a href="#六schema-registry">六、Schema Registry</a></li>
+            <li><a href="#七存储管理">七、存储管理</a></li>
+            <li><a href="#八综合">八、综合</a></li>
+            <li><a href="#九高可用">九、高可用</a></li>
+          </ol>
+        </li>
+      </ol>
+    </li>
+    <li><a href="#四学习资料">四、学习资料</a></li>
+    <li><a href="#五想对本系列文章读者说的话">五、想对本系列文章读者说的话</a></li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/pulsar%E4%BB%8E%E5%85%A5%E8%BF%B7%E5%88%B0%E5%85%A5%E9%AD%94%E4%B9%8B%E8%B7%AF/">
+                <img src="/p/pulsar%E4%BB%8E%E5%85%A5%E8%BF%B7%E5%88%B0%E5%85%A5%E9%AD%94%E4%B9%8B%E8%B7%AF/image-20240316103554735_hu16552580620542397517.png"
+                        srcset="/p/pulsar%E4%BB%8E%E5%85%A5%E8%BF%B7%E5%88%B0%E5%85%A5%E9%AD%94%E4%B9%8B%E8%B7%AF/image-20240316103554735_hu16552580620542397517.png 800w, /p/pulsar%E4%BB%8E%E5%85%A5%E8%BF%B7%E5%88%B0%E5%85%A5%E9%AD%94%E4%B9%8B%E8%B7%AF/image-20240316103554735_hu2204058640157979746.png 1600w"
+                        width="800" 
+                        height="542" 
+                        loading="lazy"
+                        alt="Featured image of post Pulsar从入迷到入魔之路" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/pulsar%E4%BB%8E%E5%85%A5%E8%BF%B7%E5%88%B0%E5%85%A5%E9%AD%94%E4%B9%8B%E8%B7%AF/">Pulsar从入迷到入魔之路</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2024-09-20</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 2 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="一引言">一、引言
+</h2><p>系统学习Pulsar的大纲</p>
+<h2 id="二正文">二、正文
+</h2><p>下图是我绘制的Pulsar大纲 (由于时间缘故花的比较粗糙，这张图会不定期更新)</p>
+<img src="image-20240316103554735.png" alt="image-20240316103554735" style="zoom:50%;" />
+<h2 id="三学习大纲">三、学习大纲
+</h2><h4 id="一pulsar-client">一、Pulsar Client
+</h4><h4 id="二生产者">二、生产者
+</h4><ol>
+<li><a class="link" href="https://blog.csdn.net/linchonghui888/article/details/136689382"  target="_blank" rel="noopener"
+    >Pulsar消息路由深入剖析</a></li>
+</ol>
+<h4 id="三消费者">三、消费者
+</h4><h4 id="四topic">四、Topic
+</h4><ol>
+<li><a class="link" href="https://blog.csdn.net/linchonghui888/article/details/135402239"  target="_blank" rel="noopener"
+    >pulsar原来是这样操作topic的</a></li>
+</ol>
+<h4 id="五function">五、Function
+</h4><ol>
+<li><a class="link" href="https://blog.csdn.net/linchonghui888/article/details/136353474"  target="_blank" rel="noopener"
+    >Pulsar3.2 Function的介绍与使用</a></li>
+<li><a class="link" href="https://blog.csdn.net/linchonghui888/article/details/136689470"  target="_blank" rel="noopener"
+    >Pulsar IO实战</a></li>
+<li><a class="link" href="https://blog.csdn.net/linchonghui888/article/details/136487456"  target="_blank" rel="noopener"
+    >Worker调度管理器原理解析</a></li>
+</ol>
+<h4 id="六schema-registry">六、Schema Registry
+</h4><ol>
+<li><a class="link" href="https://blog.csdn.net/linchonghui888/article/details/136587735?spm=1001.2014.3001.5501"  target="_blank" rel="noopener"
+    >Pulsar Schema使用原理介绍</a></li>
+</ol>
+<h4 id="七存储管理">七、存储管理
+</h4><ol>
+<li><a class="link" href="https://blog.csdn.net/linchonghui888/article/details/135387974"  target="_blank" rel="noopener"
+    >详解bookkeeper AutoRecovery机制</a></li>
+</ol>
+<h4 id="八综合">八、综合
+</h4><h4 id="九高可用">九、高可用
+</h4><h2 id="四学习资料">四、学习资料
+</h2><ol>
+<li>
+<p><a class="link" href="https://pulsar.apache.org/docs/3.2.x/"  target="_blank" rel="noopener"
+    >官方文档</a></p>
+</li>
+<li>
+<p>Pulsar三本书籍</p>
+<p>《Mastering Apache Pulsar》：个人认为是Pulsar系统资料最好的，喜欢Pulsar的伙伴务必阅读此经典</p>
+<p>《深入解析Apace Pulsar》：林琳大佬的作品，兼备使用、调优以及原理的介绍</p>
+<p>《Apache Pulsar in Action》：目录布局不太好，但针对个别知识点讲得比较精细，可作为补充读物</p>
+</li>
+<li>
+<p><a class="link" href="https://mp.weixin.qq.com/s/Fb4FReqSGfHZfINY9Ws9LA"  target="_blank" rel="noopener"
+    >Pulsar官方整理资料大全</a>：收录了大量Pulsar使用、原理、业务场景等精彩的文章资料</p>
+</li>
+</ol>
+<h2 id="五想对本系列文章读者说的话">五、想对本系列文章读者说的话
+</h2><p>坦白了说，现如今的网络环境不像过去那么友好(这个观点不做任何讨论，如果你觉得不对，那么你是对的)，如今还能坚持在网络上输出高质量的作者都是值得尊敬的。我之所以写这系列文章的目的有以下三点：1. 接触技术这些年，受到不少大佬文章的熏陶，技术和思维都有了不少的提升，因此也想做些回馈于技术社区的事情  2. 我知道一定有不少对技术充满热情的小白，我希望能够以Pulsar为切入点给你带来技术的乐趣 3. 通过输出文章来倒推自己持续阅读、提升自己提炼抽象能力。</p>
+<p>我能保证的是以下几点</p>
+<ol>
+<li>这个系列的文章永不收费(降低大家阅读成本)</li>
+<li>输出的内容都是经过思考的，拒绝复制张贴以及低价值的东西</li>
+<li>尽可能以图、精简的话来协助大家伙对某个知识点的理解</li>
+<li>不做模凌两可的解释，宁可偏激的给个错误的答案，我相信有一定依据支撑的错误答案价值大于模糊不清的概念</li>
+</ol>
+<p>除此之外，由于本人的知识量以及认知有限，如果有某个知识表述不清楚或者表达有误的地方，恳请指出，大家一起学习共同进步～</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+     
+    
+        
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>

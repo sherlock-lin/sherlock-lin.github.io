@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="一、简析 Broker的启动流程框架基本如下\n触发启动 初始化 读取配置、检测、赋值 启动 Bookie启动 Broker启动 启动Netty 启动后台监控任务 二、何时、如何触发启动 Broker的启动基本都是靠维护人员主动触发的，入口是Broker提供的脚本 bin/pulsar、bin/pulsar-daemon。常见的启动指令有 bin/pulsar standalone、 bin/pulsar broker、bin/pulsar-daemon start broker等，今天就从bin/pulsar broker流程进行探讨。先来看看bin/pulsar的脚本逻辑\n">
+<title>启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生">
+<meta property='og:description' content="一、简析 Broker的启动流程框架基本如下\n触发启动 初始化 读取配置、检测、赋值 启动 Bookie启动 Broker启动 启动Netty 启动后台监控任务 二、何时、如何触发启动 Broker的启动基本都是靠维护人员主动触发的，入口是Broker提供的脚本 bin/pulsar、bin/pulsar-daemon。常见的启动指令有 bin/pulsar standalone、 bin/pulsar broker、bin/pulsar-daemon start broker等，今天就从bin/pulsar broker流程进行探讨。先来看看bin/pulsar的脚本逻辑\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/'>
+<meta property='og:site_name' content='夏洛克-lin'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-09-20T10:34:57&#43;08:00'/><meta property='article:modified_time' content='2024-09-20T10:34:57&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240913141630196.png' />
+<meta name="twitter:title" content="启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生">
+<meta name="twitter:description" content="一、简析 Broker的启动流程框架基本如下\n触发启动 初始化 读取配置、检测、赋值 启动 Bookie启动 Broker启动 启动Netty 启动后台监控任务 二、何时、如何触发启动 Broker的启动基本都是靠维护人员主动触发的，入口是Broker提供的脚本 bin/pulsar、bin/pulsar-daemon。常见的启动指令有 bin/pulsar standalone、 bin/pulsar broker、bin/pulsar-daemon start broker等，今天就从bin/pulsar broker流程进行探讨。先来看看bin/pulsar的脚本逻辑\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240913141630196.png' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-lin</a></h1>
+            <h2 class="site-description">一个读书狂魔的博客，用于记录学习、思考心得~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li>
+      <ol>
+        <li>
+          <ol>
+            <li><a href="#一简析">一、简析</a></li>
+            <li><a href="#二何时如何触发启动">二、何时、如何触发启动</a></li>
+            <li><a href="#三broker启动流程">三、Broker启动流程</a></li>
+            <li><a href="#四总结">四、总结</a></li>
+          </ol>
+        </li>
+      </ol>
+    </li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/">
+                <img src="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240913141630196_hu6018241644086706244.png"
+                        srcset="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240913141630196_hu6018241644086706244.png 800w, /p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240913141630196_hu9251393859693937695.png 1600w"
+                        width="800" 
+                        height="242" 
+                        loading="lazy"
+                        alt="Featured image of post 启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/">启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2024-09-20</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 4 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h4 id="一简析">一、简析
+</h4><p>Broker的启动流程框架基本如下</p>
+<ol>
+<li>触发启动</li>
+<li>初始化
+<ul>
+<li>读取配置、检测、赋值</li>
+</ul>
+</li>
+<li>启动
+<ol>
+<li>Bookie启动</li>
+<li>Broker启动
+<ol>
+<li>启动Netty</li>
+<li>启动后台监控任务</li>
+</ol>
+</li>
+</ol>
+</li>
+</ol>
+<h4 id="二何时如何触发启动">二、何时、如何触发启动
+</h4><p>Broker的启动基本都是靠维护人员主动触发的，入口是Broker提供的脚本 <code>bin/pulsar</code>、<code>bin/pulsar-daemon</code>。常见的启动指令有 <code>bin/pulsar standalone</code>、 <code>bin/pulsar broker</code>、<code>bin/pulsar-daemon start broker</code>等，今天就从<code>bin/pulsar broker</code>流程进行探讨。先来看看<code>bin/pulsar</code>的脚本逻辑</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">pulsar_help<span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    cat <span class="s">&lt;&lt;EOF
+</span></span></span><span class="line"><span class="cl"><span class="s">//在这里可以看到pulsar支持的操作，当然也可以通过bin/pulsar  help 指令进行查看
+</span></span></span><span class="line"><span class="cl"><span class="s">Usage: pulsar &lt;command&gt;
+</span></span></span><span class="line"><span class="cl"><span class="s">where command is one of:
+</span></span></span><span class="line"><span class="cl"><span class="s">		//启动Broker服务
+</span></span></span><span class="line"><span class="cl"><span class="s">    broker              Run a broker server
+</span></span></span><span class="line"><span class="cl"><span class="s">    //启动bookie服务
+</span></span></span><span class="line"><span class="cl"><span class="s">    bookie              Run a bookie server
+</span></span></span><span class="line"><span class="cl"><span class="s">    zookeeper           Run a zookeeper server
+</span></span></span><span class="line"><span class="cl"><span class="s">    configuration-store Run a configuration-store server
+</span></span></span><span class="line"><span class="cl"><span class="s">    discovery           Run a discovery server
+</span></span></span><span class="line"><span class="cl"><span class="s">    proxy               Run a pulsar proxy
+</span></span></span><span class="line"><span class="cl"><span class="s">    websocket           Run a web socket proxy server
+</span></span></span><span class="line"><span class="cl"><span class="s">    functions-worker    Run a functions worker server
+</span></span></span><span class="line"><span class="cl"><span class="s">    sql-worker          Run a sql worker server
+</span></span></span><span class="line"><span class="cl"><span class="s">    sql                 Run sql CLI
+</span></span></span><span class="line"><span class="cl"><span class="s">    standalone          Run a broker server with local bookies and local zookeeper
+</span></span></span><span class="line"><span class="cl"><span class="s">    autorecovery        Run an autorecovery service
+</span></span></span><span class="line"><span class="cl"><span class="s">		....
+</span></span></span><span class="line"><span class="cl"><span class="s">}
+</span></span></span><span class="line"><span class="cl"><span class="s">
+</span></span></span><span class="line"><span class="cl"><span class="s">//如果执行的是bin/pulsar broker则会走到这里，可以清楚的看到最终会调用PulsarBrokerStarter类进行启动
+</span></span></span><span class="line"><span class="cl"><span class="s">if [ $COMMAND == &#34;broker&#34; ]; then
+</span></span></span><span class="line"><span class="cl"><span class="s">    PULSAR_LOG_FILE</span><span class="o">=</span><span class="si">${</span><span class="nv">PULSAR_LOG_FILE</span><span class="k">:-</span><span class="s2">&#34;pulsar-broker.log&#34;</span><span class="si">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">exec</span> <span class="nv">$JAVA</span> <span class="nv">$LOG4J2_SHUTDOWN_HOOK_DISABLED</span> <span class="nv">$OPTS</span> -Dpulsar.log.file<span class="o">=</span><span class="nv">$PULSAR_LOG_FILE</span> org.apache.pulsar.PulsarBrokerStarter --broker-conf <span class="nv">$PULSAR_BROKER_CONF</span> <span class="nv">$@</span>
+</span></span><span class="line"><span class="cl"><span class="k">elif</span> <span class="o">[</span> <span class="nv">$COMMAND</span> <span class="o">==</span> <span class="s2">&#34;bookie&#34;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+</span></span><span class="line"><span class="cl">    <span class="nv">PULSAR_LOG_FILE</span><span class="o">=</span><span class="si">${</span><span class="nv">PULSAR_LOG_FILE</span><span class="k">:-</span><span class="s2">&#34;bookkeeper.log&#34;</span><span class="si">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">exec</span> <span class="nv">$JAVA</span> <span class="nv">$OPTS</span> -Dpulsar.log.file<span class="o">=</span><span class="nv">$PULSAR_LOG_FILE</span> org.apache.bookkeeper.server.Main --conf <span class="nv">$PULSAR_BOOKKEEPER_CONF</span> <span class="nv">$@</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="三broker启动流程">三、Broker启动流程
+</h4><p>通过脚本能够看到是通过PulsarBrokerStarter进行启动，因此现在就直接从它的main方法进行跟踪吧</p>
+<p><img src="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912190827624.png"
+	width="1230"
+	height="569"
+	srcset="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912190827624_hu9056242677826948616.png 480w, /p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912190827624_hu17484323108990211195.png 1024w"
+	loading="lazy"
+	
+		alt="PulsarBrokerStarter#main"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="216"
+		data-flex-basis="518px"
+	
+></p>
+<p>这里的初始化和启动两条链路都值得看，首先跟踪下初始化Broker的链路</p>
+<p><img src="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912201859114.png"
+	width="1224"
+	height="2132"
+	srcset="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912201859114_hu7300230405390556246.png 480w, /p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912201859114_hu11372914787203338586.png 1024w"
+	loading="lazy"
+	
+		alt="BrokerStarter#构造函数"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="57"
+		data-flex-basis="137px"
+	
+></p>
+<p>可以看到初始化的过程中分别做了 配置加载、初始化Broker、初始化Bookkeeper以及AutoRecoveryMain服务等。接下来就就看服务启动链路。</p>
+<p>可以看到启动入口很简洁，就是启动上面初始化好的Broker、Bookkeeper、AutoRecoveryMain，这里先看Broker的启动流程也就是276行</p>
+<p><img src="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912202550536.png"
+	width="1226"
+	height="378"
+	srcset="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912202550536_hu10044610411225330781.png 480w, /p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912202550536_hu13245871286600875033.png 1024w"
+	loading="lazy"
+	
+		alt="BrokerStarter#start"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="324"
+		data-flex-basis="778px"
+	
+></p>
+<p>可以看到这个方法非常大，里面内容非常丰富，一起来详细看看</p>
+<p><img src="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912204404063.png"
+	width="1300"
+	height="6133"
+	srcset="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912204404063_hu18137123883546174023.png 480w, /p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912204404063_hu449763587142634575.png 1024w"
+	loading="lazy"
+	
+		alt="PulsarService#start"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="21"
+		data-flex-basis="50px"
+	
+></p>
+<p>简单总结下这个方法，它主要创建了以下几个对象</p>
+<ul>
+<li>
+<p>CoordinationServiceImpl对象，用于协调Broker选主</p>
+</li>
+<li>
+<p>BrokerService对象，这个是启动Broker对象的核心</p>
+</li>
+<li>
+<p>LoadManager对象，用于管理Broker对象的负载均衡</p>
+</li>
+<li>
+<p>SchemaStorage对象，负责处理读写schema的请求</p>
+</li>
+<li>
+<p>OffloadPoliciesImpl，负责分层存储操作</p>
+</li>
+<li>
+<p>并启动WebService服务，负责对外提供http服务</p>
+</li>
+<li>
+<p>WorkerService服务，负责处理function计算操作</p>
+</li>
+</ul>
+<p>这里面的BrokerService是最核心的，在这里进去看下它创建的逻辑</p>
+<p><img src="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912211150449.png"
+	width="1248"
+	height="3886"
+	srcset="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912211150449_hu12685087766613547482.png 480w, /p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912211150449_hu6924837973557394693.png 1024w"
+	loading="lazy"
+	
+		alt="BrokerService#构造函数"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="32"
+		data-flex-basis="77px"
+	
+></p>
+<p>此方法主要做了下面几件事</p>
+<ul>
+<li>创建Netty服务端，用于处理生产者/消费者/代理的TCP请求</li>
+<li>创建定期检测服务
+<ul>
+<li>不活跃的检测</li>
+<li>消息过期检测</li>
+<li>压缩检测</li>
+<li>消费者检测</li>
+</ul>
+</li>
+<li>初始化五个Map容器
+<ul>
+<li>维护Topic对象</li>
+<li>维护集群副本复制的客户端</li>
+<li>维护连接当前Broker的管理流</li>
+<li>维护Topic归属信息</li>
+<li>维护多层级的Topic信息？</li>
+</ul>
+</li>
+<li>启动DelayedDeliveryTrackerLoader跟踪延迟消息</li>
+<li>启动Broker拦截器BrokerEntryMetadataInterceptors</li>
+<li>启动限额管理对象BundlesQuotas</li>
+</ul>
+<p><img src="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912213242869.png"
+	width="1254"
+	height="1486"
+	srcset="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912213242869_hu10860774660295293100.png 480w, /p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912213242869_hu12854337351092929711.png 1024w"
+	loading="lazy"
+	
+		alt="BrokerService#start"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="84"
+		data-flex-basis="202px"
+	
+></p>
+<ul>
+<li>启动Netty服务端(此时Pulsar服务具备处理所有客户端请求能力)</li>
+<li>启动定期检测服务
+<ul>
+<li>不活跃的检测</li>
+<li>消息过期检测</li>
+<li>压缩检测</li>
+<li>消费者检测</li>
+<li>消息积压检测</li>
+</ul>
+</li>
+</ul>
+<h4 id="四总结">四、总结
+</h4><p>PulsarService是Pulsar服务启动的核心类，其内置了七大重要的对象如下图</p>
+<p><img src="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240913141630196.png"
+	width="914"
+	height="277"
+	srcset="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240913141630196_hu7540094836171967857.png 480w, /p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240913141630196_hu595369138289089509.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240913141630196"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="329"
+		data-flex-basis="791px"
+	
+></p>
+<ul>
+<li>BrokerService: 核心是启动Netty，处理客户端的TCP连接，同时通过多个Map容器维护例如Topic信息、Topic归属信息等等，除此之外还启动一批定时线程定期检测(消息过期、压缩、客户端活跃等)</li>
+<li>LoadManager: 负责处理Broker服务的负载均衡</li>
+<li>WebService: 对外提供HTTP服务，例如管理流的操作(元数据)等</li>
+<li>CoordinationService: 给Broker提供协调服务，例如Broker选主操作</li>
+<li>SchemaStorage: 提供schema相关的一切服务，常见的就是schema的读写</li>
+<li>OffloadPolicies: 提供分层存储，冷数据自动迁移到外部服务中</li>
+<li>WorkerService: 管理Worker实例，用来执行Function计算任务</li>
+</ul>
+<p>以上就是Pulsar启动流程所做的事情，其中Bookkeeper的启动以及其余的功能例如CoordinationService、SchemaStorage等等都值得单独新开一篇文章进行讲解，这里就不混在一起讲了。</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+     
+    
+        
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>

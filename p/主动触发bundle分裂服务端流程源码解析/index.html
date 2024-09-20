@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="一、正文 Namespace下的Topic是分Bundle进行管理的，每个Namespace都是一个哈希环，而Bundle负责管理环上某个范围上的Topic。通过这种方式可以更好的进行Topic的管理。当某个Bundle上负责的Topic越来越多时，会导致负责该Bundle的Broker节点压力变大。因此Pulsar还提供了Bundle分裂的机制，这个机制支持自动触发以及手动触发，今天这篇文章就从源码的角度分析手动触发Bundle分裂时服务端会发生什么\n">
+<title>主动触发Bundle分裂服务端流程源码解析</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91bundle%E5%88%86%E8%A3%82%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="主动触发Bundle分裂服务端流程源码解析">
+<meta property='og:description' content="一、正文 Namespace下的Topic是分Bundle进行管理的，每个Namespace都是一个哈希环，而Bundle负责管理环上某个范围上的Topic。通过这种方式可以更好的进行Topic的管理。当某个Bundle上负责的Topic越来越多时，会导致负责该Bundle的Broker节点压力变大。因此Pulsar还提供了Bundle分裂的机制，这个机制支持自动触发以及手动触发，今天这篇文章就从源码的角度分析手动触发Bundle分裂时服务端会发生什么\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91bundle%E5%88%86%E8%A3%82%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/'>
+<meta property='og:site_name' content='夏洛克-lin'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-09-20T10:34:57&#43;08:00'/><meta property='article:modified_time' content='2024-09-20T10:34:57&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91bundle%E5%88%86%E8%A3%82%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240416181912380.png' />
+<meta name="twitter:title" content="主动触发Bundle分裂服务端流程源码解析">
+<meta name="twitter:description" content="一、正文 Namespace下的Topic是分Bundle进行管理的，每个Namespace都是一个哈希环，而Bundle负责管理环上某个范围上的Topic。通过这种方式可以更好的进行Topic的管理。当某个Bundle上负责的Topic越来越多时，会导致负责该Bundle的Broker节点压力变大。因此Pulsar还提供了Bundle分裂的机制，这个机制支持自动触发以及手动触发，今天这篇文章就从源码的角度分析手动触发Bundle分裂时服务端会发生什么\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91bundle%E5%88%86%E8%A3%82%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240416181912380.png' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-lin</a></h1>
+            <h2 class="site-description">一个读书狂魔的博客，用于记录学习、思考心得~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li>
+      <ol>
+        <li>
+          <ol>
+            <li><a href="#一正文">一、正文</a></li>
+            <li><a href="#二源码解析">二、源码解析</a></li>
+            <li><a href="#三参考文献">三、参考文献</a></li>
+          </ol>
+        </li>
+      </ol>
+    </li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91bundle%E5%88%86%E8%A3%82%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">
+                <img src="/p/%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91bundle%E5%88%86%E8%A3%82%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240416181912380_hu31296662500652591.png"
+                        srcset="/p/%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91bundle%E5%88%86%E8%A3%82%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240416181912380_hu31296662500652591.png 800w, /p/%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91bundle%E5%88%86%E8%A3%82%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240416181912380_hu436110977265696999.png 1600w"
+                        width="800" 
+                        height="415" 
+                        loading="lazy"
+                        alt="Featured image of post 主动触发Bundle分裂服务端流程源码解析" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91bundle%E5%88%86%E8%A3%82%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">主动触发Bundle分裂服务端流程源码解析</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2024-09-20</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 5 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h4 id="一正文">一、正文
+</h4><p>Namespace下的Topic是分Bundle进行管理的，每个Namespace都是一个哈希环，而Bundle负责管理环上某个范围上的Topic。通过这种方式可以更好的进行Topic的管理。当某个Bundle上负责的Topic越来越多时，会导致负责该Bundle的Broker节点压力变大。因此Pulsar还提供了Bundle分裂的机制，这个机制支持自动触发以及手动触发，今天这篇文章就从源码的角度分析手动触发Bundle分裂时服务端会发生什么</p>
+<img src="image-20240416181912380.png" alt="image-20240416181912380" style="zoom: 50%;" />
+<p><strong>主动触发Bundle分裂操作方式</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">bin/pulsar-admin namespaces bundles public/default
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">//输出如下
+</span></span><span class="line"><span class="cl"><span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="s2">&#34;boundaries&#34;</span> : <span class="o">[</span> <span class="s2">&#34;0x00000000&#34;</span>, <span class="s2">&#34;0x08000000&#34;</span>, <span class="s2">&#34;0x10000000&#34;</span>, <span class="s2">&#34;0x20000000&#34;</span>, <span class="s2">&#34;0x30000000&#34;</span>, <span class="s2">&#34;0x40000000&#34;</span>, <span class="s2">&#34;0x50000000&#34;</span>, <span class="s2">&#34;0x60000000&#34;</span>, <span class="s2">&#34;0x70000000&#34;</span>, <span class="s2">&#34;0x80000000&#34;</span>, <span class="s2">&#34;0x90000000&#34;</span>, <span class="s2">&#34;0xa0000000&#34;</span>, <span class="s2">&#34;0xb0000000&#34;</span>, <span class="s2">&#34;0xc0000000&#34;</span>, <span class="s2">&#34;0xd0000000&#34;</span>, <span class="s2">&#34;0xe0000000&#34;</span>, <span class="s2">&#34;0xf0000000&#34;</span>, <span class="s2">&#34;0xffffffff&#34;</span> <span class="o">]</span>,
+</span></span><span class="line"><span class="cl">  <span class="s2">&#34;numBundles&#34;</span> : <span class="m">17</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">//指定某个bundle进行分裂
+</span></span><span class="line"><span class="cl">bin/pulsar-admin namespaces split-bundle --bundle 0x00000000_0x10000000 public/default
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="二源码解析">二、源码解析
+</h4><p>Pulsar管理流相关的操作都是通过HTTP的方式，因为需要支持多种客户端类型(http、client、cli)。服务端处理这些操作都在admin模块下，如下图，本次要聊的bundle分裂就在Namespaces方法中</p>
+<img src="image-20240416155125370.png" alt="image-20240416155125370" style="zoom: 67%;" />
+<p>首先从Namespaces的splitNamespaceBundle进行跟踪</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">splitNamespaceBundle</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nd">@QueryParam</span><span class="p">(</span><span class="s">&#34;splitAlgorithmName&#34;</span><span class="p">)</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">splitAlgorithmName</span><span class="p">,</span><span class="w"> </span><span class="c1">//指定bundle分裂算法</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nd">@ApiParam</span><span class="p">(</span><span class="s">&#34;splitBoundaries&#34;</span><span class="p">)</span><span class="w"> </span><span class="n">List</span><span class="o">&lt;</span><span class="n">Long</span><span class="o">&gt;</span><span class="w"> </span><span class="n">splitBoundaries</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="c1">//校验参数格式以及是否存在对应的namespace</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="n">validateNamespaceName</span><span class="p">(</span><span class="n">tenant</span><span class="p">,</span><span class="w"> </span><span class="n">namespace</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="c1">//异步进行分裂操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="n">internalSplitNamespaceBundleAsync</span><span class="p">(</span><span class="n">bundleRange</span><span class="p">,</span><span class="w"> </span><span class="n">authoritative</span><span class="p">,</span><span class="w"> </span><span class="n">unload</span><span class="p">,</span><span class="w"> </span><span class="n">splitAlgorithmName</span><span class="p">,</span><span class="w"> </span><span class="n">splitBoundaries</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">thenAccept</span><span class="p">(</span><span class="n">__</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">})</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">exceptionally</span><span class="p">(</span><span class="n">ex</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">});</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到最外层只是做些参数校验，那么就继续跟踪internalSplitNamespaceBundleAsync方法，如下</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kd">protected</span><span class="w"> </span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">Void</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">internalSplitNamespaceBundleAsync</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">bundleName</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                        </span><span class="kt">boolean</span><span class="w"> </span><span class="n">authoritative</span><span class="p">,</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                    		</span><span class="kt">boolean</span><span class="w"> </span><span class="n">unload</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                        </span><span class="n">String</span><span class="w"> </span><span class="n">splitAlgorithmName</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                        </span><span class="n">List</span><span class="o">&lt;</span><span class="n">Long</span><span class="o">&gt;</span><span class="w"> </span><span class="n">splitBoundaries</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">validateSuperUserAccessAsync</span><span class="p">()</span><span class="w">   </span><span class="c1">//权限校验</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">thenAccept</span><span class="p">(</span><span class="n">__</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="n">checkNotNull</span><span class="p">(</span><span class="n">bundleName</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;BundleRange should not be null&#34;</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="n">log</span><span class="p">.</span><span class="na">info</span><span class="p">(</span><span class="s">&#34;[{}] Split namespace bundle {}/{}&#34;</span><span class="p">,</span><span class="w"> </span><span class="n">clientAppId</span><span class="p">(),</span><span class="w"> </span><span class="n">namespaceName</span><span class="p">,</span><span class="w"> </span><span class="n">bundleName</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="c1">//获取当前集群所支持的bundle分裂算法，这里是硬编码的固定四种</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="n">List</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span><span class="w"> </span><span class="n">supportedNamespaceBundleSplitAlgorithms</span><span class="w"> </span><span class="o">=</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="n">pulsar</span><span class="p">().</span><span class="na">getConfig</span><span class="p">().</span><span class="na">getSupportedNamespaceBundleSplitAlgorithms</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                  					</span><span class="c1">//此处省去参数检查逻辑</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">     												</span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">})</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">thenCompose</span><span class="p">(</span><span class="n">__</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="c1">//此处省去参数检查逻辑</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">     								</span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">})</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">thenCompose</span><span class="p">(</span><span class="n">__</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">validatePoliciesReadOnlyAccessAsync</span><span class="p">())</span><span class="w">   </span><span class="c1">//权限校验</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">thenCompose</span><span class="p">(</span><span class="n">__</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">getBundleRangeAsync</span><span class="p">(</span><span class="n">bundleName</span><span class="p">))</span><span class="w"> </span><span class="c1">//获取要分裂的bundle的范围</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">thenCompose</span><span class="p">(</span><span class="n">bundleRange</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="k">return</span><span class="w"> </span><span class="n">getNamespacePoliciesAsync</span><span class="p">(</span><span class="n">namespaceName</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="p">.</span><span class="na">thenCompose</span><span class="p">(</span><span class="n">policies</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                  </span><span class="c1">//1. 校验Bundle的范围是否有效 </span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                  </span><span class="c1">//2.判断当前Broker节点是否负责这个bundle的管理，如果不是则重定向</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                	</span><span class="n">validateNamespaceBundleOwnershipAsync</span><span class="p">(</span><span class="n">namespaceName</span><span class="p">,</span><span class="w"> </span><span class="n">policies</span><span class="p">.</span><span class="na">bundles</span><span class="p">,</span><span class="w"> </span><span class="n">bundleRange</span><span class="p">,</span><span class="n">authoritative</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="p">))</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="c1">//核心方法就是这里的 NamespaceService.splitAndOwnBundle</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="p">.</span><span class="na">thenCompose</span><span class="p">(</span><span class="n">nsBundle</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">pulsar</span><span class="p">().</span><span class="na">getNamespaceService</span><span class="p">().</span><span class="na">splitAndOwnBundle</span><span class="p">(</span><span class="n">nsBundle</span><span class="p">,</span><span class="w"> </span><span class="n">unload</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                    </span><span class="n">pulsar</span><span class="p">().</span><span class="na">getNamespaceService</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                            </span><span class="p">.</span><span class="na">getNamespaceBundleSplitAlgorithmByName</span><span class="p">(</span><span class="n">splitAlgorithmName</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                    </span><span class="n">splitBoundaries</span><span class="p">));</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">});</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>接下来就是进入NamespaceService类的splitAndOwnBundle方法，NamespaceService也是Pulsar比较重要的一个类，这里先继续跟踪分割bundle的逻辑</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kd">public</span><span class="w"> </span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">Void</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">splitAndOwnBundle</span><span class="p">(</span><span class="n">NamespaceBundle</span><span class="w"> </span><span class="n">bundle</span><span class="p">,</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="n">unload</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                     </span><span class="n">NamespaceBundleSplitAlgorithm</span><span class="w"> </span><span class="n">splitAlgorithm</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                     </span><span class="n">List</span><span class="o">&lt;</span><span class="n">Long</span><span class="o">&gt;</span><span class="w"> </span><span class="n">boundaries</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="c1">//如果实现了自定义的分割逻辑则使用自定义的</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">ExtensibleLoadManagerImpl</span><span class="p">.</span><span class="na">isLoadManagerExtensionEnabled</span><span class="p">(</span><span class="n">config</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">ExtensibleLoadManagerImpl</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">loadManager</span><span class="p">.</span><span class="na">get</span><span class="p">())</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="p">.</span><span class="na">splitNamespaceBundleAsync</span><span class="p">(</span><span class="n">bundle</span><span class="p">,</span><span class="w"> </span><span class="n">splitAlgorithm</span><span class="p">,</span><span class="w"> </span><span class="n">boundaries</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="kd">final</span><span class="w"> </span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">Void</span><span class="o">&gt;</span><span class="w"> </span><span class="n">unloadFuture</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">CompletableFuture</span><span class="o">&lt;&gt;</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="kd">final</span><span class="w"> </span><span class="n">AtomicInteger</span><span class="w"> </span><span class="n">counter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">AtomicInteger</span><span class="p">(</span><span class="n">BUNDLE_SPLIT_RETRY_LIMIT</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="c1">//核心流程流程</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">splitAndOwnBundleOnceAndRetry</span><span class="p">(</span><span class="n">bundle</span><span class="p">,</span><span class="w"> </span><span class="n">unload</span><span class="p">,</span><span class="w"> </span><span class="n">counter</span><span class="p">,</span><span class="w"> </span><span class="n">unloadFuture</span><span class="p">,</span><span class="w"> </span><span class="n">splitAlgorithm</span><span class="p">,</span><span class="w"> </span><span class="n">boundaries</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">unloadFuture</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="kt">void</span><span class="w"> </span><span class="nf">splitAndOwnBundleOnceAndRetry</span><span class="p">(</span><span class="n">NamespaceBundle</span><span class="w"> </span><span class="n">bundle</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                       </span><span class="kt">boolean</span><span class="w"> </span><span class="n">unload</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                       </span><span class="n">AtomicInteger</span><span class="w"> </span><span class="n">counter</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                       </span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">Void</span><span class="o">&gt;</span><span class="w"> </span><span class="n">completionFuture</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                       </span><span class="n">NamespaceBundleSplitAlgorithm</span><span class="w"> </span><span class="n">splitAlgorithm</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                       </span><span class="n">List</span><span class="o">&lt;</span><span class="n">Long</span><span class="o">&gt;</span><span class="w"> </span><span class="n">boundaries</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="c1">//获取bundle分割配置</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">BundleSplitOption</span><span class="w"> </span><span class="n">bundleSplitOption</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">getBundleSplitOption</span><span class="p">(</span><span class="n">bundle</span><span class="p">,</span><span class="w"> </span><span class="n">boundaries</span><span class="p">,</span><span class="w"> </span><span class="n">config</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="c1">//根据配置来选择对应的分割算法进行分割</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">splitAlgorithm</span><span class="p">.</span><span class="na">getSplitBoundary</span><span class="p">(</span><span class="n">bundleSplitOption</span><span class="p">).</span><span class="na">whenComplete</span><span class="p">((</span><span class="n">splitBoundaries</span><span class="p">,</span><span class="w"> </span><span class="n">ex</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">List</span><span class="o">&lt;</span><span class="n">NamespaceBundle</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">updateFuture</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">CompletableFuture</span><span class="o">&lt;&gt;</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">ex</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    						</span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="k">try</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="c1">//进行bundle分割操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="n">bundleFactory</span><span class="p">.</span><span class="na">splitBundles</span><span class="p">(</span><span class="n">bundle</span><span class="p">,</span><span class="w"> </span><span class="n">splitBoundaries</span><span class="p">.</span><span class="na">size</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">1</span><span class="p">,</span><span class="w"> </span><span class="n">splitBoundaries</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="p">.</span><span class="na">thenAccept</span><span class="p">(</span><span class="n">splitBundles</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">																</span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="n">Objects</span><span class="p">.</span><span class="na">requireNonNull</span><span class="p">(</span><span class="n">splitBundles</span><span class="p">.</span><span class="na">getLeft</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="n">Objects</span><span class="p">.</span><span class="na">requireNonNull</span><span class="p">(</span><span class="n">splitBundles</span><span class="p">.</span><span class="na">getRight</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="n">checkArgument</span><span class="p">(</span><span class="n">splitBundles</span><span class="p">.</span><span class="na">getRight</span><span class="p">().</span><span class="na">size</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">splitBoundaries</span><span class="p">.</span><span class="na">size</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">1</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                        </span><span class="s">&#34;bundle has to be split in &#34;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">splitBoundaries</span><span class="p">.</span><span class="na">size</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">1</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&#34; bundles&#34;</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="n">NamespaceName</span><span class="w"> </span><span class="n">nsname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bundle</span><span class="p">.</span><span class="na">getNamespaceObject</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="k">try</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                    </span><span class="c1">// 检查确保每个Bundle都有对应的Broker负责</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">NamespaceBundle</span><span class="w"> </span><span class="n">sBundle</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">splitBundles</span><span class="p">.</span><span class="na">getRight</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                        </span><span class="n">Objects</span><span class="p">.</span><span class="na">requireNonNull</span><span class="p">(</span><span class="n">ownershipCache</span><span class="p">.</span><span class="na">tryAcquiringOwnership</span><span class="p">(</span><span class="n">sBundle</span><span class="p">));</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                  	</span><span class="c1">//更新Bundle信息，毕竟Bundle已经分裂好了，相关的一些元数据要同步更新</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                    </span><span class="n">updateNamespaceBundles</span><span class="p">(</span><span class="n">nsname</span><span class="p">,</span><span class="w"> </span><span class="n">splitBundles</span><span class="p">.</span><span class="na">getLeft</span><span class="p">()).</span><span class="na">thenCompose</span><span class="p">(</span><span class="n">__</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                        </span><span class="n">updateNamespaceBundlesForPolicies</span><span class="p">(</span><span class="n">nsname</span><span class="p">,</span><span class="w"> </span><span class="n">splitBundles</span><span class="p">.</span><span class="na">getLeft</span><span class="p">()))</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                            </span><span class="p">.</span><span class="na">thenRun</span><span class="p">(()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> 	                                          </span><span class="n">bundleFactory</span><span class="p">.</span><span class="na">invalidateBundleCache</span><span class="p">(</span><span class="n">bundle</span><span class="p">.</span><span class="na">getNamespaceObject</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                </span><span class="n">updateFuture</span><span class="p">.</span><span class="na">complete</span><span class="p">(</span><span class="n">splitBundles</span><span class="p">.</span><span class="na">getRight</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                    </span><span class="p">}).</span><span class="na">exceptionally</span><span class="p">(</span><span class="n">ex1</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                       	</span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                    </span><span class="p">});</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">Exception</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                    </span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="p">});</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">Exception</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">updateFuture</span><span class="p">.</span><span class="na">completeExceptionally</span><span class="p">(</span><span class="n">ex</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">updateFuture</span><span class="p">.</span><span class="na">whenCompleteAsync</span><span class="p">((</span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="n">t</span><span class="p">)</span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">t</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="c1">// 失败则重试几次</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="k">if</span><span class="w"> </span><span class="p">((</span><span class="n">t</span><span class="p">.</span><span class="na">getCause</span><span class="p">()</span><span class="w"> </span><span class="k">instanceof</span><span class="w"> </span><span class="n">MetadataStoreException</span><span class="p">.</span><span class="na">BadVersionException</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="p">(</span><span class="n">counter</span><span class="p">.</span><span class="na">decrementAndGet</span><span class="p">()</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">0</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">pulsar</span><span class="p">.</span><span class="na">getExecutor</span><span class="p">().</span><span class="na">schedule</span><span class="p">(()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">pulsar</span><span class="p">.</span><span class="na">getOrderedExecutor</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="p">.</span><span class="na">execute</span><span class="p">(()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">splitAndOwnBundleOnceAndRetry</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                        </span><span class="n">bundle</span><span class="p">,</span><span class="w"> </span><span class="n">unload</span><span class="p">,</span><span class="w"> </span><span class="n">counter</span><span class="p">,</span><span class="w"> </span><span class="n">completionFuture</span><span class="p">,</span><span class="w"> </span><span class="n">splitAlgorithm</span><span class="p">,</span><span class="w"> </span><span class="n">boundaries</span><span class="p">)),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="n">100</span><span class="p">,</span><span class="w"> </span><span class="n">MILLISECONDS</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">t</span><span class="w"> </span><span class="k">instanceof</span><span class="w"> </span><span class="n">IllegalArgumentException</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">completionFuture</span><span class="p">.</span><span class="na">completeExceptionally</span><span class="p">(</span><span class="n">t</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="c1">// Retry enough, or meet other exception</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">String</span><span class="w"> </span><span class="n">msg2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">format</span><span class="p">(</span><span class="s">&#34; %s not success update nsBundles, counter %d, reason %s&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="n">bundle</span><span class="p">.</span><span class="na">toString</span><span class="p">(),</span><span class="w"> </span><span class="n">counter</span><span class="p">.</span><span class="na">get</span><span class="p">(),</span><span class="w"> </span><span class="n">t</span><span class="p">.</span><span class="na">getMessage</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">LOG</span><span class="p">.</span><span class="na">warn</span><span class="p">(</span><span class="n">msg2</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">completionFuture</span><span class="p">.</span><span class="na">completeExceptionally</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">ServiceUnitNotReadyException</span><span class="p">(</span><span class="n">msg2</span><span class="p">));</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="k">return</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="c1">//更新bundle的状态</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">getOwnershipCache</span><span class="p">().</span><span class="na">updateBundleState</span><span class="p">(</span><span class="n">bundle</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="p">.</span><span class="na">thenRun</span><span class="p">(()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="c1">// update bundled_topic cache for load-report-generation</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="n">pulsar</span><span class="p">.</span><span class="na">getBrokerService</span><span class="p">().</span><span class="na">refreshTopicToStatsMaps</span><span class="p">(</span><span class="n">bundle</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="n">loadManager</span><span class="p">.</span><span class="na">get</span><span class="p">().</span><span class="na">setLoadReportForceUpdateFlag</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="c1">// release old bundle from ownership cache</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="n">pulsar</span><span class="p">.</span><span class="na">getNamespaceService</span><span class="p">().</span><span class="na">getOwnershipCache</span><span class="p">().</span><span class="na">removeOwnership</span><span class="p">(</span><span class="n">bundle</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="n">completionFuture</span><span class="p">.</span><span class="na">complete</span><span class="p">(</span><span class="kc">null</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">unload</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="c1">// Unload new split bundles, in background. This will not</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="c1">// affect the split operation which is already safely completed</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="n">r</span><span class="p">.</span><span class="na">forEach</span><span class="p">(</span><span class="k">this</span><span class="p">::</span><span class="n">unloadNamespaceBundle</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="n">onNamespaceBundleSplit</span><span class="p">(</span><span class="n">bundle</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="p">})</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="p">.</span><span class="na">exceptionally</span><span class="p">(</span><span class="n">e</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="p">});</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">},</span><span class="w"> </span><span class="n">pulsar</span><span class="p">.</span><span class="na">getOrderedExecutor</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">});</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面这个方法的逻辑比较丰富，但核心的分割流程实际上是调用的NamespaceBundleFactory的splitBundles进行的，这里就继续跟踪NamespaceBundleFactory的逻辑</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">Pair</span><span class="o">&lt;</span><span class="n">NamespaceBundles</span><span class="p">,</span><span class="w"> </span><span class="n">List</span><span class="o">&lt;</span><span class="n">NamespaceBundle</span><span class="o">&gt;&gt;&gt;</span><span class="w"> </span><span class="nf">splitBundles</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">NamespaceBundle</span><span class="w"> </span><span class="n">targetBundle</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">argNumBundles</span><span class="p">,</span><span class="w"> </span><span class="n">List</span><span class="o">&lt;</span><span class="n">Long</span><span class="o">&gt;</span><span class="w"> </span><span class="n">splitBoundaries</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="c1">//判断当前bundle是否支持分裂</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">checkArgument</span><span class="p">(</span><span class="n">canSplitBundle</span><span class="p">(</span><span class="n">targetBundle</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;%s bundle can&#39;t be split further since range not larger than 1&#34;</span><span class="p">,</span><span class="w"> </span><span class="n">targetBundle</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      	</span><span class="p">....</span><span class="w">   
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">NamespaceName</span><span class="w"> </span><span class="n">nsname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">targetBundle</span><span class="p">.</span><span class="na">getNamespaceObject</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="kd">final</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">numBundles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">argNumBundles</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">bundlesCache</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">nsname</span><span class="p">).</span><span class="na">thenApply</span><span class="p">(</span><span class="n">sourceBundle</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="kd">final</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">lastIndex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sourceBundle</span><span class="p">.</span><span class="na">partitions</span><span class="p">.</span><span class="na">length</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">1</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="c1">//重新创建数组保存哈希环的节点，因为bundle分裂后环上的节点会增多</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="kd">final</span><span class="w"> </span><span class="kt">long</span><span class="o">[]</span><span class="w"> </span><span class="n">partitions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="kt">long</span><span class="o">[</span><span class="n">sourceBundle</span><span class="p">.</span><span class="na">partitions</span><span class="p">.</span><span class="na">length</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">numBundles</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">1</span><span class="p">)</span><span class="o">]</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">pos</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">0</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">splitPartition</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="n">1</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="kd">final</span><span class="w"> </span><span class="n">Range</span><span class="o">&lt;</span><span class="n">Long</span><span class="o">&gt;</span><span class="w"> </span><span class="n">range</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">targetBundle</span><span class="p">.</span><span class="na">getKeyRange</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">lastIndex</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">              	</span><span class="c1">//遍历当前Namespace的所有Bundle来找到需要进行分裂的目标Bundle</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">sourceBundle</span><span class="p">.</span><span class="na">partitions</span><span class="o">[</span><span class="n">i</span><span class="o">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">range</span><span class="p">.</span><span class="na">lowerEndpoint</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="p">(</span><span class="n">range</span><span class="p">.</span><span class="na">upperEndpoint</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">sourceBundle</span><span class="p">.</span><span class="na">partitions</span><span class="o">[</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">1</span><span class="o">]</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="n">splitPartition</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="kt">long</span><span class="w"> </span><span class="n">minVal</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sourceBundle</span><span class="p">.</span><span class="na">partitions</span><span class="o">[</span><span class="n">i</span><span class="o">]</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="n">partitions</span><span class="o">[</span><span class="n">pos</span><span class="o">++]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">minVal</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">splitBoundaries</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">null</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">splitBoundaries</span><span class="p">.</span><span class="na">size</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="kt">long</span><span class="w"> </span><span class="n">maxVal</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sourceBundle</span><span class="p">.</span><span class="na">partitions</span><span class="o">[</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">1</span><span class="o">]</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                      	</span><span class="c1">//numBundles就是要分割成的份数，这里相当于将原先Bundle负责的范围平均分给多个新的Bundle</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="kt">long</span><span class="w"> </span><span class="n">segSize</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">maxVal</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">minVal</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">numBundles</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="kt">long</span><span class="w"> </span><span class="n">curPartition</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">minVal</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">segSize</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">numBundles</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">1</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="n">partitions</span><span class="o">[</span><span class="n">pos</span><span class="o">++]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">curPartition</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="n">curPartition</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">segSize</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">long</span><span class="w"> </span><span class="n">splitBoundary</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">splitBoundaries</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="n">partitions</span><span class="o">[</span><span class="n">pos</span><span class="o">++]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">splitBoundary</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="n">partitions</span><span class="o">[</span><span class="n">pos</span><span class="o">++]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sourceBundle</span><span class="p">.</span><span class="na">partitions</span><span class="o">[</span><span class="n">i</span><span class="o">]</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">partitions</span><span class="o">[</span><span class="n">pos</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sourceBundle</span><span class="p">.</span><span class="na">partitions</span><span class="o">[</span><span class="n">lastIndex</span><span class="o">]</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">splitPartition</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="o">-</span><span class="n">1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="c1">// keep version of sourceBundle</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="c1">//根据上面旧的Bundle范围划分来分裂出多个新的bundle</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">NamespaceBundles</span><span class="w"> </span><span class="n">splitNsBundles</span><span class="w"> </span><span class="o">=</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="k">new</span><span class="w"> </span><span class="n">NamespaceBundles</span><span class="p">(</span><span class="n">nsname</span><span class="p">,</span><span class="w"> </span><span class="k">this</span><span class="p">,</span><span class="w"> </span><span class="n">sourceBundle</span><span class="p">.</span><span class="na">getLocalPolicies</span><span class="p">(),</span><span class="w"> </span><span class="n">partitions</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">List</span><span class="o">&lt;</span><span class="n">NamespaceBundle</span><span class="o">&gt;</span><span class="w"> </span><span class="n">splitBundles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">splitNsBundles</span><span class="p">.</span><span class="na">getBundles</span><span class="p">().</span><span class="na">subList</span><span class="p">(</span><span class="n">splitPartition</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="p">(</span><span class="n">splitPartition</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">numBundles</span><span class="p">));</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="k">return</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ImmutablePair</span><span class="o">&lt;&gt;</span><span class="p">(</span><span class="n">splitNsBundles</span><span class="p">,</span><span class="w"> </span><span class="n">splitBundles</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">});</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>到这里基本就结束，这条链路主要是Broker将原先的哈希环中的某一个范围拆分成多个范围的逻辑，这里保留几个问题给读者思考</p>
+<ol>
+<li>Bundle分裂后是否会涉及到数据的迁移？</li>
+<li>Bundle分裂算法有四种，区别是什么？</li>
+</ol>
+<h4 id="三参考文献">三、参考文献
+</h4><ol>
+<li><a class="link" href="https://pulsar.apache.org/docs/3.2.x/concepts-broker-load-balancing-quick-start/"  target="_blank" rel="noopener"
+    >官方文档</a></li>
+</ol>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+     
+    
+        
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>

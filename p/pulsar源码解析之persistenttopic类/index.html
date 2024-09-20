@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="引言 今天一起来看看Pulsar服务端消息相关最重要的一个类PersistentTopic，看看它都负责哪些事情以及是如何设计的\n正文 在Topic被创建时，Pulsar集群中会有一台Broker维护这个Topic，在实现上就是维护一个PersistentTopic对象，这个PersistentTopic对象处理针对该Topic相关的一切操作，具体负责的相关操作如下\n">
+<title>Pulsar源码解析之PersistentTopic类</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/pulsar%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E4%B9%8Bpersistenttopic%E7%B1%BB/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="Pulsar源码解析之PersistentTopic类">
+<meta property='og:description' content="引言 今天一起来看看Pulsar服务端消息相关最重要的一个类PersistentTopic，看看它都负责哪些事情以及是如何设计的\n正文 在Topic被创建时，Pulsar集群中会有一台Broker维护这个Topic，在实现上就是维护一个PersistentTopic对象，这个PersistentTopic对象处理针对该Topic相关的一切操作，具体负责的相关操作如下\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/pulsar%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E4%B9%8Bpersistenttopic%E7%B1%BB/'>
+<meta property='og:site_name' content='夏洛克-lin'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-09-20T10:34:55&#43;08:00'/><meta property='article:modified_time' content='2024-09-20T10:34:55&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/image-20240331085922332.png' />
+<meta name="twitter:title" content="Pulsar源码解析之PersistentTopic类">
+<meta name="twitter:description" content="引言 今天一起来看看Pulsar服务端消息相关最重要的一个类PersistentTopic，看看它都负责哪些事情以及是如何设计的\n正文 在Topic被创建时，Pulsar集群中会有一台Broker维护这个Topic，在实现上就是维护一个PersistentTopic对象，这个PersistentTopic对象处理针对该Topic相关的一切操作，具体负责的相关操作如下\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/image-20240331085922332.png' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-lin</a></h1>
+            <h2 class="site-description">一个读书狂魔的博客，用于记录学习、思考心得~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li>
+      <ol>
+        <li>
+          <ol>
+            <li><a href="#引言">引言</a></li>
+            <li><a href="#正文">正文</a></li>
+            <li><a href="#一何时创建">一、何时创建</a></li>
+            <li><a href="#二创建流程">二、创建流程</a></li>
+            <li><a href="#三负责内容">三、负责内容</a></li>
+            <li><a href="#四总结">四、总结</a></li>
+          </ol>
+        </li>
+      </ol>
+    </li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/pulsar%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E4%B9%8Bpersistenttopic%E7%B1%BB/">
+                
+                    <img src="/image-20240331085922332.png" loading="lazy" alt="Featured image of post Pulsar源码解析之PersistentTopic类" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/pulsar%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E4%B9%8Bpersistenttopic%E7%B1%BB/">Pulsar源码解析之PersistentTopic类</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2024-09-20</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 7 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h4 id="引言">引言
+</h4><p>今天一起来看看Pulsar服务端消息相关最重要的一个类PersistentTopic，看看它都负责哪些事情以及是如何设计的</p>
+<h4 id="正文">正文
+</h4><p>在Topic被创建时，Pulsar集群中会有一台Broker维护这个Topic，在实现上就是维护一个PersistentTopic对象，这个PersistentTopic对象处理针对该Topic相关的一切操作，具体负责的相关操作如下</p>
+<ul>
+<li>处理订阅以及下线订阅</li>
+<li>新增生产者对象以及下线生产者对象</li>
+<li>处理消息写入</li>
+<li>进行跨集群复制</li>
+<li>记录Topic度量状态以及做Topic限流</li>
+<li>检查消息的TTL、积压、压缩、配置策略更新</li>
+</ul>
+<p>绘成表格的形式如下图</p>
+<p><img src="/p/pulsar%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E4%B9%8Bpersistenttopic%E7%B1%BB/image-20240327210450901-6219390.png"
+	width="1066"
+	height="473"
+	srcset="/p/pulsar%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E4%B9%8Bpersistenttopic%E7%B1%BB/image-20240327210450901-6219390_hu7262759847874162654.png 480w, /p/pulsar%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E4%B9%8Bpersistenttopic%E7%B1%BB/image-20240327210450901-6219390_hu2889226051595343206.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240327210450901"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="225"
+		data-flex-basis="540px"
+	
+></p>
+<p>本篇文章不会深入讲解每一项，主要是大概过下这个类都做了哪些事情以及大致逻辑，因为服务端的代码会经常跟这个类打交道，因此专门弄清楚这个类的相关知识还是很有必要的。接下来就让我们带着以下三个疑问去看下面的内容</p>
+<ul>
+<li>PersistentTopic在什么时候会被创建？都有哪些重要的成员变量？</li>
+<li>PersistentTopic的创建流程都会发生什么？</li>
+<li>上面那些相关操作大概是什么实现的？</li>
+</ul>
+<h4 id="一何时创建">一、何时创建
+</h4><p>以下列出创建的时机，基本上流程都是发起创建Topic的时候会通过一致性哈希计算出这个Topic所归属的Bundle，然后去zookeeper获取这个Bundle所归属的Broker机器，最后请求这台Broker节点创建对应的PersistentTopic对象</p>
+<ol>
+<li>管理流创建
+<ul>
+<li>cli管理命令行</li>
+<li>多语言Client</li>
+<li>Http方式</li>
+</ul>
+</li>
+<li>写入流创建
+<ul>
+<li>生产者写入流</li>
+<li>消费者写入流</li>
+</ul>
+</li>
+</ol>
+<p>接下来看看这个类的主要成员变量，重要的一些已经加上注释解释了</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">PersistentTopic</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">AbstractTopic</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">Topic</span><span class="p">,</span><span class="w"> </span><span class="n">AddEntryCallback</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// 管理Bookkeeper的Ledger，在做消息读取或者写入时会通过该对象</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">protected</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ManagedLedger</span><span class="w"> </span><span class="n">ledger</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// 存储订阅当前Topic的所有订阅对象，key是订阅名，value是订阅对象</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ConcurrentOpenHashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="w"> </span><span class="n">PersistentSubscription</span><span class="o">&gt;</span><span class="w"> </span><span class="n">subscriptions</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// 管理对端集群，负责做跨集群数据复制</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ConcurrentOpenHashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="cm">/*RemoteCluster*/</span><span class="p">,</span><span class="w"> </span><span class="n">Replicator</span><span class="o">&gt;</span><span class="w"> </span><span class="n">replicators</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">//跟replicators类似</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ConcurrentOpenHashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="cm">/*ShadowTopic*/</span><span class="p">,</span><span class="w"> </span><span class="n">Replicator</span><span class="o">&gt;</span><span class="w"> </span><span class="n">shadowReplicators</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nd">@Getter</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">volatile</span><span class="w"> </span><span class="n">List</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span><span class="w"> </span><span class="n">shadowTopics</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">TopicName</span><span class="w"> </span><span class="n">shadowSourceTopic</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">//调度限流器</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">Optional</span><span class="o">&lt;</span><span class="n">DispatchRateLimiter</span><span class="o">&gt;</span><span class="w"> </span><span class="n">dispatchRateLimiter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Optional</span><span class="p">.</span><span class="na">empty</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">//调度限流锁</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">Object</span><span class="w"> </span><span class="n">dispatchRateLimiterLock</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Object</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">//订阅限流器</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">Optional</span><span class="o">&lt;</span><span class="n">SubscribeRateLimiter</span><span class="o">&gt;</span><span class="w"> </span><span class="n">subscribeRateLimiter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Optional</span><span class="p">.</span><span class="na">empty</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">//积压游标阈值条数</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">backloggedCursorThresholdEntries</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">MESSAGE_RATE_BACKOFF_MS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">1000</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  	</span><span class="c1">//处理消息重复情况</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">protected</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">MessageDeduplication</span><span class="w"> </span><span class="n">messageDeduplication</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">//处理消息压缩服务</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">TopicCompactionService</span><span class="w"> </span><span class="n">topicCompactionService</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// 在对外开放压缩策略配置时，根据用户配置创建对应的压缩策略</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="w"> </span><span class="n">TopicCompactionStrategy</span><span class="o">&gt;</span><span class="w"> </span><span class="n">strategicCompactionMap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Map</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">ServiceUnitStateChannelImpl</span><span class="p">.</span><span class="na">TOPIC</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">ServiceUnitStateCompactionStrategy</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">//未知</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">MessageIdImpl</span><span class="o">&gt;</span><span class="w"> </span><span class="n">currentOffload</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CompletableFuture</span><span class="p">.</span><span class="na">completedFuture</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">(</span><span class="n">MessageIdImpl</span><span class="p">)</span><span class="w"> </span><span class="n">MessageId</span><span class="p">.</span><span class="na">earliest</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">//负责跨集群复制时订阅相关事项</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">volatile</span><span class="w"> </span><span class="n">Optional</span><span class="o">&lt;</span><span class="n">ReplicatedSubscriptionsController</span><span class="o">&gt;</span><span class="w"> </span><span class="n">replicatedSubscriptionsController</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Optional</span><span class="p">.</span><span class="na">empty</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  	</span><span class="c1">//记录Topic度量相关信息，如这个Topic的写入速率、消费速率等</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">FastThreadLocal</span><span class="o">&lt;</span><span class="n">TopicStatsHelper</span><span class="o">&gt;</span><span class="w"> </span><span class="n">threadLocalTopicStats</span><span class="w"> </span><span class="o">=</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">FastThreadLocal</span><span class="o">&lt;</span><span class="n">TopicStatsHelper</span><span class="o">&gt;</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nd">@Override</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="kd">protected</span><span class="w"> </span><span class="n">TopicStatsHelper</span><span class="w"> </span><span class="nf">initialValue</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="k">return</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">TopicStatsHelper</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">};</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="二创建流程">二、创建流程
+</h4><p>创建流程主要分为构建和初始化两个阶段，一般是先通过构造函数创建PersistentTopic，创建好后在调用其initialize方法进行初始化</p>
+<h5 id="1-构造函数">1. 构造函数
+</h5><p>构造函数主要做三件事：1. 更新Broker级别策略 2. 创建发布限流 3. 初始化容器。具体代码实现如下</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">AbstractTopic</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">topic</span><span class="p">,</span><span class="w"> </span><span class="n">BrokerService</span><span class="w"> </span><span class="n">brokerService</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      	</span><span class="c1">//基本都是赋值操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">topic</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">topic</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">brokerService</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">brokerService</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">producers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ConcurrentHashMap</span><span class="o">&lt;&gt;</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">isFenced</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">ServiceConfiguration</span><span class="w"> </span><span class="n">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">brokerService</span><span class="p">.</span><span class="na">pulsar</span><span class="p">().</span><span class="na">getConfiguration</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">replicatorPrefix</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">config</span><span class="p">.</span><span class="na">getReplicatorPrefix</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">topicPolicies</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">HierarchyTopicPolicies</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">updateTopicPolicyByBrokerConfig</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">lastActive</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">System</span><span class="p">.</span><span class="na">nanoTime</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">preciseTopicPublishRateLimitingEnable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">config</span><span class="p">.</span><span class="na">isPreciseTopicPublishRateLimiterEnable</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      	</span><span class="c1">//创建发布限流</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">topicPublishRateLimiter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">PublishRateLimiterImpl</span><span class="p">(</span><span class="n">brokerService</span><span class="p">.</span><span class="na">getPulsar</span><span class="p">().</span><span class="na">getMonotonicSnapshotClock</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      	</span><span class="c1">//更新限流策略</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">updateActiveRateLimiters</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="kd">public</span><span class="w"> </span><span class="nf">PersistentTopic</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">topic</span><span class="p">,</span><span class="w"> </span><span class="n">ManagedLedger</span><span class="w"> </span><span class="n">ledger</span><span class="p">,</span><span class="w"> </span><span class="n">BrokerService</span><span class="w"> </span><span class="n">brokerService</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="kd">super</span><span class="p">(</span><span class="n">topic</span><span class="p">,</span><span class="w"> </span><span class="n">brokerService</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="c1">//赋值操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">orderedExecutor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">brokerService</span><span class="p">.</span><span class="na">getTopicOrderedExecutor</span><span class="p">()</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="o">?</span><span class="w"> </span><span class="n">brokerService</span><span class="p">.</span><span class="na">getTopicOrderedExecutor</span><span class="p">().</span><span class="na">chooseThread</span><span class="p">(</span><span class="n">topic</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">ledger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ledger</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  			</span><span class="c1">//初始化容器，分别是维护当前Topic的订阅情况、跨集群副本情况</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">subscriptions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ConcurrentOpenHashMap</span><span class="p">.</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="w"> </span><span class="n">PersistentSubscription</span><span class="o">&gt;</span><span class="n">newBuilder</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="p">.</span><span class="na">expectedItems</span><span class="p">(</span><span class="n">16</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="p">.</span><span class="na">concurrencyLevel</span><span class="p">(</span><span class="n">1</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">replicators</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ConcurrentOpenHashMap</span><span class="p">.</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="w"> </span><span class="n">Replicator</span><span class="o">&gt;</span><span class="n">newBuilder</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">expectedItems</span><span class="p">(</span><span class="n">16</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">concurrencyLevel</span><span class="p">(</span><span class="n">1</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">shadowReplicators</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ConcurrentOpenHashMap</span><span class="p">.</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="w"> </span><span class="n">Replicator</span><span class="o">&gt;</span><span class="n">newBuilder</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">expectedItems</span><span class="p">(</span><span class="n">16</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">concurrencyLevel</span><span class="p">(</span><span class="n">1</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">backloggedCursorThresholdEntries</span><span class="w"> </span><span class="o">=</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">brokerService</span><span class="p">.</span><span class="na">pulsar</span><span class="p">().</span><span class="na">getConfiguration</span><span class="p">().</span><span class="na">getManagedLedgerCursorBackloggedThreshold</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h5 id="2-initialize方法">2. initialize方法
+</h5><p>初始化方法的逻辑相比下要丰富写，归纳起来有以下四点</p>
+<ol>
+<li>
+<p>获取压缩服务</p>
+<p>通过双重判断获取单例TwoPhaseCompactor进行压缩，有专门的线程池进行处理压缩动作</p>
+</li>
+<li>
+<p>遍历游标恢复订阅的状态</p>
+<p>当Topic重新分配后，在新的Broker中要根据游标恢复订阅、跨集群复制的状态，这样才能让客户端“无感”</p>
+</li>
+<li>
+<p>跨集群复制</p>
+<p>遍历这个Topic的游标，如果游标中存在跨集群复制游标则创建对应的GeoPersistentReplicator对象进行消息的复制</p>
+</li>
+<li>
+<p>更新配置</p>
+<ul>
+<li>更新Topic命名空间的配置策略</li>
+<li>初始化调度限流DispatchRateLimiter</li>
+<li>更新订阅/发布/资源组限流</li>
+<li>更新Topic级别的配置</li>
+</ul>
+</li>
+</ol>
+<p>具体代码实现如下</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">Void</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">initialize</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">List</span><span class="o">&lt;</span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">Void</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">futures</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ArrayList</span><span class="o">&lt;&gt;</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="c1">//获取Broker压缩对象</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">futures</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="n">brokerService</span><span class="p">.</span><span class="na">getPulsar</span><span class="p">().</span><span class="na">newTopicCompactionService</span><span class="p">(</span><span class="n">topic</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">thenAccept</span><span class="p">(</span><span class="n">service</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">PersistentTopic</span><span class="p">.</span><span class="na">this</span><span class="p">.</span><span class="na">topicCompactionService</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">service</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="c1">//遍历这个Topic的游标恢复订阅中的对象</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">this</span><span class="p">.</span><span class="na">createPersistentSubscriptions</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}));</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="c1">//遍历这个Topic的游标，如果游标中存在跨集群复制游标则创建对应的GeoPersistentReplicator对象进行消息的复制</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">ManagedCursor</span><span class="w"> </span><span class="n">cursor</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">ledger</span><span class="p">.</span><span class="na">getCursors</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cursor</span><span class="p">.</span><span class="na">getName</span><span class="p">().</span><span class="na">startsWith</span><span class="p">(</span><span class="n">replicatorPrefix</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">String</span><span class="w"> </span><span class="n">localCluster</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">brokerService</span><span class="p">.</span><span class="na">pulsar</span><span class="p">().</span><span class="na">getConfiguration</span><span class="p">().</span><span class="na">getClusterName</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">String</span><span class="w"> </span><span class="n">remoteCluster</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">PersistentReplicator</span><span class="p">.</span><span class="na">getRemoteCluster</span><span class="p">(</span><span class="n">cursor</span><span class="p">.</span><span class="na">getName</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">futures</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="n">addReplicationCluster</span><span class="p">(</span><span class="n">remoteCluster</span><span class="p">,</span><span class="w"> </span><span class="n">cursor</span><span class="p">,</span><span class="w"> </span><span class="n">localCluster</span><span class="p">));</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">FutureUtil</span><span class="p">.</span><span class="na">waitForAll</span><span class="p">(</span><span class="n">futures</span><span class="p">).</span><span class="na">thenCompose</span><span class="p">(</span><span class="n">__</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">brokerService</span><span class="p">.</span><span class="na">pulsar</span><span class="p">().</span><span class="na">getPulsarResources</span><span class="p">().</span><span class="na">getNamespaceResources</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">getPoliciesAsync</span><span class="p">(</span><span class="n">TopicName</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">topic</span><span class="p">).</span><span class="na">getNamespaceObject</span><span class="p">())</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">thenAcceptAsync</span><span class="p">(</span><span class="n">optPolicies</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">optPolicies</span><span class="p">.</span><span class="na">isPresent</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">isEncryptionRequired</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">updatePublishDispatcher</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="c1">//进行资源组级别的隔离</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">updateResourceGroupLimiter</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">Policies</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">initializeDispatchRateLimiterIfNeeded</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">updateSubscribeRateLimiter</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="k">return</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="n">Policies</span><span class="w"> </span><span class="n">policies</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">optPolicies</span><span class="p">.</span><span class="na">get</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="c1">//更新命名空间级别的策略</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="k">this</span><span class="p">.</span><span class="na">updateTopicPolicyByNamespacePolicy</span><span class="p">(</span><span class="n">policies</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="c1">//初始化调度限流</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="n">initializeDispatchRateLimiterIfNeeded</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="c1">//更新订阅限流</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="n">updateSubscribeRateLimiter</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="c1">//更新发布限流</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="n">updatePublishDispatcher</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="c1">//更新资源组限流</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="n">updateResourceGroupLimiter</span><span class="p">(</span><span class="n">policies</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="k">this</span><span class="p">.</span><span class="na">isEncryptionRequired</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">policies</span><span class="p">.</span><span class="na">encryption_required</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="n">isAllowAutoUpdateSchema</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">policies</span><span class="p">.</span><span class="na">is_allow_auto_update_schema</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">},</span><span class="w"> </span><span class="n">getOrderedExecutor</span><span class="p">())</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">thenCompose</span><span class="p">(</span><span class="n">ignore</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">initTopicPolicy</span><span class="p">())</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">exceptionally</span><span class="p">(</span><span class="n">ex</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">}));</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="三负责内容">三、负责内容
+</h4><h5 id="1生产者相关">1、生产者相关
+</h5><h6 id="新增">新增
+</h6><p>生产者客户端启动时会跟Topic归属的Broker建立TCP连接并请求Broker端ServerCnx的handleProducer方法进行处理，这个方法最终会调用PersistentTopic的addProducer方法进行创建，咱们来看看实现</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">Optional</span><span class="o">&lt;</span><span class="n">Long</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="nf">addProducer</span><span class="p">(</span><span class="n">Producer</span><span class="w"> </span><span class="n">producer</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">Void</span><span class="o">&gt;</span><span class="w"> </span><span class="n">producerQueuedFuture</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      	</span><span class="c1">//进去看看父类的实现</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kd">super</span><span class="p">.</span><span class="na">addProducer</span><span class="p">(</span><span class="n">producer</span><span class="p">,</span><span class="w"> </span><span class="n">producerQueuedFuture</span><span class="p">).</span><span class="na">thenCompose</span><span class="p">(</span><span class="n">topicEpoch</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">messageDeduplication</span><span class="p">.</span><span class="na">producerAdded</span><span class="p">(</span><span class="n">producer</span><span class="p">.</span><span class="na">getProducerName</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="c1">// Start replication producers if not already</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">startReplProducers</span><span class="p">().</span><span class="na">thenApply</span><span class="p">(</span><span class="n">__</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">topicEpoch</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">});</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="kd">public</span><span class="w"> </span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">Optional</span><span class="o">&lt;</span><span class="n">Long</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="nf">addProducer</span><span class="p">(</span><span class="n">Producer</span><span class="w"> </span><span class="n">producer</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                         </span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">Void</span><span class="o">&gt;</span><span class="w"> </span><span class="n">producerQueuedFuture</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">     </span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">     </span><span class="c1">//继续跟踪</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">     </span><span class="k">return</span><span class="w"> </span><span class="n">internalAddProducer</span><span class="p">(</span><span class="n">producer</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">     </span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">protected</span><span class="w"> </span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">Void</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">internalAddProducer</span><span class="p">(</span><span class="n">Producer</span><span class="w"> </span><span class="n">producer</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="c1">//producers是ConcurrentHashMap结构，相当于会在PersistentTopic中维护服务端的生产者对象</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">Producer</span><span class="w"> </span><span class="n">existProducer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">producers</span><span class="p">.</span><span class="na">putIfAbsent</span><span class="p">(</span><span class="n">producer</span><span class="p">.</span><span class="na">getProducerName</span><span class="p">(),</span><span class="w"> </span><span class="n">producer</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">CompletableFuture</span><span class="p">.</span><span class="na">completedFuture</span><span class="p">(</span><span class="kc">null</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h6 id="删除">删除
+</h6><p>删除的逻辑很简单，也是通过TCP接收到客户端断开连接的请求后，会调用Producer的close方法进行资源释放，同时从维护的producers中移除此对象</p>
+<h5 id="2-订阅相关">2. 订阅相关
+</h5><p>消费者客户端启动时会跟Topic归属的Broker建立TCP连接并请求Broker端，请求由ServerCnx的handleSubscribe方法进行处理，这个方法最终会调用PersistentTopic的internalSubscribe方法进行创建，咱们来看看实现</p>
+<h6 id="新增-1">新增
+</h6><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">Consumer</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">internalSubscribe</span><span class="p">(</span><span class="kd">final</span><span class="w"> </span><span class="n">TransportCnx</span><span class="w"> </span><span class="n">cnx</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">subscriptionName</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                          </span><span class="kt">long</span><span class="w"> </span><span class="n">consumerId</span><span class="p">,</span><span class="w"> </span><span class="n">SubType</span><span class="w"> </span><span class="n">subType</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">priorityLevel</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                          </span><span class="n">String</span><span class="w"> </span><span class="n">consumerName</span><span class="p">,</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="n">isDurable</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                          </span><span class="n">MessageId</span><span class="w"> </span><span class="n">startMessageId</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                          </span><span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="o">&gt;</span><span class="w"> </span><span class="n">metadata</span><span class="p">,</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="n">readCompacted</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                          </span><span class="n">InitialPosition</span><span class="w"> </span><span class="n">initialPosition</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                          </span><span class="kt">long</span><span class="w"> </span><span class="n">startMessageRollbackDurationSec</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                          </span><span class="kt">boolean</span><span class="w"> </span><span class="n">replicatedSubscriptionStateArg</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                          </span><span class="n">KeySharedMeta</span><span class="w"> </span><span class="n">keySharedMeta</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                          </span><span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="o">&gt;</span><span class="w"> </span><span class="n">subscriptionProperties</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                          </span><span class="kt">long</span><span class="w"> </span><span class="n">consumerEpoch</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                          </span><span class="n">SchemaType</span><span class="w"> </span><span class="n">schemaType</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="c1">//创建对应的客户端对象</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">Consumer</span><span class="w"> </span><span class="n">consumer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Consumer</span><span class="p">(</span><span class="n">subscription</span><span class="p">,</span><span class="w"> </span><span class="n">subType</span><span class="p">,</span><span class="w"> </span><span class="n">topic</span><span class="p">,</span><span class="w"> </span><span class="n">consumerId</span><span class="p">,</span><span class="w"> </span><span class="n">priorityLevel</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">consumerName</span><span class="p">,</span><span class="w"> </span><span class="n">isDurable</span><span class="p">,</span><span class="w"> </span><span class="n">cnx</span><span class="p">,</span><span class="w"> </span><span class="n">cnx</span><span class="p">.</span><span class="na">getAuthRole</span><span class="p">(),</span><span class="w"> </span><span class="n">metadata</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">readCompacted</span><span class="p">,</span><span class="w"> </span><span class="n">keySharedMeta</span><span class="p">,</span><span class="w"> </span><span class="n">startMessageId</span><span class="p">,</span><span class="w"> </span><span class="n">consumerEpoch</span><span class="p">,</span><span class="w"> </span><span class="n">schemaType</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="c1">//将消费者对象加到订阅里</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="n">addConsumerToSubscription</span><span class="p">(</span><span class="n">subscription</span><span class="p">,</span><span class="w"> </span><span class="n">consumer</span><span class="p">);</span><span class="w">                                                    
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">protected</span><span class="w"> </span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">Void</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">addConsumerToSubscription</span><span class="p">(</span><span class="n">Subscription</span><span class="w"> </span><span class="n">subscription</span><span class="p">,</span><span class="w"> </span><span class="n">Consumer</span><span class="w"> </span><span class="n">consumer</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="p">....</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="c1">//最终将将创建的消费者放到Dispatcher中进行管理以及加到subscriptions这个Map中进行维护</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">subscription</span><span class="p">.</span><span class="na">addConsumer</span><span class="p">(</span><span class="n">consumer</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h6 id="删除-1">删除
+</h6><p>删除的逻辑也是比较简单的，就是从subscriptions中进行移除</p>
+<h5 id="3-处理消息写入">3. 处理消息写入
+</h5><p>消息写入的流程相对比较复杂，后面再单独分析，暂时跳过</p>
+<h5 id="4-跨集群复制">4. 跨集群复制
+</h5><p>跨集群复制这里实现逻辑其实不难，相当于在Broker上去读取Bookkeeper获取数据并通过启动生产者往其他集群进行数据写入，具体细节后面也单独写文章进行分析</p>
+<h5 id="5-消息清理">5. 消息清理
+</h5><p>Pulsar的消息TTL、积压、压缩都是在Broker启动时往线程池中加入定时任务轮询触发的</p>
+<h6 id="ttl">TTL
+</h6><p>TTL会循环扫描每个Topic过期的消息位置，并通过改变游标进行标记，而清理是由专门的线程根据游标进行处理的</p>
+<h6 id="积压">积压
+</h6><p>消息积压也是会定期检测，分两种情况，一种是消息超过限制额度，另一种是消息时间超过额度。这两种情况都会触发积压策略的处理，具体的策略在BacklogQuota.RetentionPolicy中定义</p>
+<h6 id="压缩">压缩
+</h6><p>跟上面一样，轮询检测进行处理</p>
+<h6 id="配置更新">配置更新
+</h6><p>在PersistentTopic启动的初始化initialize方法中会调用onUpdate进行策略更新，那Pulsar又是如何做的支持配置动态更新的呢？这个问题保留给大家</p>
+<h4 id="四总结">四、总结
+</h4><p>本文主要强调PersistentTopic类的重要性、聊聊它都负责哪些事情以及大概实现，具体每个细节展开都能单独写一篇文章，这个敬请期待～</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+     
+    
+        
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
