@@ -266,48 +266,32 @@
         <div class="widget--toc">
             <nav id="TableOfContents">
   <ol>
-    <li><a href="#一简析">一、简析</a>
+    <li><a href="#简析">简析</a>
       <ol>
-        <li>
-          <ol>
-            <li><a href="#客户端">客户端</a></li>
-            <li><a href="#服务端">服务端</a></li>
-            <li><a href="#小结">小结</a></li>
-          </ol>
-        </li>
+        <li><a href="#客户端">客户端</a></li>
+        <li><a href="#服务端">服务端</a></li>
+        <li><a href="#小结">小结</a></li>
       </ol>
     </li>
-    <li><a href="#二客户端源码解析">二、客户端源码解析</a>
+    <li><a href="#客户端源码解析">客户端源码解析</a>
       <ol>
-        <li>
-          <ol>
-            <li><a href="#源码跟踪">源码跟踪</a></li>
-            <li><a href="#小结-1">小结</a></li>
-          </ol>
-        </li>
+        <li><a href="#源码跟踪">源码跟踪</a></li>
+        <li><a href="#小结-1">小结</a></li>
       </ol>
     </li>
-    <li><a href="#三服务端源码解析">三、服务端源码解析</a>
+    <li><a href="#服务端源码解析">服务端源码解析</a>
       <ol>
-        <li>
-          <ol>
-            <li><a href="#源码跟踪-1">源码跟踪</a></li>
-            <li><a href="#小结-2">小结</a></li>
-          </ol>
-        </li>
+        <li><a href="#源码跟踪-1">源码跟踪</a></li>
+        <li><a href="#小结-2">小结</a></li>
       </ol>
     </li>
-    <li><a href="#四其他">四、其他</a>
+    <li><a href="#其他">其他</a>
       <ol>
-        <li>
-          <ol>
-            <li><a href="#序列化对象创建流程">序列化对象创建流程</a></li>
-            <li><a href="#getschemacompatibilitystrategyasyncwithoutauth方法">getSchemaCompatibilityStrategyAsyncWithoutAuth方法</a></li>
-          </ol>
-        </li>
+        <li><a href="#序列化对象创建流程">序列化对象创建流程</a></li>
+        <li><a href="#getschemacompatibilitystrategyasyncwithoutauth方法">getSchemaCompatibilityStrategyAsyncWithoutAuth方法</a></li>
       </ol>
     </li>
-    <li><a href="#五总结">五、总结</a></li>
+    <li><a href="#总结">总结</a></li>
   </ol>
 </nav>
         </div>
@@ -407,11 +391,11 @@
     <section class="article-content">
     
     
-    <h2 id="一简析">一、简析
+    <h2 id="简析">简析
 </h2><p>schema是pulsar重要的功能之一，现在就一起从源码的视角看下管理流创建schema时客户端和服务端的表现</p>
 <img src="image-20240801111546500.png" alt="schema新建流程图" style="zoom:50%;" />
-<h4 id="客户端">客户端
-</h4><p>客户端主要经历以下四个步骤</p>
+<h3 id="客户端">客户端
+</h3><p>客户端主要经历以下四个步骤</p>
 <ol>
 <li>
 <p>创建Schema实例</p>
@@ -430,8 +414,8 @@
 <p>通过post请求将数据发到服务端，这里是通过Java Rest库<code>javax.ws.rs-api</code>进行处理的</p>
 </li>
 </ol>
-<h4 id="服务端">服务端
-</h4><p>服务端主要经历以下四个步骤</p>
+<h3 id="服务端">服务端
+</h3><p>服务端主要经历以下四个步骤</p>
 <ol>
 <li>
 <p>参数格式校验</p>
@@ -456,11 +440,11 @@
 <p>通过LedgerHandle对象向Bookkeeper服务端发送写请求</p>
 </li>
 </ol>
-<h4 id="小结">小结
-</h4><p>schame新建流程概括起来就是，客户端构造schema信息，服务端负责schema校验，bookkeeper负责schema的存储</p>
-<h2 id="二客户端源码解析">二、客户端源码解析
-</h2><h4 id="源码跟踪">源码跟踪
-</h4><p>下面是通过管理流创建schema的样例代码，核心就是通过PulsarAdmin.schemas获取schema对象，这个schema对象负责所有客户端跟schema相关的操作，包括schema的增删改查等。通过方法的第二个参数可以看到是通过Schema接口提供的静态方法AVRO来构造Avro格式的schema对象，除此之外Schema接口还提供了诸如JSON、KeyValue、PROTOBUF等静态方法提供对应数据格式的schema对象，这里如果将这块构造schema对象逻辑抽成简单工厂模式可能会更合适些</p>
+<h3 id="小结">小结
+</h3><p>schame新建流程概括起来就是，客户端构造schema信息，服务端负责schema校验，bookkeeper负责schema的存储</p>
+<h2 id="客户端源码解析">客户端源码解析
+</h2><h3 id="源码跟踪">源码跟踪
+</h3><p>下面是通过管理流创建schema的样例代码，核心就是通过PulsarAdmin.schemas获取schema对象，这个schema对象负责所有客户端跟schema相关的操作，包括schema的增删改查等。通过方法的第二个参数可以看到是通过Schema接口提供的静态方法AVRO来构造Avro格式的schema对象，除此之外Schema接口还提供了诸如JSON、KeyValue、PROTOBUF等静态方法提供对应数据格式的schema对象，这里如果将这块构造schema对象逻辑抽成简单工厂模式可能会更合适些</p>
 <p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729172837581.png"
 	width="1236"
 	height="110"
@@ -552,16 +536,16 @@
 		data-flex-basis="1376px"
 	
 ></p>
-<h4 id="小结-1">小结
-</h4><p>简单归纳如下</p>
+<h3 id="小结-1">小结
+</h3><p>简单归纳如下</p>
 <ul>
 <li>通过Schema接口构造对应数据格式的schema对象，由此对象可得到schema相关的元信息SchemaInfo</li>
 <li>构造请求目标的HTTP地址</li>
 <li>通过<code>javax.ws.rs-api</code>提供的库发送异步HTTP请求到服务端</li>
 </ul>
-<h2 id="三服务端源码解析">三、服务端源码解析
-</h2><h4 id="源码跟踪-1">源码跟踪
-</h4><p>服务端的接收逻辑在SchemasResource类，这个类在<code>org.apache.pulsar.broker.admin</code>包下，这个包下全是处理管理流相关的操作，如果有做pulsar平台化需求的，这个包下的相关逻辑值得一读。</p>
+<h2 id="服务端源码解析">服务端源码解析
+</h2><h3 id="源码跟踪-1">源码跟踪
+</h3><p>服务端的接收逻辑在SchemasResource类，这个类在<code>org.apache.pulsar.broker.admin</code>包下，这个包下全是处理管理流相关的操作，如果有做pulsar平台化需求的，这个包下的相关逻辑值得一读。</p>
 <p>再来看看postSchema方法，首先是validateTopicName方法，这个方法就是对入参进行判空、是否有特殊字符做检查；接下来就是核心方法postSchemaAsync，通过方法名可以推断出这是个异步处理schema写请求的方法</p>
 <p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729194959541.png"
 	width="1234"
@@ -742,17 +726,17 @@
 		data-flex-basis="1281px"
 	
 ></p>
-<h4 id="小结-2">小结
-</h4><p>简单归纳如下</p>
+<h3 id="小结-2">小结
+</h3><p>简单归纳如下</p>
 <ol>
 <li>参数格式校验、操作权限校验</li>
 <li>查询当前Topic是否已经创建过schema，有则以插入时版本号自增</li>
 <li>如果是初次创建Schema，则调用bookkeeper创建Ledger</li>
 <li>往这个Schema对应的Ledger内插入schema元数据信息</li>
 </ol>
-<h2 id="四其他">四、其他
-</h2><h4 id="序列化对象创建流程">序列化对象创建流程
-</h4><p>现在再专门来看看序列化对象的创建过程，回到开头管理流创建schema的地方，Schema.AVRO方法是咱们本次要看的</p>
+<h2 id="其他">其他
+</h2><h3 id="序列化对象创建流程">序列化对象创建流程
+</h3><p>现在再专门来看看序列化对象的创建过程，回到开头管理流创建schema的地方，Schema.AVRO方法是咱们本次要看的</p>
 <p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801102718485.png"
 	width="1233"
 	height="110"
@@ -917,8 +901,8 @@
 		data-flex-basis="539px"
 	
 ></p>
-<h4 id="getschemacompatibilitystrategyasyncwithoutauth方法">getSchemaCompatibilityStrategyAsyncWithoutAuth方法
-</h4><p>AdminResource#getSchemaCompatibilityStrategyAsyncWithoutAuth方法是在服务端处理schema创建请求阶段会调用的方法，现在就一起跟踪看看</p>
+<h3 id="getschemacompatibilitystrategyasyncwithoutauth方法">getSchemaCompatibilityStrategyAsyncWithoutAuth方法
+</h3><p>AdminResource#getSchemaCompatibilityStrategyAsyncWithoutAuth方法是在服务端处理schema创建请求阶段会调用的方法，现在就一起跟踪看看</p>
 <p>731行和739行分别是获取Topic级别和Namespace级别的schema兼容策略，如果没有定义则默认自动更新。例如Topic A之前已经创建过schema1，那么如果此时再发起schema2创建请求，则服务端会继续保存并且生效schema2，只不过它的版本号会进行累加，当然，也可以配置为不支持schema策略不支持更新，一旦确定了后就不允许再变更</p>
 <p><img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801110732825.png"
 	width="1237"
@@ -934,7 +918,7 @@
 		data-flex-basis="444px"
 	
 ></p>
-<h2 id="五总结">五、总结
+<h2 id="总结">总结
 </h2><p>相信大家对schema创建的流程已经很清楚了，再次简单归纳下</p>
 <ol>
 <li>客户端根据用户定义的结构信息创建对应的Schema对象，并将结构信息以HTTP请求发给服务端</li>

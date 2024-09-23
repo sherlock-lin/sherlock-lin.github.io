@@ -680,11 +680,11 @@
         <pubDate>Thu, 01 Aug 2024 10:02:55 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801111546500.png" alt="Featured image of post 管理流创建schema流程源码解析" /&gt;&lt;h2 id=&#34;一简析&#34;&gt;一、简析
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801111546500.png" alt="Featured image of post 管理流创建schema流程源码解析" /&gt;&lt;h2 id=&#34;简析&#34;&gt;简析
 &lt;/h2&gt;&lt;p&gt;schema是pulsar重要的功能之一，现在就一起从源码的视角看下管理流创建schema时客户端和服务端的表现&lt;/p&gt;
 &lt;img src=&#34;image-20240801111546500.png&#34; alt=&#34;schema新建流程图&#34; style=&#34;zoom:50%;&#34; /&gt;
-&lt;h4 id=&#34;客户端&#34;&gt;客户端
-&lt;/h4&gt;&lt;p&gt;客户端主要经历以下四个步骤&lt;/p&gt;
+&lt;h3 id=&#34;客户端&#34;&gt;客户端
+&lt;/h3&gt;&lt;p&gt;客户端主要经历以下四个步骤&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;
 &lt;p&gt;创建Schema实例&lt;/p&gt;
@@ -703,8 +703,8 @@
 &lt;p&gt;通过post请求将数据发到服务端，这里是通过Java Rest库&lt;code&gt;javax.ws.rs-api&lt;/code&gt;进行处理的&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ol&gt;
-&lt;h4 id=&#34;服务端&#34;&gt;服务端
-&lt;/h4&gt;&lt;p&gt;服务端主要经历以下四个步骤&lt;/p&gt;
+&lt;h3 id=&#34;服务端&#34;&gt;服务端
+&lt;/h3&gt;&lt;p&gt;服务端主要经历以下四个步骤&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;
 &lt;p&gt;参数格式校验&lt;/p&gt;
@@ -729,11 +729,11 @@
 &lt;p&gt;通过LedgerHandle对象向Bookkeeper服务端发送写请求&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ol&gt;
-&lt;h4 id=&#34;小结&#34;&gt;小结
-&lt;/h4&gt;&lt;p&gt;schame新建流程概括起来就是，客户端构造schema信息，服务端负责schema校验，bookkeeper负责schema的存储&lt;/p&gt;
-&lt;h2 id=&#34;二客户端源码解析&#34;&gt;二、客户端源码解析
-&lt;/h2&gt;&lt;h4 id=&#34;源码跟踪&#34;&gt;源码跟踪
-&lt;/h4&gt;&lt;p&gt;下面是通过管理流创建schema的样例代码，核心就是通过PulsarAdmin.schemas获取schema对象，这个schema对象负责所有客户端跟schema相关的操作，包括schema的增删改查等。通过方法的第二个参数可以看到是通过Schema接口提供的静态方法AVRO来构造Avro格式的schema对象，除此之外Schema接口还提供了诸如JSON、KeyValue、PROTOBUF等静态方法提供对应数据格式的schema对象，这里如果将这块构造schema对象逻辑抽成简单工厂模式可能会更合适些&lt;/p&gt;
+&lt;h3 id=&#34;小结&#34;&gt;小结
+&lt;/h3&gt;&lt;p&gt;schame新建流程概括起来就是，客户端构造schema信息，服务端负责schema校验，bookkeeper负责schema的存储&lt;/p&gt;
+&lt;h2 id=&#34;客户端源码解析&#34;&gt;客户端源码解析
+&lt;/h2&gt;&lt;h3 id=&#34;源码跟踪&#34;&gt;源码跟踪
+&lt;/h3&gt;&lt;p&gt;下面是通过管理流创建schema的样例代码，核心就是通过PulsarAdmin.schemas获取schema对象，这个schema对象负责所有客户端跟schema相关的操作，包括schema的增删改查等。通过方法的第二个参数可以看到是通过Schema接口提供的静态方法AVRO来构造Avro格式的schema对象，除此之外Schema接口还提供了诸如JSON、KeyValue、PROTOBUF等静态方法提供对应数据格式的schema对象，这里如果将这块构造schema对象逻辑抽成简单工厂模式可能会更合适些&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729172837581.png&#34;
 	width=&#34;1236&#34;
 	height=&#34;110&#34;
@@ -825,16 +825,16 @@
 		data-flex-basis=&#34;1376px&#34;
 	
 &gt;&lt;/p&gt;
-&lt;h4 id=&#34;小结-1&#34;&gt;小结
-&lt;/h4&gt;&lt;p&gt;简单归纳如下&lt;/p&gt;
+&lt;h3 id=&#34;小结-1&#34;&gt;小结
+&lt;/h3&gt;&lt;p&gt;简单归纳如下&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;通过Schema接口构造对应数据格式的schema对象，由此对象可得到schema相关的元信息SchemaInfo&lt;/li&gt;
 &lt;li&gt;构造请求目标的HTTP地址&lt;/li&gt;
 &lt;li&gt;通过&lt;code&gt;javax.ws.rs-api&lt;/code&gt;提供的库发送异步HTTP请求到服务端&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h2 id=&#34;三服务端源码解析&#34;&gt;三、服务端源码解析
-&lt;/h2&gt;&lt;h4 id=&#34;源码跟踪-1&#34;&gt;源码跟踪
-&lt;/h4&gt;&lt;p&gt;服务端的接收逻辑在SchemasResource类，这个类在&lt;code&gt;org.apache.pulsar.broker.admin&lt;/code&gt;包下，这个包下全是处理管理流相关的操作，如果有做pulsar平台化需求的，这个包下的相关逻辑值得一读。&lt;/p&gt;
+&lt;h2 id=&#34;服务端源码解析&#34;&gt;服务端源码解析
+&lt;/h2&gt;&lt;h3 id=&#34;源码跟踪-1&#34;&gt;源码跟踪
+&lt;/h3&gt;&lt;p&gt;服务端的接收逻辑在SchemasResource类，这个类在&lt;code&gt;org.apache.pulsar.broker.admin&lt;/code&gt;包下，这个包下全是处理管理流相关的操作，如果有做pulsar平台化需求的，这个包下的相关逻辑值得一读。&lt;/p&gt;
 &lt;p&gt;再来看看postSchema方法，首先是validateTopicName方法，这个方法就是对入参进行判空、是否有特殊字符做检查；接下来就是核心方法postSchemaAsync，通过方法名可以推断出这是个异步处理schema写请求的方法&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240729194959541.png&#34;
 	width=&#34;1234&#34;
@@ -1015,17 +1015,17 @@
 		data-flex-basis=&#34;1281px&#34;
 	
 &gt;&lt;/p&gt;
-&lt;h4 id=&#34;小结-2&#34;&gt;小结
-&lt;/h4&gt;&lt;p&gt;简单归纳如下&lt;/p&gt;
+&lt;h3 id=&#34;小结-2&#34;&gt;小结
+&lt;/h3&gt;&lt;p&gt;简单归纳如下&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;参数格式校验、操作权限校验&lt;/li&gt;
 &lt;li&gt;查询当前Topic是否已经创建过schema，有则以插入时版本号自增&lt;/li&gt;
 &lt;li&gt;如果是初次创建Schema，则调用bookkeeper创建Ledger&lt;/li&gt;
 &lt;li&gt;往这个Schema对应的Ledger内插入schema元数据信息&lt;/li&gt;
 &lt;/ol&gt;
-&lt;h2 id=&#34;四其他&#34;&gt;四、其他
-&lt;/h2&gt;&lt;h4 id=&#34;序列化对象创建流程&#34;&gt;序列化对象创建流程
-&lt;/h4&gt;&lt;p&gt;现在再专门来看看序列化对象的创建过程，回到开头管理流创建schema的地方，Schema.AVRO方法是咱们本次要看的&lt;/p&gt;
+&lt;h2 id=&#34;其他&#34;&gt;其他
+&lt;/h2&gt;&lt;h3 id=&#34;序列化对象创建流程&#34;&gt;序列化对象创建流程
+&lt;/h3&gt;&lt;p&gt;现在再专门来看看序列化对象的创建过程，回到开头管理流创建schema的地方，Schema.AVRO方法是咱们本次要看的&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801102718485.png&#34;
 	width=&#34;1233&#34;
 	height=&#34;110&#34;
@@ -1190,8 +1190,8 @@
 		data-flex-basis=&#34;539px&#34;
 	
 &gt;&lt;/p&gt;
-&lt;h4 id=&#34;getschemacompatibilitystrategyasyncwithoutauth方法&#34;&gt;getSchemaCompatibilityStrategyAsyncWithoutAuth方法
-&lt;/h4&gt;&lt;p&gt;AdminResource#getSchemaCompatibilityStrategyAsyncWithoutAuth方法是在服务端处理schema创建请求阶段会调用的方法，现在就一起跟踪看看&lt;/p&gt;
+&lt;h3 id=&#34;getschemacompatibilitystrategyasyncwithoutauth方法&#34;&gt;getSchemaCompatibilityStrategyAsyncWithoutAuth方法
+&lt;/h3&gt;&lt;p&gt;AdminResource#getSchemaCompatibilityStrategyAsyncWithoutAuth方法是在服务端处理schema创建请求阶段会调用的方法，现在就一起跟踪看看&lt;/p&gt;
 &lt;p&gt;731行和739行分别是获取Topic级别和Namespace级别的schema兼容策略，如果没有定义则默认自动更新。例如Topic A之前已经创建过schema1，那么如果此时再发起schema2创建请求，则服务端会继续保存并且生效schema2，只不过它的版本号会进行累加，当然，也可以配置为不支持schema策略不支持更新，一旦确定了后就不允许再变更&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801110732825.png&#34;
 	width=&#34;1237&#34;
@@ -1207,7 +1207,7 @@
 		data-flex-basis=&#34;444px&#34;
 	
 &gt;&lt;/p&gt;
-&lt;h2 id=&#34;五总结&#34;&gt;五、总结
+&lt;h2 id=&#34;总结&#34;&gt;总结
 &lt;/h2&gt;&lt;p&gt;相信大家对schema创建的流程已经很清楚了，再次简单归纳下&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;客户端根据用户定义的结构信息创建对应的Schema对象，并将结构信息以HTTP请求发给服务端&lt;/li&gt;
@@ -1673,12 +1673,12 @@
         <pubDate>Fri, 19 Apr 2024 11:54:03 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2%E7%94%9F%E4%BA%A7%E8%80%85%E6%8B%A6%E6%88%AA%E5%99%A8%E7%9A%84%E4%BD%BF%E7%94%A8%E4%BB%A5%E5%8F%8A%E6%BA%90%E7%A0%81%E8%AE%BE%E8%AE%A1/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2%E7%94%9F%E4%BA%A7%E8%80%85%E6%8B%A6%E6%88%AA%E5%99%A8%E7%9A%84%E4%BD%BF%E7%94%A8%E4%BB%A5%E5%8F%8A%E6%BA%90%E7%A0%81%E8%AE%BE%E8%AE%A1/image-20240419110502648.png" alt="Featured image of post 深入探索生产者拦截器的使用以及源码设计" /&gt;&lt;h4 id=&#34;一介绍&#34;&gt;一、介绍
-&lt;/h4&gt;&lt;p&gt;在软件设计中，为了方便能够应对不同的场景，一般在一些容易有差异的环节会考虑允许用户自定义逻辑，拦截器就是其中的一种实现方式，像Spring、Kafka、Pulsar等都支持这种方式。流程简化起来就如下图，客户端跟服务端的写消息请求和接收请求都要先通过一遍拦截器，因此用户都过自定义拦截器逻辑就能以一种无侵入、规范化的方式来改动消息发送以及处理响应的行为。&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2%E7%94%9F%E4%BA%A7%E8%80%85%E6%8B%A6%E6%88%AA%E5%99%A8%E7%9A%84%E4%BD%BF%E7%94%A8%E4%BB%A5%E5%8F%8A%E6%BA%90%E7%A0%81%E8%AE%BE%E8%AE%A1/image-20240419110502648.png" alt="Featured image of post 深入探索生产者拦截器的使用以及源码设计" /&gt;&lt;h2 id=&#34;介绍&#34;&gt;介绍
+&lt;/h2&gt;&lt;p&gt;在软件设计中，为了方便能够应对不同的场景，一般在一些容易有差异的环节会考虑允许用户自定义逻辑，拦截器就是其中的一种实现方式，像Spring、Kafka、Pulsar等都支持这种方式。流程简化起来就如下图，客户端跟服务端的写消息请求和接收请求都要先通过一遍拦截器，因此用户都过自定义拦截器逻辑就能以一种无侵入、规范化的方式来改动消息发送以及处理响应的行为。&lt;/p&gt;
 &lt;img src=&#34;image-20240419110502648.png&#34; alt=&#34;image-20240419110502648&#34; style=&#34;zoom:67%;&#34; /&gt;
-&lt;h4 id=&#34;二使用&#34;&gt;二、使用
-&lt;/h4&gt;&lt;h5 id=&#34;1-producerinterceptor接口&#34;&gt;&lt;strong&gt;1. ProducerInterceptor接口&lt;/strong&gt;
-&lt;/h5&gt;&lt;p&gt;ProducerInterceptor是Pulsar提供的接口，通过实现该接口用户可以在消息发送和发送成功阶段注入自定义的逻辑来扩展Pulsar客户端的能力，进而优雅的解决某些场景的问题。&lt;/p&gt;
+&lt;h2 id=&#34;使用&#34;&gt;使用
+&lt;/h2&gt;&lt;h3 id=&#34;producerinterceptor接口&#34;&gt;ProducerInterceptor接口
+&lt;/h3&gt;&lt;p&gt;ProducerInterceptor是Pulsar提供的接口，通过实现该接口用户可以在消息发送和发送成功阶段注入自定义的逻辑来扩展Pulsar客户端的能力，进而优雅的解决某些场景的问题。&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -1725,8 +1725,8 @@
 &lt;li&gt;onSendAcknowledgement：在每条消息消息发送服务端响应后(无论成功失败)会调用此方法&lt;/li&gt;
 &lt;li&gt;onPartitionsChange：在分区数有变动的时候会调用这里的逻辑。这是3.2版本新加的逻辑，2.8以及之前的版本没有此接口&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h5 id=&#34;2-实现之统计&#34;&gt;2. 实现之统计
-&lt;/h5&gt;&lt;p&gt;这里对生产者累计发送的消息条数进行统计，实现逻辑如下&lt;/p&gt;
+&lt;h3 id=&#34;实现之统计&#34;&gt;实现之统计
+&lt;/h3&gt;&lt;p&gt;这里对生产者累计发送的消息条数进行统计，实现逻辑如下&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -1841,8 +1841,8 @@
 	
 &gt;&lt;/p&gt;
 &lt;p&gt;可以看到我们通过拦截器完成了消息发送的统计功能，可以发散设想一想，像根据不同key进行分组统计、统计某个时间段消息发送失败的条数等功能也同样可以通过拦截器实现。&lt;/p&gt;
-&lt;h5 id=&#34;3-实现之二次处理&#34;&gt;3. 实现之二次处理
-&lt;/h5&gt;&lt;p&gt;实现统计感觉还不得劲，再折腾一个。假设咱们的生产者中会发送很多地区的消息，这些消息有些是中国的，有些是新加坡的，有些是巴西的，这个时候它们的时间就有歧义了，因为不同时区的时间是有差异的，那咱们尝试用拦截器来实现一下&lt;/p&gt;
+&lt;h3 id=&#34;实现之二次处理&#34;&gt;实现之二次处理
+&lt;/h3&gt;&lt;p&gt;实现统计感觉还不得劲，再折腾一个。假设咱们的生产者中会发送很多地区的消息，这些消息有些是中国的，有些是新加坡的，有些是巴西的，这个时候它们的时间就有歧义了，因为不同时区的时间是有差异的，那咱们尝试用拦截器来实现一下&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -1968,11 +1968,11 @@
 	
 &gt;&lt;/p&gt;
 &lt;p&gt;通过输出的结果可以分析出来eligible的逻辑是生效的，针对新加坡地区的消息会进行处理，而中国的消息保持不变，所有地区的时间通过此拦截器来统一成东八区的时间。&lt;/p&gt;
-&lt;h5 id=&#34;4-小结&#34;&gt;4. 小结
-&lt;/h5&gt;&lt;p&gt;通过上述例子可以看到我们可以通过拦截器实现任意的逻辑，但是这里需要注意的是，拦截器里面尽量不要放过多的逻辑，因为这可能会影响生产者发送消息的速度，并且也容易造成处理逻辑的分散。拦截器最好是做一些校验、适配、状态记录等一些需要前置完成并且轻量级的操作。&lt;/p&gt;
-&lt;h4 id=&#34;三实现原理&#34;&gt;三、实现原理
-&lt;/h4&gt;&lt;h5 id=&#34;1-初始化流程&#34;&gt;1. 初始化流程
-&lt;/h5&gt;&lt;p&gt;通过使用我们可以看到在创建生产者对象是只要通过.intercept方法传入拦截器对象即可生效，那么我们就先通过这个方法来看看实现逻辑&lt;/p&gt;
+&lt;h3 id=&#34;小结&#34;&gt;小结
+&lt;/h3&gt;&lt;p&gt;通过上述例子可以看到我们可以通过拦截器实现任意的逻辑，但是这里需要注意的是，拦截器里面尽量不要放过多的逻辑，因为这可能会影响生产者发送消息的速度，并且也容易造成处理逻辑的分散。拦截器最好是做一些校验、适配、状态记录等一些需要前置完成并且轻量级的操作。&lt;/p&gt;
+&lt;h2 id=&#34;实现原理&#34;&gt;实现原理
+&lt;/h2&gt;&lt;h3 id=&#34;初始化流程&#34;&gt;初始化流程
+&lt;/h3&gt;&lt;p&gt;通过使用我们可以看到在创建生产者对象是只要通过.intercept方法传入拦截器对象即可生效，那么我们就先通过这个方法来看看实现逻辑&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -2218,8 +2218,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
 &lt;/div&gt;&lt;p&gt;通过上述逻辑可以看到ProducerInterceptors本质上就是个批量管理对象，符合高内聚低耦合的设计，解耦了业务逻辑循环处理的逻辑，将这些循环处理的逻辑都封装在ProducerInterceptors类里面，然后ProducerInterceptors仅对外提供触发某几个动作的api，业务只需要在哪个阶段调用这些api即可。&lt;/p&gt;
-&lt;h5 id=&#34;2-生效流程&#34;&gt;2. 生效流程
-&lt;/h5&gt;&lt;p&gt;在生产者消息发送阶段，最终都会走到ProducerImpl类的internalSendAsync方法，可以看到这里会调用拦截器进行处理&lt;/p&gt;
+&lt;h3 id=&#34;生效流程&#34;&gt;生效流程
+&lt;/h3&gt;&lt;p&gt;在生产者消息发送阶段，最终都会走到ProducerImpl类的internalSendAsync方法，可以看到这里会调用拦截器进行处理&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -2390,8 +2390,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;四总结&#34;&gt;四、总结
-&lt;/h4&gt;&lt;p&gt;通过使用和跟踪原理，我们对Pulsar生产者拦截器有了进一步的认识，除了生产者拦截器，Pulsar还支持Broker侧以及Bookkeeper侧的拦截器，这些放到后面再跟大家一起学习。&lt;/p&gt;
+&lt;/div&gt;&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;p&gt;通过使用和跟踪原理，我们对Pulsar生产者拦截器有了进一步的认识，除了生产者拦截器，Pulsar还支持Broker侧以及Bookkeeper侧的拦截器，这些放到后面再跟大家一起学习。&lt;/p&gt;
 </description>
         </item>
         <item>
@@ -4035,10 +4035,10 @@
         <pubDate>Thu, 04 Apr 2024 20:41:34 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/%E8%AE%BA%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%8C%96%E5%8F%91%E5%B1%95%E5%8F%B2/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/%E8%AE%BA%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%8C%96%E5%8F%91%E5%B1%95%E5%8F%B2/image-20240404185440981.png" alt="Featured image of post 论大数据服务化发展史" /&gt;&lt;h4 id=&#34;引言&#34;&gt;引言
-&lt;/h4&gt;&lt;p&gt;一直想写一篇服务化相关的文章，那就别犹豫了现在就开始吧&lt;/p&gt;
-&lt;h4 id=&#34;正文&#34;&gt;正文
-&lt;/h4&gt;&lt;p&gt;作为大数据基础架构工程师，业界也笑称“运维Boy”，日常工作就是在各个机器上部署以及维护服务，例如部署Hadoop、Kafka、Pulsar这些等等，用于给公司业务提供数据导入、存储、分析服务。这些事情在经历了十多年已经演变出以下几个阶段，今天就以唠嗑的形式进行展开说说&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E8%AE%BA%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%8C%96%E5%8F%91%E5%B1%95%E5%8F%B2/image-20240404185440981.png" alt="Featured image of post 论大数据服务化发展史" /&gt;&lt;h2 id=&#34;引言&#34;&gt;引言
+&lt;/h2&gt;&lt;p&gt;一直想写一篇服务化相关的文章，那就别犹豫了现在就开始吧&lt;/p&gt;
+&lt;h2 id=&#34;正文&#34;&gt;正文
+&lt;/h2&gt;&lt;p&gt;作为大数据基础架构工程师，业界也笑称“运维Boy”，日常工作就是在各个机器上部署以及维护服务，例如部署Hadoop、Kafka、Pulsar这些等等，用于给公司业务提供数据导入、存储、分析服务。这些事情在经历了十多年已经演变出以下几个阶段，今天就以唠嗑的形式进行展开说说&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E8%AE%BA%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%8C%96%E5%8F%91%E5%B1%95%E5%8F%B2/image-20240404185440981.png&#34;
 	width=&#34;738&#34;
 	height=&#34;908&#34;
@@ -4053,8 +4053,8 @@
 		data-flex-basis=&#34;195px&#34;
 	
 &gt;&lt;/p&gt;
-&lt;h4 id=&#34;单一指令阶段&#34;&gt;单一指令阶段
-&lt;/h4&gt;&lt;p&gt;这是最原始的阶段，在机器/操作系统上的所有事情都要由大数据SRE通过一条条执行进行操作，举个简单的例子。当公司需要你新搭建数仓时，也就相当于要搭建以下三层&lt;/p&gt;
+&lt;h2 id=&#34;单一指令阶段&#34;&gt;单一指令阶段
+&lt;/h2&gt;&lt;p&gt;这是最原始的阶段，在机器/操作系统上的所有事情都要由大数据SRE通过一条条执行进行操作，举个简单的例子。当公司需要你新搭建数仓时，也就相当于要搭建以下三层&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;存储层：搭建Hadoop、Hive、HBase集群等，这是用于将所有公司数据包括用户数据的存储&lt;/li&gt;
 &lt;li&gt;导入层：搭建FlinkCDC、Flume、Kafka/Pulsar等数据导入服务，这是用于将数据导入到存储层&lt;/li&gt;
@@ -4066,19 +4066,19 @@
 &lt;li&gt;容易出错：这类动作重复多次容易出现人工操作失误导致影响&lt;/li&gt;
 &lt;li&gt;体验差：这类事情做多了对于SRE来说是煎熬，并不会有太多技术上的成长，最后沦为只会执行这几个指令的“工具人”&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h4 id=&#34;脚本化阶段&#34;&gt;脚本化阶段
-&lt;/h4&gt;&lt;p&gt;人类历史发展本质上就是对资源的利用，为了更合理的利用资源因此衍生出了各种革命，例如第一次工业革命通过蒸汽替代人力，第二次工业革命通过各种能源燃料更大幅代替人力，第三次也就是最近几十年的互联网革命，本质上也是省资源避免大量的重复劳动。&lt;/p&gt;
+&lt;h2 id=&#34;脚本化阶段&#34;&gt;脚本化阶段
+&lt;/h2&gt;&lt;p&gt;人类历史发展本质上就是对资源的利用，为了更合理的利用资源因此衍生出了各种革命，例如第一次工业革命通过蒸汽替代人力，第二次工业革命通过各种能源燃料更大幅代替人力，第三次也就是最近几十年的互联网革命，本质上也是省资源避免大量的重复劳动。&lt;/p&gt;
 &lt;p&gt;上面这段话想表达的是， 互联网行业可以说90%以上的重复劳动都是没啥意义的，就相当于在一辆豪华的汽车🚗内是有人在里面蹬三轮，这不是很滑稽吗。因此如果你发现自己的工作中还存在大量 &lt;code&gt;单一指令阶段&lt;/code&gt;的事情，那么务必要想办法进行脚本化。脚本本质上就是一本操作指南，给“操作系统”看的，举个例子如果你是一个果园园主，你雇了30个人进行水果采摘，你肯定不会去给每一个人讲解如何识别水果、水果具体的采摘的流程是怎么样子的，要用手托住果子在用剪刀轻轻减哪个部位之类的话。因为这样不仅耽误大量你的时间，并且每年水果成熟时你都要重复一遍，因此更高效的方式是花上一天时间写一本“水果采摘指南”，后续的每一个采摘的人直接看下指南即可知道该怎么做，这个指南就是脚本。&lt;/p&gt;
 &lt;p&gt;那么工作中也是一样，可以将下载组件包、解压包、更改配置、服务启动/重启等操作直接封装成脚本，然后将可能会变的东西作为参数传进来，这样的话无论是针对多少台机器进行操作，你只需要在这些机器上执行一下脚本即可。在这个基础上还能做二次优化，就是在所有机器配置SSH后，你只需要在执行脚本时传入要做变更机器的标识例如IP，执行的机器就会自动将这些“逻辑”分发到各个机器上进行执行，这样的操作方式是不是更加舒服？或者说这是不是才是一个相对成熟的流程？&lt;/p&gt;
 &lt;p&gt;那么此时大家觉得这个流程是否还存在问题？可以思考🤔一会再继续往下看。其实也很简单，就是对开发人员的专业能力是比较高的，换成是上面的例子来解释就是，果园园主不想花时间去学习写“水果采摘指南”，或者说所有果园园主单独写指南从上帝视角看本质上就是资源的浪费，要怎么解决这个问题呢。也不复杂，直接让上帝提供几份“水果采摘指南”，各个果园园主只需要选择适合自己的直接用岂不美哉？那么就引出了&lt;code&gt;用户界面操作阶段&lt;/code&gt;。&lt;/p&gt;
-&lt;h4 id=&#34;用户界面操作阶段&#34;&gt;用户界面操作阶段
-&lt;/h4&gt;&lt;p&gt;在读这篇文章的你相信对网站操作也不陌生了，例如咱们不需要知道网络底层是怎么操作，代码是怎么编写的，就能完成多人跨网络、跨时空的沟通，这些本质上要归功于&lt;code&gt;用户界面操作阶段&lt;/code&gt;, 因为这些东西已经包装成了几个按钮。大数据SRE的工作内容其实也是可以作成几个按钮来大幅提升效率的，例如要在某些服务上搭建数仓，那么只需要在Web页面上勾选要部署服务的机器标识例如IP，然后选择想要安装的服务，然后点击确定即可完成安装，然后安装完后在Web页面就有这个服务的专门管理页面，例如服务启动、配置更改、使用情况监控等等，是不是一下子觉得高级了起来？更重要的是，你发现甚至你都不用掌握过多的SRE的知识也能完成这份工作？并且即便后续在更大的场景例如要在几百台、几千台机器进行部署维护你也不怕了？这就是互联网的魅力，所以说互联网革命也是人类历史上对资源利用的一大进步，如果咱们深处互联网时代，甚至从事互联网工作，而不具备互联网思维，那岂不是一种倒退吗或者形象点就是一个远古人生活在21世纪还在钻木取火，这就挺奇怪的。&lt;/p&gt;
+&lt;h2 id=&#34;用户界面操作阶段&#34;&gt;用户界面操作阶段
+&lt;/h2&gt;&lt;p&gt;在读这篇文章的你相信对网站操作也不陌生了，例如咱们不需要知道网络底层是怎么操作，代码是怎么编写的，就能完成多人跨网络、跨时空的沟通，这些本质上要归功于&lt;code&gt;用户界面操作阶段&lt;/code&gt;, 因为这些东西已经包装成了几个按钮。大数据SRE的工作内容其实也是可以作成几个按钮来大幅提升效率的，例如要在某些服务上搭建数仓，那么只需要在Web页面上勾选要部署服务的机器标识例如IP，然后选择想要安装的服务，然后点击确定即可完成安装，然后安装完后在Web页面就有这个服务的专门管理页面，例如服务启动、配置更改、使用情况监控等等，是不是一下子觉得高级了起来？更重要的是，你发现甚至你都不用掌握过多的SRE的知识也能完成这份工作？并且即便后续在更大的场景例如要在几百台、几千台机器进行部署维护你也不怕了？这就是互联网的魅力，所以说互联网革命也是人类历史上对资源利用的一大进步，如果咱们深处互联网时代，甚至从事互联网工作，而不具备互联网思维，那岂不是一种倒退吗或者形象点就是一个远古人生活在21世纪还在钻木取火，这就挺奇怪的。&lt;/p&gt;
 &lt;p&gt;在这个阶段是否还有能改进的地方，接下来是我的设想或者是YY时间也就是 &lt;code&gt;大模型+AIOPS阶段&lt;/code&gt;&lt;/p&gt;
-&lt;h4 id=&#34;大模型aiops阶段&#34;&gt;大模型+AIOPS阶段
-&lt;/h4&gt;&lt;p&gt;最近几年随着大模型的爆发，有不少企业以及个人已经用它来提升和改进自己的工作效率。那么以后是否还有这样的一种模式，就是我们只要跟机器人，或者说是一位“虚拟同事”发送 &lt;code&gt;给我搭建一套数仓&lt;/code&gt;指令是否就可以了？它会自动接续这条自然语言的语意，咱们进行各个流程的操作，在一些关键流程我们人类只需要进行审批确认没问题即可，剩下的事情交给机器去做就够了。&lt;/p&gt;
+&lt;h2 id=&#34;大模型aiops阶段&#34;&gt;大模型+AIOPS阶段
+&lt;/h2&gt;&lt;p&gt;最近几年随着大模型的爆发，有不少企业以及个人已经用它来提升和改进自己的工作效率。那么以后是否还有这样的一种模式，就是我们只要跟机器人，或者说是一位“虚拟同事”发送 &lt;code&gt;给我搭建一套数仓&lt;/code&gt;指令是否就可以了？它会自动接续这条自然语言的语意，咱们进行各个流程的操作，在一些关键流程我们人类只需要进行审批确认没问题即可，剩下的事情交给机器去做就够了。&lt;/p&gt;
 &lt;p&gt;在这个基础上，运维人员也不用天天盯着监控告警了，我们可以将历史发生过的事故数据以及专业知识喂人工智能，并训练它针对具体事情该做出怎样的决策，举个简单的例子比如某台机器的CPU过高，那么自动排查问题并进行修复，最后再将排查的结果以及修复的流程发给人类即可，这岂不美哉？而人类过多的做这些事情本质上还是一种资源的浪费，因为存在过多过多重复劳动、过多没有太多价值的事情，如果一个人的一辈子都在做这种事情，那本质上我们还是几万年前那个吭哧吭哧钻木头🪵的原始人，一切的一切都从来没有变过。&lt;/p&gt;
-&lt;h4 id=&#34;总结&#34;&gt;总结
-&lt;/h4&gt;&lt;p&gt;以上是我对大数据服务化粗糙的认知，输出出来是希望能引发一些思考🤔，当然写的过程中也引发了我自己的不少思考。这个过程中虽然存在一点批判，但绝不是针对具体的个人，而是针对目前常见的一些流程设计，单纯觉得有些设计可以变得更“美”一些。如果对服务化感兴趣的伙伴可以去针对性的学习专业的知识来改善工作内容，本篇文章仅仅是唠嗑，存在很多瑕疵，但我始终相信，多人沟通讨论可以构建设计一个更加完美的设计，因此如果能引发其他人的共鸣或者不同想法💡其实都是好事。&lt;/p&gt;
+&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;p&gt;以上是我对大数据服务化粗糙的认知，输出出来是希望能引发一些思考🤔，当然写的过程中也引发了我自己的不少思考。这个过程中虽然存在一点批判，但绝不是针对具体的个人，而是针对目前常见的一些流程设计，单纯觉得有些设计可以变得更“美”一些。如果对服务化感兴趣的伙伴可以去针对性的学习专业的知识来改善工作内容，本篇文章仅仅是唠嗑，存在很多瑕疵，但我始终相信，多人沟通讨论可以构建设计一个更加完美的设计，因此如果能引发其他人的共鸣或者不同想法💡其实都是好事。&lt;/p&gt;
 </description>
         </item>
         <item>
@@ -4461,13 +4461,13 @@
         <pubDate>Mon, 01 Apr 2024 10:34:57 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/%E4%BD%A0%E7%9C%9F%E7%9A%84%E4%BA%86%E8%A7%A3pulsar%E7%9A%84%E6%B6%88%E6%81%AF%E4%BF%9D%E7%95%99%E7%A7%AF%E5%8E%8Bttl%E7%AD%96%E7%95%A5%E5%90%97/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/%E4%BD%A0%E7%9C%9F%E7%9A%84%E4%BA%86%E8%A7%A3pulsar%E7%9A%84%E6%B6%88%E6%81%AF%E4%BF%9D%E7%95%99%E7%A7%AF%E5%8E%8Bttl%E7%AD%96%E7%95%A5%E5%90%97/image-20240331085922332.png" alt="Featured image of post 你真的了解Pulsar的消息保留、积压、TTL策略吗" /&gt;&lt;h4 id=&#34;引言&#34;&gt;引言
-&lt;/h4&gt;&lt;p&gt;任何东西都有生命周期，就像沙丁鱼罐头🥫也会过期一样，咱们的消息本身也是有生命周期的，因此像Pulsar这样的流平台/消息队列也提供了Retention、Backlog和TTL机制。&lt;/p&gt;
-&lt;h4 id=&#34;默认清理机制&#34;&gt;默认清理机制
-&lt;/h4&gt;&lt;p&gt;任何机制的出现都是有背景的，因此我们要先了解这三个机制出现之前的情况，才能分析出它们具体分别解决的事什么问题。首先看下图，生产者往Broker不断往Broker中写入消息，这些消息在Broker中会按照顺序从左到右进行存储的，新写入的消息是不断的在左边进行新增。消费者也是从右往左进行消费的，在Broker中会维持一个游标记录消费的情况，通过此游标Broker才可以对消息进去区分，哪些消息是可清理回收的，哪些消息是目前还不能清理回收的。这个默认清理机制符合我们使用消息队列的一部分业务场景&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E4%BD%A0%E7%9C%9F%E7%9A%84%E4%BA%86%E8%A7%A3pulsar%E7%9A%84%E6%B6%88%E6%81%AF%E4%BF%9D%E7%95%99%E7%A7%AF%E5%8E%8Bttl%E7%AD%96%E7%95%A5%E5%90%97/image-20240331085922332.png" alt="Featured image of post 你真的了解Pulsar的消息保留、积压、TTL策略吗" /&gt;&lt;h2 id=&#34;引言&#34;&gt;引言
+&lt;/h2&gt;&lt;p&gt;任何东西都有生命周期，就像沙丁鱼罐头🥫也会过期一样，咱们的消息本身也是有生命周期的，因此像Pulsar这样的流平台/消息队列也提供了Retention、Backlog和TTL机制。&lt;/p&gt;
+&lt;h2 id=&#34;默认清理机制&#34;&gt;默认清理机制
+&lt;/h2&gt;&lt;p&gt;任何机制的出现都是有背景的，因此我们要先了解这三个机制出现之前的情况，才能分析出它们具体分别解决的事什么问题。首先看下图，生产者往Broker不断往Broker中写入消息，这些消息在Broker中会按照顺序从左到右进行存储的，新写入的消息是不断的在左边进行新增。消费者也是从右往左进行消费的，在Broker中会维持一个游标记录消费的情况，通过此游标Broker才可以对消息进去区分，哪些消息是可清理回收的，哪些消息是目前还不能清理回收的。这个默认清理机制符合我们使用消息队列的一部分业务场景&lt;/p&gt;
 &lt;img src=&#34;image-20240331085922332.png&#34; alt=&#34;image-20240331085922332&#34; style=&#34;zoom:50%;&#34; /&gt;
-&lt;h4 id=&#34;retention机制&#34;&gt;Retention机制
-&lt;/h4&gt;&lt;p&gt;在咱们理解了默认清理机制时，我们会有个疑问🤔️，如果消息一被成功消费就被删除，那么如果Broker的下游处理有问题需要从头消费或者从指定的某个位置消费的话，目前的清理机制是完成没办法支持的。而Pulsar设计的目标是一个大一统的流平台/消息队列，肯定是不允许这种情况的出现，因此引入了Retention机制。&lt;/p&gt;
+&lt;h2 id=&#34;retention机制&#34;&gt;Retention机制
+&lt;/h2&gt;&lt;p&gt;在咱们理解了默认清理机制时，我们会有个疑问🤔️，如果消息一被成功消费就被删除，那么如果Broker的下游处理有问题需要从头消费或者从指定的某个位置消费的话，目前的清理机制是完成没办法支持的。而Pulsar设计的目标是一个大一统的流平台/消息队列，肯定是不允许这种情况的出现，因此引入了Retention机制。&lt;/p&gt;
 &lt;p&gt;通过下图可以看到消息发布订阅过程，在默认的清理机制中游标右侧的消息是允许被删除的，但是配置Retention的情况则会按照机制进行保存一段时间。而Cursor游标左边的这些消息表示还没被消费者消费，因此即便没有配置 Retention机制这些消息也不会被删除。Retention 支持数据大小维度以及时间维度两种方式进行配置，不过它目前仅支持针对Namespace级别进行生效。&lt;/p&gt;
 &lt;img src=&#34;image-20240331091248731.png&#34; alt=&#34;image-20240331091248731&#34; style=&#34;zoom:50%;&#34; /&gt;
 &lt;p&gt;在设置Retentio机制时可以通过&lt;code&gt;defaultRetentionSizeInMB&lt;/code&gt;和&lt;code&gt;defaultRetentionTimeInMinutes&lt;/code&gt;同时进行配置，此时会有以下几种情况&lt;/p&gt;
@@ -4517,8 +4517,8 @@
       &lt;/tr&gt;
   &lt;/tbody&gt;
 &lt;/table&gt;
-&lt;h4 id=&#34;backlog-限额机制&#34;&gt;Backlog 限额机制
-&lt;/h4&gt;&lt;p&gt;Retention机制解决了消息“提前”删除的问题，那么可以高枕无忧了吗？让我们来想想下面这种场景，就是未被成功消费的消息是会一直保留在Pulsar中的，那么如果写入速度一直远大于消费速度，是不是就相当于一个蓄水池入水速度远大于出水速度，最终这个池子会满一样，Pulsar的磁盘也会被打满从而影响服务的稳定性。&lt;/p&gt;
+&lt;h2 id=&#34;backlog-限额机制&#34;&gt;Backlog 限额机制
+&lt;/h2&gt;&lt;p&gt;Retention机制解决了消息“提前”删除的问题，那么可以高枕无忧了吗？让我们来想想下面这种场景，就是未被成功消费的消息是会一直保留在Pulsar中的，那么如果写入速度一直远大于消费速度，是不是就相当于一个蓄水池入水速度远大于出水速度，最终这个池子会满一样，Pulsar的磁盘也会被打满从而影响服务的稳定性。&lt;/p&gt;
 &lt;p&gt;Backlog的原理其实不复杂，相当于在蓄水池中标记一个水位线，当蓄水池的高度到达这条水位线时则触发报警，工作人员根据这个报警来做出相对应的处理。Pulsar其实也是一样，假如我们配置Backlog限额的大小是两条消息的大小，那么如下图，此时如果已经有两条消息未被消费，再有一条新的消息进行尝试写入，就会触发Pulsar的报警策略进行处理。&lt;/p&gt;
 &lt;img src=&#34;image-20240331094008739.png&#34; alt=&#34;image-20240331094008739&#34; style=&#34;zoom:50%;&#34; /&gt;
 &lt;p&gt;积压警报策略有以下三种&lt;/p&gt;
@@ -4528,13 +4528,13 @@
 &lt;li&gt;consumer_backlog_eviction：Broker会清理一些积压的数据&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;Backlog 机制是针对Namespace级别限额，同样是支持通过数据大小以及时间两种维度配置。&lt;/p&gt;
-&lt;h4 id=&#34;time-to-live-ttl&#34;&gt;Time to live (TTL)
-&lt;/h4&gt;&lt;p&gt;看起来Retention和Backlog机制已经基本满足我们的使用了，那么为啥还要加一个TTL呢？是社区闲着没事干整那么多东西吗，答案显然不是的。我们再来想想生活中的某些场景，如果在我们的业务场景中消息是有时效性的，例如股票最新的价格，如果这个价格信息是通过Pulsar进行传递的，那么如果这条消息及时没有被消费，在10分钟后它的价值理论上就没有那么高了，因为还会有源源不断的最新价格信息写入Pulsar，而用户更加关心的是最新的价格。因此根据业务场景给消息配置上TTL，可以更有利于Pulsar进行消息的回收以及资源的释放。通过下图我们可以看到，每一条消息都有一个“蜡烛”标记它的生命周期&lt;/p&gt;
+&lt;h2 id=&#34;time-to-live-ttl&#34;&gt;Time to live (TTL)
+&lt;/h2&gt;&lt;p&gt;看起来Retention和Backlog机制已经基本满足我们的使用了，那么为啥还要加一个TTL呢？是社区闲着没事干整那么多东西吗，答案显然不是的。我们再来想想生活中的某些场景，如果在我们的业务场景中消息是有时效性的，例如股票最新的价格，如果这个价格信息是通过Pulsar进行传递的，那么如果这条消息及时没有被消费，在10分钟后它的价值理论上就没有那么高了，因为还会有源源不断的最新价格信息写入Pulsar，而用户更加关心的是最新的价格。因此根据业务场景给消息配置上TTL，可以更有利于Pulsar进行消息的回收以及资源的释放。通过下图我们可以看到，每一条消息都有一个“蜡烛”标记它的生命周期&lt;/p&gt;
 &lt;img src=&#34;image-20240331100100527.png&#34; alt=&#34;image-20240331100100527&#34; style=&#34;zoom:50%;&#34; /&gt;
 &lt;p&gt;当这条消息上面的蜡烛燃尽时，即便这条消息还没有被消费，游标依然会移动到它左边将其标记为允许被删除，因为此时对于业务来说这条消息已经属于没有价值，没有在Pulsar继续保留的必要。可以看到这种方式相比Backlog的方式更加稳妥，因为这不依赖于消费者的消费情况&lt;/p&gt;
 &lt;img src=&#34;image-20240331100408359.png&#34; alt=&#34;image-20240331100408359&#34; style=&#34;zoom:50%;&#34; /&gt;
-&lt;h4 id=&#34;综合&#34;&gt;综合
-&lt;/h4&gt;&lt;ol&gt;
+&lt;h2 id=&#34;综合&#34;&gt;综合
+&lt;/h2&gt;&lt;ol&gt;
 &lt;li&gt;对于Pulsar存储而言，Backlog和TTL机制可以防止磁盘被耗尽；而Retention机制会占用磁盘来保留未来可能还会用到的消息。&lt;/li&gt;
 &lt;li&gt;对于影响范围而言，Retention机制仅针对已经成功消费的消息，Backlog和TTL仅针对未被成功消费的消息。&lt;/li&gt;
 &lt;li&gt;整体流程就是，在过了Retention配置的时间，已被成功消费的消息就会被删除；如果Pulsar的消息超过了Backlog限额则Pulsar会停止接收来自生产者的消息直到有更多可用的空间，因此针对消息数据配置TTL是可以非常好的保护Backlog限额的。&lt;/li&gt;
@@ -4542,8 +4542,8 @@
 &lt;li&gt;除此之外Pulsar支持分层存储，会将冷数据迁移到更加廉价的外部系统中存储，此时配置的策略会依然有效，因此应该考虑全面。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;以上就是Pulsar Retention、Backlog和TTL机制的核心，可以满足流平台/消息队列的使用场景&lt;/p&gt;
-&lt;h4 id=&#34;参考资料&#34;&gt;参考资料
-&lt;/h4&gt;&lt;ol&gt;
+&lt;h2 id=&#34;参考资料&#34;&gt;参考资料
+&lt;/h2&gt;&lt;ol&gt;
 &lt;li&gt;
 &lt;p&gt;&lt;a class=&#34;link&#34; href=&#34;https://pulsar.apache.org/docs/next/cookbooks-retention-expiry/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
     &gt;官方文档&lt;/a&gt;&lt;/p&gt;

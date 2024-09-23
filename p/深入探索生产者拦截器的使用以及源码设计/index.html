@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="zh-cn" dir="ltr">
     <head><meta charset='utf-8'>
-<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="一、介绍 在软件设计中，为了方便能够应对不同的场景，一般在一些容易有差异的环节会考虑允许用户自定义逻辑，拦截器就是其中的一种实现方式，像Spring、Kafka、Pulsar等都支持这种方式。流程简化起来就如下图，客户端跟服务端的写消息请求和接收请求都要先通过一遍拦截器，因此用户都过自定义拦截器逻辑就能以一种无侵入、规范化的方式来改动消息发送以及处理响应的行为。\n">
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="介绍 在软件设计中，为了方便能够应对不同的场景，一般在一些容易有差异的环节会考虑允许用户自定义逻辑，拦截器就是其中的一种实现方式，像Spring、Kafka、Pulsar等都支持这种方式。流程简化起来就如下图，客户端跟服务端的写消息请求和接收请求都要先通过一遍拦截器，因此用户都过自定义拦截器逻辑就能以一种无侵入、规范化的方式来改动消息发送以及处理响应的行为。\n">
 <title>深入探索生产者拦截器的使用以及源码设计</title>
 
 <link rel='canonical' href='https://sherlock-lin.github.io/p/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2%E7%94%9F%E4%BA%A7%E8%80%85%E6%8B%A6%E6%88%AA%E5%99%A8%E7%9A%84%E4%BD%BF%E7%94%A8%E4%BB%A5%E5%8F%8A%E6%BA%90%E7%A0%81%E8%AE%BE%E8%AE%A1/'>
 
 <link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="深入探索生产者拦截器的使用以及源码设计">
-<meta property='og:description' content="一、介绍 在软件设计中，为了方便能够应对不同的场景，一般在一些容易有差异的环节会考虑允许用户自定义逻辑，拦截器就是其中的一种实现方式，像Spring、Kafka、Pulsar等都支持这种方式。流程简化起来就如下图，客户端跟服务端的写消息请求和接收请求都要先通过一遍拦截器，因此用户都过自定义拦截器逻辑就能以一种无侵入、规范化的方式来改动消息发送以及处理响应的行为。\n">
+<meta property='og:description' content="介绍 在软件设计中，为了方便能够应对不同的场景，一般在一些容易有差异的环节会考虑允许用户自定义逻辑，拦截器就是其中的一种实现方式，像Spring、Kafka、Pulsar等都支持这种方式。流程简化起来就如下图，客户端跟服务端的写消息请求和接收请求都要先通过一遍拦截器，因此用户都过自定义拦截器逻辑就能以一种无侵入、规范化的方式来改动消息发送以及处理响应的行为。\n">
 <meta property='og:url' content='https://sherlock-lin.github.io/p/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2%E7%94%9F%E4%BA%A7%E8%80%85%E6%8B%A6%E6%88%AA%E5%99%A8%E7%9A%84%E4%BD%BF%E7%94%A8%E4%BB%A5%E5%8F%8A%E6%BA%90%E7%A0%81%E8%AE%BE%E8%AE%A1/'>
 <meta property='og:site_name' content='夏洛克-林'>
 <meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-04-19T11:54:03&#43;08:00'/><meta property='article:modified_time' content='2024-04-19T11:54:03&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2%E7%94%9F%E4%BA%A7%E8%80%85%E6%8B%A6%E6%88%AA%E5%99%A8%E7%9A%84%E4%BD%BF%E7%94%A8%E4%BB%A5%E5%8F%8A%E6%BA%90%E7%A0%81%E8%AE%BE%E8%AE%A1/image-20240419110502648.png' />
 <meta name="twitter:title" content="深入探索生产者拦截器的使用以及源码设计">
-<meta name="twitter:description" content="一、介绍 在软件设计中，为了方便能够应对不同的场景，一般在一些容易有差异的环节会考虑允许用户自定义逻辑，拦截器就是其中的一种实现方式，像Spring、Kafka、Pulsar等都支持这种方式。流程简化起来就如下图，客户端跟服务端的写消息请求和接收请求都要先通过一遍拦截器，因此用户都过自定义拦截器逻辑就能以一种无侵入、规范化的方式来改动消息发送以及处理响应的行为。\n"><meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="介绍 在软件设计中，为了方便能够应对不同的场景，一般在一些容易有差异的环节会考虑允许用户自定义逻辑，拦截器就是其中的一种实现方式，像Spring、Kafka、Pulsar等都支持这种方式。流程简化起来就如下图，客户端跟服务端的写消息请求和接收请求都要先通过一遍拦截器，因此用户都过自定义拦截器逻辑就能以一种无侵入、规范化的方式来改动消息发送以及处理响应的行为。\n"><meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2%E7%94%9F%E4%BA%A7%E8%80%85%E6%8B%A6%E6%88%AA%E5%99%A8%E7%9A%84%E4%BD%BF%E7%94%A8%E4%BB%A5%E5%8F%8A%E6%BA%90%E7%A0%81%E8%AE%BE%E8%AE%A1/image-20240419110502648.png' />
     </head>
     <body class="
@@ -266,18 +266,22 @@
         <div class="widget--toc">
             <nav id="TableOfContents">
   <ol>
-    <li>
+    <li><a href="#介绍">介绍</a></li>
+    <li><a href="#使用">使用</a>
       <ol>
-        <li>
-          <ol>
-            <li><a href="#一介绍">一、介绍</a></li>
-            <li><a href="#二使用">二、使用</a></li>
-            <li><a href="#三实现原理">三、实现原理</a></li>
-            <li><a href="#四总结">四、总结</a></li>
-          </ol>
-        </li>
+        <li><a href="#producerinterceptor接口">ProducerInterceptor接口</a></li>
+        <li><a href="#实现之统计">实现之统计</a></li>
+        <li><a href="#实现之二次处理">实现之二次处理</a></li>
+        <li><a href="#小结">小结</a></li>
       </ol>
     </li>
+    <li><a href="#实现原理">实现原理</a>
+      <ol>
+        <li><a href="#初始化流程">初始化流程</a></li>
+        <li><a href="#生效流程">生效流程</a></li>
+      </ol>
+    </li>
+    <li><a href="#总结">总结</a></li>
   </ol>
 </nav>
         </div>
@@ -373,12 +377,12 @@
     <section class="article-content">
     
     
-    <h4 id="一介绍">一、介绍
-</h4><p>在软件设计中，为了方便能够应对不同的场景，一般在一些容易有差异的环节会考虑允许用户自定义逻辑，拦截器就是其中的一种实现方式，像Spring、Kafka、Pulsar等都支持这种方式。流程简化起来就如下图，客户端跟服务端的写消息请求和接收请求都要先通过一遍拦截器，因此用户都过自定义拦截器逻辑就能以一种无侵入、规范化的方式来改动消息发送以及处理响应的行为。</p>
+    <h2 id="介绍">介绍
+</h2><p>在软件设计中，为了方便能够应对不同的场景，一般在一些容易有差异的环节会考虑允许用户自定义逻辑，拦截器就是其中的一种实现方式，像Spring、Kafka、Pulsar等都支持这种方式。流程简化起来就如下图，客户端跟服务端的写消息请求和接收请求都要先通过一遍拦截器，因此用户都过自定义拦截器逻辑就能以一种无侵入、规范化的方式来改动消息发送以及处理响应的行为。</p>
 <img src="image-20240419110502648.png" alt="image-20240419110502648" style="zoom:67%;" />
-<h4 id="二使用">二、使用
-</h4><h5 id="1-producerinterceptor接口"><strong>1. ProducerInterceptor接口</strong>
-</h5><p>ProducerInterceptor是Pulsar提供的接口，通过实现该接口用户可以在消息发送和发送成功阶段注入自定义的逻辑来扩展Pulsar客户端的能力，进而优雅的解决某些场景的问题。</p>
+<h2 id="使用">使用
+</h2><h3 id="producerinterceptor接口">ProducerInterceptor接口
+</h3><p>ProducerInterceptor是Pulsar提供的接口，通过实现该接口用户可以在消息发送和发送成功阶段注入自定义的逻辑来扩展Pulsar客户端的能力，进而优雅的解决某些场景的问题。</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -425,8 +429,8 @@
 <li>onSendAcknowledgement：在每条消息消息发送服务端响应后(无论成功失败)会调用此方法</li>
 <li>onPartitionsChange：在分区数有变动的时候会调用这里的逻辑。这是3.2版本新加的逻辑，2.8以及之前的版本没有此接口</li>
 </ul>
-<h5 id="2-实现之统计">2. 实现之统计
-</h5><p>这里对生产者累计发送的消息条数进行统计，实现逻辑如下</p>
+<h3 id="实现之统计">实现之统计
+</h3><p>这里对生产者累计发送的消息条数进行统计，实现逻辑如下</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -541,8 +545,8 @@
 	
 ></p>
 <p>可以看到我们通过拦截器完成了消息发送的统计功能，可以发散设想一想，像根据不同key进行分组统计、统计某个时间段消息发送失败的条数等功能也同样可以通过拦截器实现。</p>
-<h5 id="3-实现之二次处理">3. 实现之二次处理
-</h5><p>实现统计感觉还不得劲，再折腾一个。假设咱们的生产者中会发送很多地区的消息，这些消息有些是中国的，有些是新加坡的，有些是巴西的，这个时候它们的时间就有歧义了，因为不同时区的时间是有差异的，那咱们尝试用拦截器来实现一下</p>
+<h3 id="实现之二次处理">实现之二次处理
+</h3><p>实现统计感觉还不得劲，再折腾一个。假设咱们的生产者中会发送很多地区的消息，这些消息有些是中国的，有些是新加坡的，有些是巴西的，这个时候它们的时间就有歧义了，因为不同时区的时间是有差异的，那咱们尝试用拦截器来实现一下</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -668,11 +672,11 @@
 	
 ></p>
 <p>通过输出的结果可以分析出来eligible的逻辑是生效的，针对新加坡地区的消息会进行处理，而中国的消息保持不变，所有地区的时间通过此拦截器来统一成东八区的时间。</p>
-<h5 id="4-小结">4. 小结
-</h5><p>通过上述例子可以看到我们可以通过拦截器实现任意的逻辑，但是这里需要注意的是，拦截器里面尽量不要放过多的逻辑，因为这可能会影响生产者发送消息的速度，并且也容易造成处理逻辑的分散。拦截器最好是做一些校验、适配、状态记录等一些需要前置完成并且轻量级的操作。</p>
-<h4 id="三实现原理">三、实现原理
-</h4><h5 id="1-初始化流程">1. 初始化流程
-</h5><p>通过使用我们可以看到在创建生产者对象是只要通过.intercept方法传入拦截器对象即可生效，那么我们就先通过这个方法来看看实现逻辑</p>
+<h3 id="小结">小结
+</h3><p>通过上述例子可以看到我们可以通过拦截器实现任意的逻辑，但是这里需要注意的是，拦截器里面尽量不要放过多的逻辑，因为这可能会影响生产者发送消息的速度，并且也容易造成处理逻辑的分散。拦截器最好是做一些校验、适配、状态记录等一些需要前置完成并且轻量级的操作。</p>
+<h2 id="实现原理">实现原理
+</h2><h3 id="初始化流程">初始化流程
+</h3><p>通过使用我们可以看到在创建生产者对象是只要通过.intercept方法传入拦截器对象即可生效，那么我们就先通过这个方法来看看实现逻辑</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -918,8 +922,8 @@
 </span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>通过上述逻辑可以看到ProducerInterceptors本质上就是个批量管理对象，符合高内聚低耦合的设计，解耦了业务逻辑循环处理的逻辑，将这些循环处理的逻辑都封装在ProducerInterceptors类里面，然后ProducerInterceptors仅对外提供触发某几个动作的api，业务只需要在哪个阶段调用这些api即可。</p>
-<h5 id="2-生效流程">2. 生效流程
-</h5><p>在生产者消息发送阶段，最终都会走到ProducerImpl类的internalSendAsync方法，可以看到这里会调用拦截器进行处理</p>
+<h3 id="生效流程">生效流程
+</h3><p>在生产者消息发送阶段，最终都会走到ProducerImpl类的internalSendAsync方法，可以看到这里会调用拦截器进行处理</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -1090,8 +1094,8 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="四总结">四、总结
-</h4><p>通过使用和跟踪原理，我们对Pulsar生产者拦截器有了进一步的认识，除了生产者拦截器，Pulsar还支持Broker侧以及Bookkeeper侧的拦截器，这些放到后面再跟大家一起学习。</p>
+</div><h2 id="总结">总结
+</h2><p>通过使用和跟踪原理，我们对Pulsar生产者拦截器有了进一步的认识，除了生产者拦截器，Pulsar还支持Broker侧以及Bookkeeper侧的拦截器，这些放到后面再跟大家一起学习。</p>
 
 </section>
 
