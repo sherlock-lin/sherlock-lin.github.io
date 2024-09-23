@@ -2917,11 +2917,11 @@
         <pubDate>Sun, 07 Apr 2024 20:51:00 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.3%E7%89%88%E6%9C%AC/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.3%E7%89%88%E6%9C%AC/image-20240923205148052.png" alt="Featured image of post 手写分布式存储系统v0.3版本" /&gt;&lt;h4 id=&#34;引言&#34;&gt;引言
-&lt;/h4&gt;&lt;p&gt;承接 &lt;a class=&#34;link&#34; href=&#34;https://blog.csdn.net/linchonghui888/article/details/136000114&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.3%E7%89%88%E6%9C%AC/image-20240923205148052.png" alt="Featured image of post 手写分布式存储系统v0.3版本" /&gt;&lt;h2 id=&#34;引言&#34;&gt;引言
+&lt;/h2&gt;&lt;p&gt;承接 &lt;a class=&#34;link&#34; href=&#34;https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
     &gt;手写分布式存储系统v0.2版本&lt;/a&gt; ，今天开始新的迭代开发。主要实现 &lt;code&gt;服务发现&lt;/code&gt; 功能&lt;/p&gt;
-&lt;h4 id=&#34;一什么是服务发现&#34;&gt;一、什么是服务发现
-&lt;/h4&gt;&lt;p&gt;由于咱们的服务是分布式的，那从服务管理的角度来看肯定是要有一个机制来知道具体都有哪些实例可以提供服务。举个例子就是，张三家里在全国各地有不少火锅加盟店，那张三肯定要有一个方式知道这些火锅店加盟店的情况。例如上海又新开了一家加盟店，那么这家加盟店肯定要先通过某种方式联系张三，这样张三才能将配方以及食材供应给这家新的加盟店等等。&lt;/p&gt;
+&lt;h2 id=&#34;什么是服务发现&#34;&gt;什么是服务发现
+&lt;/h2&gt;&lt;p&gt;由于咱们的服务是分布式的，那从服务管理的角度来看肯定是要有一个机制来知道具体都有哪些实例可以提供服务。举个例子就是，张三家里在全国各地有不少火锅加盟店，那张三肯定要有一个方式知道这些火锅店加盟店的情况。例如上海又新开了一家加盟店，那么这家加盟店肯定要先通过某种方式联系张三，这样张三才能将配方以及食材供应给这家新的加盟店等等。&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;疑问&lt;/strong&gt;&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;
@@ -2929,8 +2929,8 @@
 &lt;p&gt;答：域名映射是对外提供服务时使用的，而我们的系统还有很多场景要做内部的服务管理，例如某个节点故障了，为了服务能够继续保证高可用，咱们的分布式存储系统就要将这个节点上所管理的数据分给其余的节点进行管理等，这个时候系统内部就需要明确知道各个分布式节点的信息。&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ol&gt;
-&lt;h4 id=&#34;二服务发现设计&#34;&gt;二、服务发现设计
-&lt;/h4&gt;&lt;p&gt;目前服务发现设计主要有以下几种&lt;/p&gt;
+&lt;h2 id=&#34;服务发现设计&#34;&gt;服务发现设计
+&lt;/h2&gt;&lt;p&gt;目前服务发现设计主要有以下几种&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;配置化：将所有节点的信息写在服务配置里，像ES等&lt;/li&gt;
 &lt;li&gt;使用能保证一致性的外部服务：如kafka、bookkeeper等，外部服务有zookeeper、etcd、consul等&lt;/li&gt;
@@ -2952,8 +2952,8 @@
 	
 &gt;&lt;/p&gt;
 &lt;p&gt;所有节点实例在启动时，都去zookeeper上创建属于自己的目录，在节点下线时就将自己对应的目录进行删除。这样只需要监听“服务发现目录”就能知道是否有节点上下线。同时为了避免服务故障时没能正确删除自己的目录，因此咱们采用zookeeper临时目录的功能，例如节点1启动并在zookeeper创建对应临时目录后，会每隔一小段时间向zookeeper发送请求也就是心跳，证明自己的服务还正常；如果zookeeper在等待一段时间后，没收到某个节点的心跳，就会默认这个服务已经挂了并将其对应的临时目录进行删除。&lt;/p&gt;
-&lt;h4 id=&#34;三代码实现&#34;&gt;三、代码实现
-&lt;/h4&gt;&lt;p&gt;由于把全部代码贴上来不太现实且不易于阅读，就将开发时测试样例贴上来供大家伙参考&lt;/p&gt;
+&lt;h2 id=&#34;代码实现&#34;&gt;代码实现
+&lt;/h2&gt;&lt;p&gt;由于把全部代码贴上来不太现实且不易于阅读，就将开发时测试样例贴上来供大家伙参考&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;  1
@@ -3306,8 +3306,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;四功能演示&#34;&gt;四、功能演示
-&lt;/h4&gt;&lt;p&gt;整个功能验证逻辑如下&lt;/p&gt;
+&lt;/div&gt;&lt;h2 id=&#34;功能演示&#34;&gt;功能演示
+&lt;/h2&gt;&lt;p&gt;整个功能验证逻辑如下&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;
 &lt;p&gt;服务启动前观测zookeeper对应目录下不存在数据&lt;/p&gt;
@@ -3395,8 +3395,8 @@
 &gt;&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ol&gt;
-&lt;h4 id=&#34;五总结&#34;&gt;五、总结
-&lt;/h4&gt;&lt;p&gt;终于开发一点跟“分布式”相关的内容了，在使用zookeeper时踩了一点坑，  启动服务时报下述异常&lt;code&gt;org.apache.zookeeper.KeeperException$SessionExpiredException: KeeperErrorCode = Session expired for&lt;/code&gt;，通过调试发现zookeeper服务端返回的信息非常有限无法得出有用的信息。结果网上的答案，排除了是防火墙、超时配置等问题后，最终发现是自己在调用zookeeper创建路径是直接传了完整的路径也就是多级目录&lt;code&gt; /distributed-storage-system/available/shalocklindeMacBook-Pro.local&lt;/code&gt;导致的报错，原因是zookeeper不支持递归创建多级目录，只能参考bookkeeper开发工具类从代码层面递归去zookeeper创建路径。惭愧的是，已经接触zookeeper多年，并且也翻过它的代码，却连这个基本的点都不知晓。因此进一步验证上一篇的想法，就是很多东西真的要自己去实现一遍，否则只沉浸理论容易陷入一种“什么都懂”、“什么都是理所当然”的幻觉并自我感觉良好，但这很有可能会令我们的技术止步不前&lt;/p&gt;
+&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;p&gt;终于开发一点跟“分布式”相关的内容了，在使用zookeeper时踩了一点坑，  启动服务时报下述异常&lt;code&gt;org.apache.zookeeper.KeeperException$SessionExpiredException: KeeperErrorCode = Session expired for&lt;/code&gt;，通过调试发现zookeeper服务端返回的信息非常有限无法得出有用的信息。结果网上的答案，排除了是防火墙、超时配置等问题后，最终发现是自己在调用zookeeper创建路径是直接传了完整的路径也就是多级目录&lt;code&gt; /distributed-storage-system/available/shalocklindeMacBook-Pro.local&lt;/code&gt;导致的报错，原因是zookeeper不支持递归创建多级目录，只能参考bookkeeper开发工具类从代码层面递归去zookeeper创建路径。惭愧的是，已经接触zookeeper多年，并且也翻过它的代码，却连这个基本的点都不知晓。因此进一步验证上一篇的想法，就是很多东西真的要自己去实现一遍，否则只沉浸理论容易陷入一种“什么都懂”、“什么都是理所当然”的幻觉并自我感觉良好，但这很有可能会令我们的技术止步不前&lt;/p&gt;
 </description>
         </item>
         <item>
@@ -3405,8 +3405,8 @@
         <pubDate>Sun, 07 Apr 2024 20:49:15 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202190044471-6871646.png" alt="Featured image of post 手写分布式存储系统v0.2版本" /&gt;&lt;h4 id=&#34;引言&#34;&gt;引言
-&lt;/h4&gt;&lt;p&gt;上回说到 &lt;a class=&#34;link&#34; href=&#34;https://blog.csdn.net/linchonghui888/article/details/135967481?spm=1001.2014.3001.5502&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202190044471-6871646.png" alt="Featured image of post 手写分布式存储系统v0.2版本" /&gt;&lt;h2 id=&#34;引言&#34;&gt;引言
+&lt;/h2&gt;&lt;p&gt;上回说到 &lt;a class=&#34;link&#34; href=&#34;https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.1%E7%89%88%E6%9C%AC/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
     &gt;手写分布式存储系统v0.1版本&lt;/a&gt; ，已经实现了通过监听TCP端口并将数据写到本地磁盘的功能，今天咱们就继续往上面添砖加瓦&lt;/p&gt;
 &lt;p&gt;v0.2版本大致做以下功能&lt;/p&gt;
 &lt;ul&gt;
@@ -3417,8 +3417,8 @@
 &lt;p&gt;代码优化&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
-&lt;h4 id=&#34;滚动写文件实现&#34;&gt;滚动写文件实现
-&lt;/h4&gt;&lt;p&gt;由于咱们写文件是用的mmap进行文件写入，而mmap自身原因最多只能映射到不大于2G的文件。因此在一个磁盘文件写满后，咱们需要滚动写到一个新的文件中，基本上所有分布式存储系统都是这么实现的，如kakfa、pulsar、rocketmq等等。那咱们也自己尝试实现下，大致逻辑如下&lt;/p&gt;
+&lt;h2 id=&#34;滚动写文件实现&#34;&gt;滚动写文件实现
+&lt;/h2&gt;&lt;p&gt;由于咱们写文件是用的mmap进行文件写入，而mmap自身原因最多只能映射到不大于2G的文件。因此在一个磁盘文件写满后，咱们需要滚动写到一个新的文件中，基本上所有分布式存储系统都是这么实现的，如kakfa、pulsar、rocketmq等等。那咱们也自己尝试实现下，大致逻辑如下&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202190044471-6871646.png&#34;
 	width=&#34;1870&#34;
 	height=&#34;1324&#34;
@@ -3488,8 +3488,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;代码优化&#34;&gt;代码优化
-&lt;/h4&gt;&lt;p&gt;由于v0.1版本中实现的比较莽，因此现在需要进行一个简单的重构。重构后大致逻辑可以参考下面这张不规范的UML图，首先是抽象出一个LifecycleComponent接口，由于除了网络、持久化服务之外，未来咱们可能还会有其他的服务例如监控、插件服务等等，因此咱们需要对这些服务做一层统一的抽象，所有这些服务都要提供服务启动和服务停止的接口，这样设计之后再服务启动/停止时只需要对LifecycleComponent集合列表进行统一的启动/停止操作即可，代码维护起来也很舒服。&lt;/p&gt;
+&lt;/div&gt;&lt;h2 id=&#34;代码优化&#34;&gt;代码优化
+&lt;/h2&gt;&lt;p&gt;由于v0.1版本中实现的比较莽，因此现在需要进行一个简单的重构。重构后大致逻辑可以参考下面这张不规范的UML图，首先是抽象出一个LifecycleComponent接口，由于除了网络、持久化服务之外，未来咱们可能还会有其他的服务例如监控、插件服务等等，因此咱们需要对这些服务做一层统一的抽象，所有这些服务都要提供服务启动和服务停止的接口，这样设计之后再服务启动/停止时只需要对LifecycleComponent集合列表进行统一的启动/停止操作即可，代码维护起来也很舒服。&lt;/p&gt;
 &lt;p&gt;网络方面是通过NetServiceImpl方法初始化并启动Netty引导类ServerBootstrap，ServerBootstrap启动后会监听Linux机器的网络端口，在监听到有请求时会交给ServerHandler 进行处理，在ServerHandler这里可以调用LocalDataStorageImpl方法进行数据持久化，LocalDataStorageImpl是数据持久化的统一入口，咱们针对mmap写入方式抽象并实现了DefaultMappedFile，提供了真正的mmap写磁盘操作。基本大致逻辑就是如此，尽量不做过度的设计，&lt;strong&gt;好的系统是演变过来的&lt;/strong&gt;，等未来发展到一定阶段后再根据情形进行分析优化&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202183002486-6869804.png&#34;
 	width=&#34;1366&#34;
@@ -3505,8 +3505,8 @@
 		data-flex-basis=&#34;454px&#34;
 	
 &gt;&lt;/p&gt;
-&lt;h4 id=&#34;功能演示&#34;&gt;功能演示
-&lt;/h4&gt;&lt;ol&gt;
+&lt;h2 id=&#34;功能演示&#34;&gt;功能演示
+&lt;/h2&gt;&lt;ol&gt;
 &lt;li&gt;开发完后，咱们就可以开始进行演示了，启动服务后当在控制台看到以下信息就知道服务已经正常启动，此时就可以发数据给服务端了&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202192334201.png&#34;
@@ -3619,8 +3619,8 @@
 		data-flex-basis=&#34;5752px&#34;
 	
 &gt;&lt;/p&gt;
-&lt;h4 id=&#34;总结&#34;&gt;总结
-&lt;/h4&gt;&lt;p&gt;上面基本上就是 v0.2 版本的内容了，不难但是你会发现使用一个分布式存储系统、看它的源码的体验，跟你自己实现一遍是完全不同的，一个现成的组件就像是一架飞机，你看得到它的机翼、发动机等等，你知道它是这样设计的；但，它为什么是这样设计的呢？那样不可以吗，这类问题恐怕会想的比较少或者虽然想了一下但是转头就忘了。但是当你自己设计去实现的过程中，你会遇到种种问题需要你去反复思考以及做取舍等等，这些都是你真正意义上成长的过程，甚至有时还会顿悟为什么那个东西人家要这样设计，这些都是无比令人振奋的事情，这不就是生命的意义吗&lt;/p&gt;
+&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;p&gt;上面基本上就是 v0.2 版本的内容了，不难但是你会发现使用一个分布式存储系统、看它的源码的体验，跟你自己实现一遍是完全不同的，一个现成的组件就像是一架飞机，你看得到它的机翼、发动机等等，你知道它是这样设计的；但，它为什么是这样设计的呢？那样不可以吗，这类问题恐怕会想的比较少或者虽然想了一下但是转头就忘了。但是当你自己设计去实现的过程中，你会遇到种种问题需要你去反复思考以及做取舍等等，这些都是你真正意义上成长的过程，甚至有时还会顿悟为什么那个东西人家要这样设计，这些都是无比令人振奋的事情，这不就是生命的意义吗&lt;/p&gt;
 </description>
         </item>
         <item>
@@ -3629,10 +3629,10 @@
         <pubDate>Sun, 07 Apr 2024 20:46:11 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.1%E7%89%88%E6%9C%AC/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.1%E7%89%88%E6%9C%AC/image-20240131185601251-6698564.png" alt="Featured image of post 手写分布式存储系统v0.1版本" /&gt;&lt;h4 id=&#34;引言&#34;&gt;引言
-&lt;/h4&gt;&lt;p&gt;这是手写分布式存储系统v0.1版本，只有一个目标就是支持通过tcp接收数据并落地到磁盘文件(单机模式)，那接下来就开始吧&lt;/p&gt;
-&lt;h4 id=&#34;设计&#34;&gt;设计
-&lt;/h4&gt;&lt;p&gt;实现一个系统，设计是最过瘾的过程没有之一，类似你搭积木前在脑海设计构建一副大致的“雏形”，只有有了这个东西之后才能够指导最终实现的方向以及确保不会偏离的太差。这里我对v0.1的预期是如下的，只要客户端能够通过tcp将数据请求到Linux机器的端口，咱们的v0.1版本就能够监听到并且将数据落地到磁盘，只需要实现这个功能就可以了。&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.1%E7%89%88%E6%9C%AC/image-20240131185601251-6698564.png" alt="Featured image of post 手写分布式存储系统v0.1版本" /&gt;&lt;h2 id=&#34;引言&#34;&gt;引言
+&lt;/h2&gt;&lt;p&gt;这是手写分布式存储系统v0.1版本，只有一个目标就是支持通过tcp接收数据并落地到磁盘文件(单机模式)，那接下来就开始吧&lt;/p&gt;
+&lt;h2 id=&#34;设计&#34;&gt;设计
+&lt;/h2&gt;&lt;p&gt;实现一个系统，设计是最过瘾的过程没有之一，类似你搭积木前在脑海设计构建一副大致的“雏形”，只有有了这个东西之后才能够指导最终实现的方向以及确保不会偏离的太差。这里我对v0.1的预期是如下的，只要客户端能够通过tcp将数据请求到Linux机器的端口，咱们的v0.1版本就能够监听到并且将数据落地到磁盘，只需要实现这个功能就可以了。&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.1%E7%89%88%E6%9C%AC/image-20240131185601251-6698564.png&#34;
 	width=&#34;1534&#34;
 	height=&#34;542&#34;
@@ -3647,8 +3647,8 @@
 		data-flex-basis=&#34;679px&#34;
 	
 &gt;&lt;/p&gt;
-&lt;h4 id=&#34;代码实现&#34;&gt;代码实现
-&lt;/h4&gt;&lt;p&gt;这个功能中会跟网络和写磁盘打交道，那直接用Netty现成的包就好了，至于写磁盘的话用JDK原生自带的就够了。大致抽象出两个对应的接口以及实现，如下&lt;/p&gt;
+&lt;h2 id=&#34;代码实现&#34;&gt;代码实现
+&lt;/h2&gt;&lt;p&gt;这个功能中会跟网络和写磁盘打交道，那直接用Netty现成的包就好了，至于写磁盘的话用JDK原生自带的就够了。大致抽象出两个对应的接口以及实现，如下&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -3979,8 +3979,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
 &lt;/div&gt;&lt;p&gt;基本上就差不多了，代码优化往后放放，现在嘛，能跑就行☺️&lt;/p&gt;
-&lt;h4 id=&#34;运行调试&#34;&gt;运行调试
-&lt;/h4&gt;&lt;p&gt;启动服务后，咱们通过下列指令往接口插入数据&lt;/p&gt;
+&lt;h2 id=&#34;运行调试&#34;&gt;运行调试
+&lt;/h2&gt;&lt;p&gt;启动服务后，咱们通过下列指令往接口插入数据&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
@@ -4025,8 +4025,8 @@
 		data-flex-basis=&#34;4950px&#34;
 	
 &gt;&lt;/p&gt;
-&lt;h4 id=&#34;小结&#34;&gt;小结
-&lt;/h4&gt;&lt;p&gt;以上就是实现的整个过程，代码不可谓不粗糙，不过咱们讲究的就是一个莽，快速闭环看到效果才是最重要的，至于优化嘛，放到后面的版本慢慢优化~&lt;/p&gt;
+&lt;h2 id=&#34;小结&#34;&gt;小结
+&lt;/h2&gt;&lt;p&gt;以上就是实现的整个过程，代码不可谓不粗糙，不过咱们讲究的就是一个莽，快速闭环看到效果才是最重要的，至于优化嘛，放到后面的版本慢慢优化~&lt;/p&gt;
 </description>
         </item>
         <item>
