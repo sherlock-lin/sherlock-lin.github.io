@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="引言 上回说到 手写分布式存储系统v0.1版本 ，已经实现了通过监听TCP端口并将数据写到本地磁盘的功能，今天咱们就继续往上面添砖加瓦\nv0.2版本大致做以下功能\n">
+<title>手写分布式存储系统v0.2版本</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="手写分布式存储系统v0.2版本">
+<meta property='og:description' content="引言 上回说到 手写分布式存储系统v0.1版本 ，已经实现了通过监听TCP端口并将数据写到本地磁盘的功能，今天咱们就继续往上面添砖加瓦\nv0.2版本大致做以下功能\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-04-07T20:49:15&#43;08:00'/><meta property='article:modified_time' content='2024-04-07T20:49:15&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202190044471-6871646.png' />
+<meta name="twitter:title" content="手写分布式存储系统v0.2版本">
+<meta name="twitter:description" content="引言 上回说到 手写分布式存储系统v0.1版本 ，已经实现了通过监听TCP端口并将数据写到本地磁盘的功能，今天咱们就继续往上面添砖加瓦\nv0.2版本大致做以下功能\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202190044471-6871646.png' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li>
+      <ol>
+        <li>
+          <ol>
+            <li><a href="#引言">引言</a></li>
+            <li><a href="#滚动写文件实现">滚动写文件实现</a></li>
+            <li><a href="#代码优化">代码优化</a></li>
+            <li><a href="#功能演示">功能演示</a></li>
+            <li><a href="#总结">总结</a></li>
+          </ol>
+        </li>
+      </ol>
+    </li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/">
+                <img src="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202190044471-6871646_hu3868560556891430827.png"
+                        srcset="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202190044471-6871646_hu3868560556891430827.png 800w, /p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202190044471-6871646_hu11974122712276727668.png 1600w"
+                        width="800" 
+                        height="566" 
+                        loading="lazy"
+                        alt="Featured image of post 手写分布式存储系统v0.2版本" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/">手写分布式存储系统v0.2版本</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2024-04-07</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 4 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h4 id="引言">引言
+</h4><p>上回说到 <a class="link" href="https://blog.csdn.net/linchonghui888/article/details/135967481?spm=1001.2014.3001.5502"  target="_blank" rel="noopener"
+    >手写分布式存储系统v0.1版本</a> ，已经实现了通过监听TCP端口并将数据写到本地磁盘的功能，今天咱们就继续往上面添砖加瓦</p>
+<p>v0.2版本大致做以下功能</p>
+<ul>
+<li>
+<p>实现滚动写文件</p>
+</li>
+<li>
+<p>代码优化</p>
+</li>
+</ul>
+<h4 id="滚动写文件实现">滚动写文件实现
+</h4><p>由于咱们写文件是用的mmap进行文件写入，而mmap自身原因最多只能映射到不大于2G的文件。因此在一个磁盘文件写满后，咱们需要滚动写到一个新的文件中，基本上所有分布式存储系统都是这么实现的，如kakfa、pulsar、rocketmq等等。那咱们也自己尝试实现下，大致逻辑如下</p>
+<p><img src="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202190044471-6871646.png"
+	width="1870"
+	height="1324"
+	srcset="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202190044471-6871646_hu13604342962602081225.png 480w, /p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202190044471-6871646_hu6879666488762294907.png 1024w"
+	loading="lazy"
+	
+		alt="设计图"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="141"
+		data-flex-basis="338px"
+	
+></p>
+<p>这个过程中有几个点需要考虑</p>
+<ul>
+<li>如何判断文件写满了</li>
+<li>滚动前后文件名的变化规则</li>
+</ul>
+<p>第一点可以考虑在内存中维护一个整型记录当前文件的大小，否则每次写数据时判断是否写满都要去查下linux会影响性能</p>
+<p>第二点文件名变化规则的设计方式有较多中，例如每次写新的文件名都用最新的等。参考几个系统的实现后决定采用写指定名字的文件例如 “file”，当这个文件写满1个G时，将“file”改名为“file”加当前时间如“file-20240202”，然后再新建一个名为“file”的文件进行写入。这样就能保证“file”这个文件永远都是当前正在写入的文件，核心代码如下</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="nf">rollingFile</span><span class="p">()</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">IOException</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">preFilepath</span><span class="w"> </span><span class="o">=</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">fileName</span><span class="o">+</span><span class="s">&#34;-&#34;</span><span class="o">+</span><span class="n">LocalDateTime</span><span class="p">.</span><span class="na">now</span><span class="p">().</span><span class="na">toString</span><span class="p">().</span><span class="na">replace</span><span class="p">(</span><span class="s">&#34;:&#34;</span><span class="p">,</span><span class="s">&#34;-&#34;</span><span class="p">).</span><span class="na">substring</span><span class="p">(</span><span class="n">0</span><span class="p">,</span><span class="n">19</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">File</span><span class="w"> </span><span class="n">preFile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">File</span><span class="p">(</span><span class="n">preFilepath</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="kt">boolean</span><span class="w"> </span><span class="n">preFileExists</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">preFile</span><span class="p">.</span><span class="na">exists</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">preFileExists</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">this</span><span class="p">.</span><span class="na">fileChannel</span><span class="p">.</span><span class="na">force</span><span class="p">(</span><span class="kc">false</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="kt">boolean</span><span class="w"> </span><span class="n">rename</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">file</span><span class="p">.</span><span class="na">renameTo</span><span class="p">(</span><span class="n">preFile</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">rename</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="k">this</span><span class="p">.</span><span class="na">fileChannel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">RandomAccessFile</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">File</span><span class="p">(</span><span class="n">fileName</span><span class="p">),</span><span class="w"> </span><span class="s">&#34;rw&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="p">.</span><span class="na">getChannel</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="k">this</span><span class="p">.</span><span class="na">mappedByteBuffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="na">fileChannel</span><span class="p">.</span><span class="na">map</span><span class="p">(</span><span class="n">FileChannel</span><span class="p">.</span><span class="na">MapMode</span><span class="p">.</span><span class="na">READ_WRITE</span><span class="p">,</span><span class="w"> </span><span class="n">0</span><span class="p">,</span><span class="w"> </span><span class="n">fileSize</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">WROTE_POSITION_UPDATER</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="k">this</span><span class="p">,</span><span class="w"> </span><span class="n">0</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="k">return</span><span class="w"> </span><span class="kc">true</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">LOG</span><span class="p">.</span><span class="na">error</span><span class="p">(</span><span class="s">&#34;TieredIndexFile#rollingFile: rename current file failed&#34;</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="代码优化">代码优化
+</h4><p>由于v0.1版本中实现的比较莽，因此现在需要进行一个简单的重构。重构后大致逻辑可以参考下面这张不规范的UML图，首先是抽象出一个LifecycleComponent接口，由于除了网络、持久化服务之外，未来咱们可能还会有其他的服务例如监控、插件服务等等，因此咱们需要对这些服务做一层统一的抽象，所有这些服务都要提供服务启动和服务停止的接口，这样设计之后再服务启动/停止时只需要对LifecycleComponent集合列表进行统一的启动/停止操作即可，代码维护起来也很舒服。</p>
+<p>网络方面是通过NetServiceImpl方法初始化并启动Netty引导类ServerBootstrap，ServerBootstrap启动后会监听Linux机器的网络端口，在监听到有请求时会交给ServerHandler 进行处理，在ServerHandler这里可以调用LocalDataStorageImpl方法进行数据持久化，LocalDataStorageImpl是数据持久化的统一入口，咱们针对mmap写入方式抽象并实现了DefaultMappedFile，提供了真正的mmap写磁盘操作。基本大致逻辑就是如此，尽量不做过度的设计，<strong>好的系统是演变过来的</strong>，等未来发展到一定阶段后再根据情形进行分析优化</p>
+<p><img src="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202183002486-6869804.png"
+	width="1366"
+	height="722"
+	srcset="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202183002486-6869804_hu3345620953736825405.png 480w, /p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202183002486-6869804_hu171382931010502949.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240202183002486"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="189"
+		data-flex-basis="454px"
+	
+></p>
+<h4 id="功能演示">功能演示
+</h4><ol>
+<li>开发完后，咱们就可以开始进行演示了，启动服务后当在控制台看到以下信息就知道服务已经正常启动，此时就可以发数据给服务端了</li>
+</ol>
+<p><img src="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202192334201.png"
+	width="1458"
+	height="267"
+	srcset="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202192334201_hu5015401357973560930.png 480w, /p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202192334201_hu10133913963886850270.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240202192334201"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="546"
+		data-flex-basis="1310px"
+	
+></p>
+<ol start="2">
+<li>通过指令能看到已经在目录下创建好对应的文件，由于是通过mmap方式写的数据，因此虽然咱们还没写数据到文件内，但是可以看到文件大小已经是100Byte了，这也是mmap的特点</li>
+</ol>
+<p><img src="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202192633246-6873195.png"
+	width="1056"
+	height="72"
+	srcset="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202192633246-6873195_hu183712943637715152.png 480w, /p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202192633246-6873195_hu8541622798847945565.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240202192633246"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1466"
+		data-flex-basis="3520px"
+	
+></p>
+<ol start="3">
+<li>通过以下指令往8888端口发送数据</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="o">(</span><span class="nb">echo</span> <span class="s1">&#39;are you ok?&#39;</span><span class="p">;</span> sleep 2<span class="o">)</span> <span class="p">|</span> telnet 127.0.0.1 <span class="m">8888</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ol start="4">
+<li>通过控制台能够看到数据有写到磁盘，并且内存中维护的文件里存放数据的大小也在增加</li>
+</ol>
+<p><img src="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202193407287.png"
+	width="1354"
+	height="146"
+	srcset="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202193407287_hu17097016052492081200.png 480w, /p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202193407287_hu7196832362864511954.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240202193407287"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="927"
+		data-flex-basis="2225px"
+	
+></p>
+<ol start="5">
+<li>重复多次第4步，可以看到日志显示已到达文件大小触发文件滚动动作</li>
+</ol>
+<p><img src="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202193557504-6873759.png"
+	width="1799"
+	height="405"
+	srcset="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202193557504-6873759_hu6054346038593214172.png 480w, /p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202193557504-6873759_hu1110076038515081500.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240202193557504"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="444"
+		data-flex-basis="1066px"
+	
+></p>
+<ol start="6">
+<li>再看看linux文件系统可以看到，已经创建对应的文件<code> testWrite-2024-02-02T19-35-20</code></li>
+</ol>
+<p><img src="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202193703040.png"
+	width="1088"
+	height="86"
+	srcset="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202193703040_hu11075758763687769604.png 480w, /p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202193703040_hu13663476275135275712.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240202193703040"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1265"
+		data-flex-basis="3036px"
+	
+></p>
+<ol start="7">
+<li>打印一下可以清晰的看到咱们刚刚请求的内容都被正确的持久化到磁盘中了</li>
+</ol>
+<p><img src="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202193858021.png"
+	width="1438"
+	height="60"
+	srcset="/p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202193858021_hu5344853509313808211.png 480w, /p/%E6%89%8B%E5%86%99%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9Fv0.2%E7%89%88%E6%9C%AC/image-20240202193858021_hu15138978954184446996.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240202193858021"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="2396"
+		data-flex-basis="5752px"
+	
+></p>
+<h4 id="总结">总结
+</h4><p>上面基本上就是 v0.2 版本的内容了，不难但是你会发现使用一个分布式存储系统、看它的源码的体验，跟你自己实现一遍是完全不同的，一个现成的组件就像是一架飞机，你看得到它的机翼、发动机等等，你知道它是这样设计的；但，它为什么是这样设计的呢？那样不可以吗，这类问题恐怕会想的比较少或者虽然想了一下但是转头就忘了。但是当你自己设计去实现的过程中，你会遇到种种问题需要你去反复思考以及做取舍等等，这些都是你真正意义上成长的过程，甚至有时还会顿悟为什么那个东西人家要这样设计，这些都是无比令人振奋的事情，这不就是生命的意义吗</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240913141630196.cfdbfabbec9931a0e8aa797475dd75ef_hu14409126970437613443.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生"
+                        
+                        data-hash="md5-z9v6u&#43;yZMaDoqnl0dd117w==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/schema%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/">
+        
+        
+            <div class="article-image">
+                <img src="/p/schema%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/image-20240308104136110.ac62fe16bef7c35fa075c319ed270052_hu12371496663848303101.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Schema深度解析"
+                        
+                        data-hash="md5-rGL&#43;Fr73w1&#43;gdcMZ7ScAUg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Schema深度解析</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801111546500.a4a283d1848dd7c78dd2f8154c075ded_hu9510561139179840573.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 管理流创建schema流程源码解析"
+                        
+                        data-hash="md5-pKKD0YSN18eN0vgVTAdd7Q==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">管理流创建schema流程源码解析</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">
+        
+        
+            <div class="article-image">
+                <img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651.a3b365edff64e8f7e171ba3a9b5b8025_hu1088019663378991776.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post PulsarClient源码解析"
+                        
+                        data-hash="md5-o7Nl7f9k6Pfhcbo6m1uAJQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">PulsarClient源码解析</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2%E7%94%9F%E4%BA%A7%E8%80%85%E6%8B%A6%E6%88%AA%E5%99%A8%E7%9A%84%E4%BD%BF%E7%94%A8%E4%BB%A5%E5%8F%8A%E6%BA%90%E7%A0%81%E8%AE%BE%E8%AE%A1/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2%E7%94%9F%E4%BA%A7%E8%80%85%E6%8B%A6%E6%88%AA%E5%99%A8%E7%9A%84%E4%BD%BF%E7%94%A8%E4%BB%A5%E5%8F%8A%E6%BA%90%E7%A0%81%E8%AE%BE%E8%AE%A1/image-20240419110502648.3d31dddee53536dbcc4c1b80870fdf94_hu16245328447067671180.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 深入探索生产者拦截器的使用以及源码设计"
+                        
+                        data-hash="md5-PTHd3uU1NtvMTBuAhw/flA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">深入探索生产者拦截器的使用以及源码设计</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>

@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="引言 一直想写一篇服务化相关的文章，那就别犹豫了现在就开始吧\n正文 作为大数据基础架构工程师，业界也笑称“运维Boy”，日常工作就是在各个机器上部署以及维护服务，例如部署Hadoop、Kafka、Pulsar这些等等，用于给公司业务提供数据导入、存储、分析服务。这些事情在经历了十多年已经演变出以下几个阶段，今天就以唠嗑的形式进行展开说说\n">
+<title>论大数据服务化发展史</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E8%AE%BA%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%8C%96%E5%8F%91%E5%B1%95%E5%8F%B2/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="论大数据服务化发展史">
+<meta property='og:description' content="引言 一直想写一篇服务化相关的文章，那就别犹豫了现在就开始吧\n正文 作为大数据基础架构工程师，业界也笑称“运维Boy”，日常工作就是在各个机器上部署以及维护服务，例如部署Hadoop、Kafka、Pulsar这些等等，用于给公司业务提供数据导入、存储、分析服务。这些事情在经历了十多年已经演变出以下几个阶段，今天就以唠嗑的形式进行展开说说\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E8%AE%BA%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%8C%96%E5%8F%91%E5%B1%95%E5%8F%B2/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-04-04T20:41:34&#43;08:00'/><meta property='article:modified_time' content='2024-04-04T20:41:34&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E8%AE%BA%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%8C%96%E5%8F%91%E5%B1%95%E5%8F%B2/image-20240404185440981.png' />
+<meta name="twitter:title" content="论大数据服务化发展史">
+<meta name="twitter:description" content="引言 一直想写一篇服务化相关的文章，那就别犹豫了现在就开始吧\n正文 作为大数据基础架构工程师，业界也笑称“运维Boy”，日常工作就是在各个机器上部署以及维护服务，例如部署Hadoop、Kafka、Pulsar这些等等，用于给公司业务提供数据导入、存储、分析服务。这些事情在经历了十多年已经演变出以下几个阶段，今天就以唠嗑的形式进行展开说说\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E8%AE%BA%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%8C%96%E5%8F%91%E5%B1%95%E5%8F%B2/image-20240404185440981.png' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li>
+      <ol>
+        <li>
+          <ol>
+            <li><a href="#引言">引言</a></li>
+            <li><a href="#正文">正文</a></li>
+            <li><a href="#单一指令阶段">单一指令阶段</a></li>
+            <li><a href="#脚本化阶段">脚本化阶段</a></li>
+            <li><a href="#用户界面操作阶段">用户界面操作阶段</a></li>
+            <li><a href="#大模型aiops阶段">大模型+AIOPS阶段</a></li>
+            <li><a href="#总结">总结</a></li>
+          </ol>
+        </li>
+      </ol>
+    </li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/%E8%AE%BA%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%8C%96%E5%8F%91%E5%B1%95%E5%8F%B2/">
+                <img src="/p/%E8%AE%BA%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%8C%96%E5%8F%91%E5%B1%95%E5%8F%B2/image-20240404185440981_hu11073582641019446703.png"
+                        srcset="/p/%E8%AE%BA%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%8C%96%E5%8F%91%E5%B1%95%E5%8F%B2/image-20240404185440981_hu11073582641019446703.png 800w, /p/%E8%AE%BA%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%8C%96%E5%8F%91%E5%B1%95%E5%8F%B2/image-20240404185440981_hu13984247790258274359.png 1600w"
+                        width="800" 
+                        height="984" 
+                        loading="lazy"
+                        alt="Featured image of post 论大数据服务化发展史" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/%E8%AE%BA%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%8C%96%E5%8F%91%E5%B1%95%E5%8F%B2/">论大数据服务化发展史</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2024-04-04</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 6 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h4 id="引言">引言
+</h4><p>一直想写一篇服务化相关的文章，那就别犹豫了现在就开始吧</p>
+<h4 id="正文">正文
+</h4><p>作为大数据基础架构工程师，业界也笑称“运维Boy”，日常工作就是在各个机器上部署以及维护服务，例如部署Hadoop、Kafka、Pulsar这些等等，用于给公司业务提供数据导入、存储、分析服务。这些事情在经历了十多年已经演变出以下几个阶段，今天就以唠嗑的形式进行展开说说</p>
+<p><img src="/p/%E8%AE%BA%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%8C%96%E5%8F%91%E5%B1%95%E5%8F%B2/image-20240404185440981.png"
+	width="738"
+	height="908"
+	srcset="/p/%E8%AE%BA%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%8C%96%E5%8F%91%E5%B1%95%E5%8F%B2/image-20240404185440981_hu1528746146247270653.png 480w, /p/%E8%AE%BA%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%8C%96%E5%8F%91%E5%B1%95%E5%8F%B2/image-20240404185440981_hu2963247272016223178.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240404185440981"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="81"
+		data-flex-basis="195px"
+	
+></p>
+<h4 id="单一指令阶段">单一指令阶段
+</h4><p>这是最原始的阶段，在机器/操作系统上的所有事情都要由大数据SRE通过一条条执行进行操作，举个简单的例子。当公司需要你新搭建数仓时，也就相当于要搭建以下三层</p>
+<ul>
+<li>存储层：搭建Hadoop、Hive、HBase集群等，这是用于将所有公司数据包括用户数据的存储</li>
+<li>导入层：搭建FlinkCDC、Flume、Kafka/Pulsar等数据导入服务，这是用于将数据导入到存储层</li>
+<li>分析层：搭建Doris、ClickHouse、Presto、SpringBoot等服务，这是用于将存储层的数据按照预期的想法进行计算出最终可直接用于分析的结果，例如庞大的公司昨天赚了多少钱？分别是各个城市赚了多少？相比上个月多了多少等等</li>
+</ul>
+<p>换算到真正要做的事情，那大致流程就是，先申请机器(物理机或者云服务)、初始化环境例如搭建SSH等等，然后下载各个组件的安装包上传到对应的机器，针对对应的组件进行配置修改以及各个组件启动的前置动作，最后再根据具体的启动指令来挨个启动机器等等。如果机器只有几台，你不会觉得什么，但是如果有三四十台的时候，你会觉得手软以及抱怨。大致抱怨以下几点</p>
+<ul>
+<li>工作量大：要靠人工登陆每台机器重复执行那么多的步骤</li>
+<li>容易出错：这类动作重复多次容易出现人工操作失误导致影响</li>
+<li>体验差：这类事情做多了对于SRE来说是煎熬，并不会有太多技术上的成长，最后沦为只会执行这几个指令的“工具人”</li>
+</ul>
+<h4 id="脚本化阶段">脚本化阶段
+</h4><p>人类历史发展本质上就是对资源的利用，为了更合理的利用资源因此衍生出了各种革命，例如第一次工业革命通过蒸汽替代人力，第二次工业革命通过各种能源燃料更大幅代替人力，第三次也就是最近几十年的互联网革命，本质上也是省资源避免大量的重复劳动。</p>
+<p>上面这段话想表达的是， 互联网行业可以说90%以上的重复劳动都是没啥意义的，就相当于在一辆豪华的汽车🚗内是有人在里面蹬三轮，这不是很滑稽吗。因此如果你发现自己的工作中还存在大量 <code>单一指令阶段</code>的事情，那么务必要想办法进行脚本化。脚本本质上就是一本操作指南，给“操作系统”看的，举个例子如果你是一个果园园主，你雇了30个人进行水果采摘，你肯定不会去给每一个人讲解如何识别水果、水果具体的采摘的流程是怎么样子的，要用手托住果子在用剪刀轻轻减哪个部位之类的话。因为这样不仅耽误大量你的时间，并且每年水果成熟时你都要重复一遍，因此更高效的方式是花上一天时间写一本“水果采摘指南”，后续的每一个采摘的人直接看下指南即可知道该怎么做，这个指南就是脚本。</p>
+<p>那么工作中也是一样，可以将下载组件包、解压包、更改配置、服务启动/重启等操作直接封装成脚本，然后将可能会变的东西作为参数传进来，这样的话无论是针对多少台机器进行操作，你只需要在这些机器上执行一下脚本即可。在这个基础上还能做二次优化，就是在所有机器配置SSH后，你只需要在执行脚本时传入要做变更机器的标识例如IP，执行的机器就会自动将这些“逻辑”分发到各个机器上进行执行，这样的操作方式是不是更加舒服？或者说这是不是才是一个相对成熟的流程？</p>
+<p>那么此时大家觉得这个流程是否还存在问题？可以思考🤔一会再继续往下看。其实也很简单，就是对开发人员的专业能力是比较高的，换成是上面的例子来解释就是，果园园主不想花时间去学习写“水果采摘指南”，或者说所有果园园主单独写指南从上帝视角看本质上就是资源的浪费，要怎么解决这个问题呢。也不复杂，直接让上帝提供几份“水果采摘指南”，各个果园园主只需要选择适合自己的直接用岂不美哉？那么就引出了<code>用户界面操作阶段</code>。</p>
+<h4 id="用户界面操作阶段">用户界面操作阶段
+</h4><p>在读这篇文章的你相信对网站操作也不陌生了，例如咱们不需要知道网络底层是怎么操作，代码是怎么编写的，就能完成多人跨网络、跨时空的沟通，这些本质上要归功于<code>用户界面操作阶段</code>, 因为这些东西已经包装成了几个按钮。大数据SRE的工作内容其实也是可以作成几个按钮来大幅提升效率的，例如要在某些服务上搭建数仓，那么只需要在Web页面上勾选要部署服务的机器标识例如IP，然后选择想要安装的服务，然后点击确定即可完成安装，然后安装完后在Web页面就有这个服务的专门管理页面，例如服务启动、配置更改、使用情况监控等等，是不是一下子觉得高级了起来？更重要的是，你发现甚至你都不用掌握过多的SRE的知识也能完成这份工作？并且即便后续在更大的场景例如要在几百台、几千台机器进行部署维护你也不怕了？这就是互联网的魅力，所以说互联网革命也是人类历史上对资源利用的一大进步，如果咱们深处互联网时代，甚至从事互联网工作，而不具备互联网思维，那岂不是一种倒退吗或者形象点就是一个远古人生活在21世纪还在钻木取火，这就挺奇怪的。</p>
+<p>在这个阶段是否还有能改进的地方，接下来是我的设想或者是YY时间也就是 <code>大模型+AIOPS阶段</code></p>
+<h4 id="大模型aiops阶段">大模型+AIOPS阶段
+</h4><p>最近几年随着大模型的爆发，有不少企业以及个人已经用它来提升和改进自己的工作效率。那么以后是否还有这样的一种模式，就是我们只要跟机器人，或者说是一位“虚拟同事”发送 <code>给我搭建一套数仓</code>指令是否就可以了？它会自动接续这条自然语言的语意，咱们进行各个流程的操作，在一些关键流程我们人类只需要进行审批确认没问题即可，剩下的事情交给机器去做就够了。</p>
+<p>在这个基础上，运维人员也不用天天盯着监控告警了，我们可以将历史发生过的事故数据以及专业知识喂人工智能，并训练它针对具体事情该做出怎样的决策，举个简单的例子比如某台机器的CPU过高，那么自动排查问题并进行修复，最后再将排查的结果以及修复的流程发给人类即可，这岂不美哉？而人类过多的做这些事情本质上还是一种资源的浪费，因为存在过多过多重复劳动、过多没有太多价值的事情，如果一个人的一辈子都在做这种事情，那本质上我们还是几万年前那个吭哧吭哧钻木头🪵的原始人，一切的一切都从来没有变过。</p>
+<h4 id="总结">总结
+</h4><p>以上是我对大数据服务化粗糙的认知，输出出来是希望能引发一些思考🤔，当然写的过程中也引发了我自己的不少思考。这个过程中虽然存在一点批判，但绝不是针对具体的个人，而是针对目前常见的一些流程设计，单纯觉得有些设计可以变得更“美”一些。如果对服务化感兴趣的伙伴可以去针对性的学习专业的知识来改善工作内容，本篇文章仅仅是唠嗑，存在很多瑕疵，但我始终相信，多人沟通讨论可以构建设计一个更加完美的设计，因此如果能引发其他人的共鸣或者不同想法💡其实都是好事。</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240913141630196.cfdbfabbec9931a0e8aa797475dd75ef_hu14409126970437613443.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生"
+                        
+                        data-hash="md5-z9v6u&#43;yZMaDoqnl0dd117w==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/schema%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/">
+        
+        
+            <div class="article-image">
+                <img src="/p/schema%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/image-20240308104136110.ac62fe16bef7c35fa075c319ed270052_hu12371496663848303101.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Schema深度解析"
+                        
+                        data-hash="md5-rGL&#43;Fr73w1&#43;gdcMZ7ScAUg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Schema深度解析</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801111546500.a4a283d1848dd7c78dd2f8154c075ded_hu9510561139179840573.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 管理流创建schema流程源码解析"
+                        
+                        data-hash="md5-pKKD0YSN18eN0vgVTAdd7Q==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">管理流创建schema流程源码解析</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">
+        
+        
+            <div class="article-image">
+                <img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651.a3b365edff64e8f7e171ba3a9b5b8025_hu1088019663378991776.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post PulsarClient源码解析"
+                        
+                        data-hash="md5-o7Nl7f9k6Pfhcbo6m1uAJQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">PulsarClient源码解析</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2%E7%94%9F%E4%BA%A7%E8%80%85%E6%8B%A6%E6%88%AA%E5%99%A8%E7%9A%84%E4%BD%BF%E7%94%A8%E4%BB%A5%E5%8F%8A%E6%BA%90%E7%A0%81%E8%AE%BE%E8%AE%A1/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2%E7%94%9F%E4%BA%A7%E8%80%85%E6%8B%A6%E6%88%AA%E5%99%A8%E7%9A%84%E4%BD%BF%E7%94%A8%E4%BB%A5%E5%8F%8A%E6%BA%90%E7%A0%81%E8%AE%BE%E8%AE%A1/image-20240419110502648.3d31dddee53536dbcc4c1b80870fdf94_hu16245328447067671180.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 深入探索生产者拦截器的使用以及源码设计"
+                        
+                        data-hash="md5-PTHd3uU1NtvMTBuAhw/flA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">深入探索生产者拦截器的使用以及源码设计</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>

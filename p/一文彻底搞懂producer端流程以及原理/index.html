@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="zh-cn" dir="ltr">
     <head><meta charset='utf-8'>
-<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="一、引言 无论你是刚接触Pulsar还是使用Pulsar多年，相信你对下面这段代码都很熟悉，这就是生产者端最常写的代码没有之一，其中最核心的其实就三行代码，分别用红色数字标识出来了，其中对应的就是1、客户端对象创建 2、生产者对象创建 3、消息发送。今天就分别针对这三个步骤进行深入的探索。\n">
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="引言 无论你是刚接触Pulsar还是使用Pulsar多年，相信你对下面这段代码都很熟悉，这就是生产者端最常写的代码没有之一，其中最核心的其实就三行代码，分别用红色数字标识出来了，其中对应的就是1、客户端对象创建 2、生产者对象创建 3、消息发送。今天就分别针对这三个步骤进行深入的探索。\n">
 <title>一文彻底搞懂Producer端流程以及原理</title>
 
 <link rel='canonical' href='https://sherlock-lin.github.io/p/%E4%B8%80%E6%96%87%E5%BD%BB%E5%BA%95%E6%90%9E%E6%87%82producer%E7%AB%AF%E6%B5%81%E7%A8%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%90%86/'>
 
 <link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="一文彻底搞懂Producer端流程以及原理">
-<meta property='og:description' content="一、引言 无论你是刚接触Pulsar还是使用Pulsar多年，相信你对下面这段代码都很熟悉，这就是生产者端最常写的代码没有之一，其中最核心的其实就三行代码，分别用红色数字标识出来了，其中对应的就是1、客户端对象创建 2、生产者对象创建 3、消息发送。今天就分别针对这三个步骤进行深入的探索。\n">
+<meta property='og:description' content="引言 无论你是刚接触Pulsar还是使用Pulsar多年，相信你对下面这段代码都很熟悉，这就是生产者端最常写的代码没有之一，其中最核心的其实就三行代码，分别用红色数字标识出来了，其中对应的就是1、客户端对象创建 2、生产者对象创建 3、消息发送。今天就分别针对这三个步骤进行深入的探索。\n">
 <meta property='og:url' content='https://sherlock-lin.github.io/p/%E4%B8%80%E6%96%87%E5%BD%BB%E5%BA%95%E6%90%9E%E6%87%82producer%E7%AB%AF%E6%B5%81%E7%A8%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%90%86/'>
 <meta property='og:site_name' content='夏洛克-林'>
 <meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-03-21T10:34:57&#43;08:00'/><meta property='article:modified_time' content='2024-03-21T10:34:57&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E4%B8%80%E6%96%87%E5%BD%BB%E5%BA%95%E6%90%9E%E6%87%82producer%E7%AB%AF%E6%B5%81%E7%A8%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%90%86/image-20240321153410330.png' />
 <meta name="twitter:title" content="一文彻底搞懂Producer端流程以及原理">
-<meta name="twitter:description" content="一、引言 无论你是刚接触Pulsar还是使用Pulsar多年，相信你对下面这段代码都很熟悉，这就是生产者端最常写的代码没有之一，其中最核心的其实就三行代码，分别用红色数字标识出来了，其中对应的就是1、客户端对象创建 2、生产者对象创建 3、消息发送。今天就分别针对这三个步骤进行深入的探索。\n"><meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="引言 无论你是刚接触Pulsar还是使用Pulsar多年，相信你对下面这段代码都很熟悉，这就是生产者端最常写的代码没有之一，其中最核心的其实就三行代码，分别用红色数字标识出来了，其中对应的就是1、客户端对象创建 2、生产者对象创建 3、消息发送。今天就分别针对这三个步骤进行深入的探索。\n"><meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E4%B8%80%E6%96%87%E5%BD%BB%E5%BA%95%E6%90%9E%E6%87%82producer%E7%AB%AF%E6%B5%81%E7%A8%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%90%86/image-20240321153410330.png' />
     </head>
     <body class="
@@ -266,19 +266,30 @@
         <div class="widget--toc">
             <nav id="TableOfContents">
   <ol>
-    <li>
+    <li><a href="#引言">引言</a></li>
+    <li><a href="#创建客户端对象">创建客户端对象</a>
       <ol>
-        <li>
-          <ol>
-            <li><a href="#一引言">一、引言</a></li>
-            <li><a href="#二创建客户端对象">二、创建客户端对象</a></li>
-            <li><a href="#三生产者对象创建">三、生产者对象创建</a></li>
-            <li><a href="#四消息发送">四、消息发送</a></li>
-            <li><a href="#五总结">五、总结</a></li>
-          </ol>
-        </li>
+        <li><a href="#lookup服务">Lookup服务</a></li>
+        <li><a href="#连接池connectionpool">连接池ConnectionPool</a></li>
       </ol>
     </li>
+    <li><a href="#生产者对象创建">生产者对象创建</a>
+      <ol>
+        <li><a href="#指定路由策略">指定路由策略</a></li>
+        <li><a href="#获取topic分区数和schema">获取Topic分区数和Schema</a></li>
+        <li><a href="#创建生产者对象">创建生产者对象</a></li>
+        <li><a href="#创建连接">创建连接</a></li>
+      </ol>
+    </li>
+    <li><a href="#消息发送">消息发送</a>
+      <ol>
+        <li><a href="#发送流程前置操作">发送流程前置操作</a></li>
+        <li><a href="#消息处理以及包装">消息处理以及包装</a></li>
+        <li><a href="#消息发送-1">消息发送</a></li>
+        <li><a href="#消息确认">消息确认</a></li>
+      </ol>
+    </li>
+    <li><a href="#总结">总结</a></li>
   </ol>
 </nav>
         </div>
@@ -374,11 +385,11 @@
     <section class="article-content">
     
     
-    <h4 id="一引言">一、引言
-</h4><p>无论你是刚接触Pulsar还是使用Pulsar多年，相信你对下面这段代码都很熟悉，这就是生产者端最常写的代码没有之一，其中最核心的其实就三行代码，分别用红色数字标识出来了，其中对应的就是<code>1、客户端对象创建 2、生产者对象创建 3、消息发送</code>。今天就分别针对这三个步骤进行深入的探索。</p>
+    <h2 id="引言">引言
+</h2><p>无论你是刚接触Pulsar还是使用Pulsar多年，相信你对下面这段代码都很熟悉，这就是生产者端最常写的代码没有之一，其中最核心的其实就三行代码，分别用红色数字标识出来了，其中对应的就是<code>1、客户端对象创建 2、生产者对象创建 3、消息发送</code>。今天就分别针对这三个步骤进行深入的探索。</p>
 <img src="image-20240320153647060.png" alt="image-20240320153647060" style="zoom:50%;" />
-<h4 id="二创建客户端对象">二、创建客户端对象
-</h4><p>无论是写生产者还是消费者端代码，第一步都是要创建客户端对象，那么客户端对象都做了些什么事情呢？这里将客户端对象创建的步骤绘制成以下图</p>
+<h2 id="创建客户端对象">创建客户端对象
+</h2><p>无论是写生产者还是消费者端代码，第一步都是要创建客户端对象，那么客户端对象都做了些什么事情呢？这里将客户端对象创建的步骤绘制成以下图</p>
 <img src="image-20240321153410330.png" alt="image-20240321153410330" style="zoom:50%;" />
 <p>客户端对象的创建以下几个东西，其中最重要的是前两个</p>
 <ol>
@@ -388,8 +399,8 @@
 <li>内存控制器MemoryLimitController</li>
 <li>创建客户端计数器HashedWheelTimer</li>
 </ol>
-<h5 id="1-lookup服务">1. Lookup服务
-</h5><p>Lookup服务负责获取Topic的归属Broker地址以及Schema信息等，非常重要。默认有HTTP和二进制传输两种实现，如果创建客户端对象时.serviceUrl方法传入的地址是http开头则使用HTTP实现，否则就是二进制传输实现。</p>
+<h3 id="lookup服务">Lookup服务
+</h3><p>Lookup服务负责获取Topic的归属Broker地址以及Schema信息等，非常重要。默认有HTTP和二进制传输两种实现，如果创建客户端对象时.serviceUrl方法传入的地址是http开头则使用HTTP实现，否则就是二进制传输实现。</p>
 <p>Lookup服务的创建如下</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -441,8 +452,8 @@
 </span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>跟到这里就差不多了，我们知道创建客户端对象的时候会初始化Lookup服务，而Lookup服务初始化的时候会创建跟外部进行通信的异步HTTP客户端，用于在创建生产者时去查询Topic的归属Broker的IP地址，这样生产者才知道具体去跟哪台Broker创建TCP连接</p>
-<h5 id="2-连接池connectionpool">2. 连接池ConnectionPool
-</h5><p>连接池是池化技术在网络连接这个场景的使用，使用连接池可以避免重复创建关闭TCP连接造成资源浪费以及提升性能。在创建客户端对象的构造方法中，ConnectionPool的创建如下，可以是通过new方式进行创建，因此我们看下它的构造方法</p>
+<h3 id="连接池connectionpool">连接池ConnectionPool
+</h3><p>连接池是池化技术在网络连接这个场景的使用，使用连接池可以避免重复创建关闭TCP连接造成资源浪费以及提升性能。在创建客户端对象的构造方法中，ConnectionPool的创建如下，可以是通过new方式进行创建，因此我们看下它的构造方法</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -508,8 +519,8 @@
 </span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="三生产者对象创建">三、生产者对象创建
-</h4><p>看完了客户端对象创建，再来看看生产者对象的创建，从这条语句进行切入 <code>Producer&lt;String&gt; producer = pulsarClient.newProducer(...).create();</code> 在创建生产者对象时会进行一下几步</p>
+</div><h2 id="生产者对象创建">生产者对象创建
+</h2><p>看完了客户端对象创建，再来看看生产者对象的创建，从这条语句进行切入 <code>Producer&lt;String&gt; producer = pulsarClient.newProducer(...).create();</code> 在创建生产者对象时会进行一下几步</p>
 <p><img src="/p/%E4%B8%80%E6%96%87%E5%BD%BB%E5%BA%95%E6%90%9E%E6%87%82producer%E7%AB%AF%E6%B5%81%E7%A8%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%90%86/image-20240320183224595.png"
 	width="464"
 	height="732"
@@ -524,8 +535,8 @@
 		data-flex-basis="152px"
 	
 ></p>
-<h5 id="1-指定路由策略">1. 指定路由策略
-</h5><p>这个主要就是根据创建生产者对象时指定的，如果没有配置的话默认使用的轮询路由策略。<code>setMessageRoutingMode</code> 这个方法就是指定路由策略的，然后指定完后下面的代码可以看到，如果有配置拦截器的话在创建生产者对象时也会把它给拦截逻辑加载进去。</p>
+<h3 id="指定路由策略">指定路由策略
+</h3><p>这个主要就是根据创建生产者对象时指定的，如果没有配置的话默认使用的轮询路由策略。<code>setMessageRoutingMode</code> 这个方法就是指定路由策略的，然后指定完后下面的代码可以看到，如果有配置拦截器的话在创建生产者对象时也会把它给拦截逻辑加载进去。</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -593,8 +604,8 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h5 id="2-获取topic分区数和schema">2. 获取Topic分区数和Schema
-</h5><p>通过Lookup机制去Broker中查询这个Topic的Schema信息，可以看到如果服务端没有配置Schema信息的话则默认用 <code>Schema.BYTES</code></p>
+</div><h3 id="获取topic分区数和schema">获取Topic分区数和Schema
+</h3><p>通过Lookup机制去Broker中查询这个Topic的Schema信息，可以看到如果服务端没有配置Schema信息的话则默认用 <code>Schema.BYTES</code></p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -846,8 +857,8 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h5 id="3-创建生产者对象">3. 创建生产者对象
-</h5><p>在上一小结可以看到已经查到分区信息，在有分区的情况是会调用 <code>newPartitionedProducerImpl</code> 方法进行生产者对象的初始化，现在就从这里开始进行跟踪，可以看到这个方法只是封装了new PartitionedProducerImpl对象的操作，于是继续看PartitionedProducerImpl的构造函数的逻辑</p>
+</div><h3 id="创建生产者对象">创建生产者对象
+</h3><p>在上一小结可以看到已经查到分区信息，在有分区的情况是会调用 <code>newPartitionedProducerImpl</code> 方法进行生产者对象的初始化，现在就从这里开始进行跟踪，可以看到这个方法只是封装了new PartitionedProducerImpl对象的操作，于是继续看PartitionedProducerImpl的构造函数的逻辑</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -1037,8 +1048,8 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h5 id="4-创建连接">4. 创建连接
-</h5><p>从上一小节可以看到代码逻辑跟到了<code>grabCnx</code> 方法，继续一路跟踪下去，可以看到最后都会调用 <code>state.client.getConnection</code>, 继续往里面看看</p>
+</div><h3 id="创建连接">创建连接
+</h3><p>从上一小节可以看到代码逻辑跟到了<code>grabCnx</code> 方法，继续一路跟踪下去，可以看到最后都会调用 <code>state.client.getConnection</code>, 继续往里面看看</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">  1
@@ -1264,8 +1275,8 @@
 </span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>从上面的代码跟踪可以看到，生产者对象在创建的时候会通过Netty客户端跟Topic所在的Broker建立TCP网络连接，方便后续的通信</p>
-<h4 id="四消息发送">四、消息发送
-</h4><p>消息发送流程大致如下图</p>
+<h2 id="消息发送">消息发送
+</h2><p>消息发送流程大致如下图</p>
 <img src="image-20240321135322166.png" alt="image-20240321135322166" style="zoom: 50%;" />
 <ol>
 <li>在选择消息发送是，生产者对象会根据路由策略来决定用目标分区所对应的ProducerImpl对象进行处理</li>
@@ -1275,8 +1286,8 @@
 <li>Broker将数据写入成功后向客户端返回ack，客户端通过ack中携带的消息信息到待确认队列中进行消息的删除</li>
 </ol>
 <p>那么老规矩，继续一起看下代码实现吧</p>
-<h5 id="1-发送流程前置操作">1. 发送流程前置操作
-</h5><p>就从常见的这条语句进行切入 <code>producer.sendAsync(&quot;hello java API pulsar:&quot;+i+&quot;, 当前时间为：&quot;+new Date());</code> 。通过代码中可以看到<code>sendAsync</code> 方法是从其父类ProducerBase中继承的</p>
+<h3 id="发送流程前置操作">发送流程前置操作
+</h3><p>就从常见的这条语句进行切入 <code>producer.sendAsync(&quot;hello java API pulsar:&quot;+i+&quot;, 当前时间为：&quot;+new Date());</code> 。通过代码中可以看到<code>sendAsync</code> 方法是从其父类ProducerBase中继承的</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -1319,8 +1330,8 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h5 id="2-消息处理以及包装">2. 消息处理以及包装
-</h5><p>又回到ProducerImpl对象的逻辑了，相当于分区生产者对象只是个壳，无论分区还是非分区最终都是调用的ProducerImpl进行消息发送的真正逻辑，不废话继续往下看</p>
+</div><h3 id="消息处理以及包装">消息处理以及包装
+</h3><p>又回到ProducerImpl对象的逻辑了，相当于分区生产者对象只是个壳，无论分区还是非分区最终都是调用的ProducerImpl进行消息发送的真正逻辑，不废话继续往下看</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -1395,8 +1406,8 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h5 id="3-消息发送">3. 消息发送
-</h5><p>数据已经处理包装得差不多了，接下来就是发送的逻辑，咱们顺着 <code>processOpSendMsg</code> 方法继续往下看</p>
+</div><h3 id="消息发送-1">消息发送
+</h3><p>数据已经处理包装得差不多了，接下来就是发送的逻辑，咱们顺着 <code>processOpSendMsg</code> 方法继续往下看</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -1470,8 +1481,8 @@
 </span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>跟踪到这里基本就结束了，对Netty感兴趣的朋友可以再继续往下跟，这里可以简单说一下，其实它内部是对JDK的NIO做了包装和优化，最底层也是通过Java的Socket连接网络端口进行的数据发送。不知道有没有小伙伴发现，咦，怎么没有对返回结果进行处理的逻辑呢？这就是所谓的异步设计，Netty不就是一个异步通信框架吗，客户端发送的逻辑到这里就是彻底结束了，而消息的处理结束就是要等服务端Broker向客户端发起消息ack请求了，想知道Pulsar怎么实现的吗？那就跟着我一起瞅瞅吧～</p>
-<h5 id="4-消息确认">4. 消息确认
-</h5><p>消息确认流程是由Broker端发起的，那么生产者对象肯定是通过Netty客户端接收的，所以直接看Pulsar实现的ChannelInboundHandlerAdapter类的channelRead的逻辑即可</p>
+<h3 id="消息确认">消息确认
+</h3><p>消息确认流程是由Broker端发起的，那么生产者对象肯定是通过Netty客户端接收的，所以直接看Pulsar实现的ChannelInboundHandlerAdapter类的channelRead的逻辑即可</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -1573,8 +1584,8 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="五总结">五、总结
-</h4><p>生产者写数据的流程到这里基本就结束了，怎么样，是不是没想象中那么可怕？也许你对<code>1、客户端对象创建 2、生产者对象创建 3、消息发送</code>  这三步之间的关系还有点迷迷糊糊，那就请允许我给你举个例子，<code>1、客户端对象创建</code>相当于一座新城市的创建，打好城市的地基，<code>2、生产者对象创建</code> 相当于在这个地基的基础上建起了城市，发电厂等等，最重要的是修建其通往其他各个城市的交通要道，最后的<code>3、消息发送</code> 相当于这个新城市的居民们乘坐高铁去其他的城市。这么说相信你一定已经明白了～如果还有其他疑问欢迎在下面的评论区一起讨论</p>
+</div><h2 id="总结">总结
+</h2><p>生产者写数据的流程到这里基本就结束了，怎么样，是不是没想象中那么可怕？也许你对<code>1、客户端对象创建 2、生产者对象创建 3、消息发送</code>  这三步之间的关系还有点迷迷糊糊，那就请允许我给你举个例子，<code>1、客户端对象创建</code>相当于一座新城市的创建，打好城市的地基，<code>2、生产者对象创建</code> 相当于在这个地基的基础上建起了城市，发电厂等等，最重要的是修建其通往其他各个城市的交通要道，最后的<code>3、消息发送</code> 相当于这个新城市的居民们乘坐高铁去其他的城市。这么说相信你一定已经明白了～如果还有其他疑问欢迎在下面的评论区一起讨论</p>
 
 </section>
 

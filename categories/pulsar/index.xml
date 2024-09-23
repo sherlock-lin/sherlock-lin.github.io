@@ -13,8 +13,8 @@
         <pubDate>Wed, 18 Sep 2024 10:05:57 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240913141630196.png" alt="Featured image of post 启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生" /&gt;&lt;h4 id=&#34;一简析&#34;&gt;一、简析
-&lt;/h4&gt;&lt;p&gt;Broker的启动流程框架基本如下&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240913141630196.png" alt="Featured image of post 启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生" /&gt;&lt;h2 id=&#34;简析&#34;&gt;简析
+&lt;/h2&gt;&lt;p&gt;Broker的启动流程框架基本如下&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;触发启动&lt;/li&gt;
 &lt;li&gt;初始化
@@ -34,8 +34,8 @@
 &lt;/ol&gt;
 &lt;/li&gt;
 &lt;/ol&gt;
-&lt;h4 id=&#34;二何时如何触发启动&#34;&gt;二、何时、如何触发启动
-&lt;/h4&gt;&lt;p&gt;Broker的启动基本都是靠维护人员主动触发的，入口是Broker提供的脚本 &lt;code&gt;bin/pulsar&lt;/code&gt;、&lt;code&gt;bin/pulsar-daemon&lt;/code&gt;。常见的启动指令有 &lt;code&gt;bin/pulsar standalone&lt;/code&gt;、 &lt;code&gt;bin/pulsar broker&lt;/code&gt;、&lt;code&gt;bin/pulsar-daemon start broker&lt;/code&gt;等，今天就从&lt;code&gt;bin/pulsar broker&lt;/code&gt;流程进行探讨。先来看看&lt;code&gt;bin/pulsar&lt;/code&gt;的脚本逻辑&lt;/p&gt;
+&lt;h2 id=&#34;何时如何触发启动&#34;&gt;何时、如何触发启动
+&lt;/h2&gt;&lt;p&gt;Broker的启动基本都是靠维护人员主动触发的，入口是Broker提供的脚本 &lt;code&gt;bin/pulsar&lt;/code&gt;、&lt;code&gt;bin/pulsar-daemon&lt;/code&gt;。常见的启动指令有 &lt;code&gt;bin/pulsar standalone&lt;/code&gt;、 &lt;code&gt;bin/pulsar broker&lt;/code&gt;、&lt;code&gt;bin/pulsar-daemon start broker&lt;/code&gt;等，今天就从&lt;code&gt;bin/pulsar broker&lt;/code&gt;流程进行探讨。先来看看&lt;code&gt;bin/pulsar&lt;/code&gt;的脚本逻辑&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -100,8 +100,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;    &lt;span class=&#34;nb&#34;&gt;exec&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$JAVA&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$OPTS&lt;/span&gt; -Dpulsar.log.file&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;nv&#34;&gt;$PULSAR_LOG_FILE&lt;/span&gt; org.apache.bookkeeper.server.Main --conf &lt;span class=&#34;nv&#34;&gt;$PULSAR_BOOKKEEPER_CONF&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$@&lt;/span&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;三broker启动流程&#34;&gt;三、Broker启动流程
-&lt;/h4&gt;&lt;p&gt;通过脚本能够看到是通过PulsarBrokerStarter进行启动，因此现在就直接从它的main方法进行跟踪吧&lt;/p&gt;
+&lt;/div&gt;&lt;h2 id=&#34;broker启动流程&#34;&gt;Broker启动流程
+&lt;/h2&gt;&lt;p&gt;通过脚本能够看到是通过PulsarBrokerStarter进行启动，因此现在就直接从它的main方法进行跟踪吧&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240912190827624.png&#34;
 	width=&#34;1230&#34;
 	height=&#34;569&#34;
@@ -251,8 +251,8 @@
 &lt;/ul&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
-&lt;h4 id=&#34;四总结&#34;&gt;四、总结
-&lt;/h4&gt;&lt;p&gt;PulsarService是Pulsar服务启动的核心类，其内置了七大重要的对象如下图&lt;/p&gt;
+&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;p&gt;PulsarService是Pulsar服务启动的核心类，其内置了七大重要的对象如下图&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240913141630196.png&#34;
 	width=&#34;914&#34;
 	height=&#34;277&#34;
@@ -3953,11 +3953,11 @@
         <pubDate>Thu, 21 Mar 2024 10:34:57 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/%E4%B8%80%E6%96%87%E5%BD%BB%E5%BA%95%E6%90%9E%E6%87%82producer%E7%AB%AF%E6%B5%81%E7%A8%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%90%86/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/%E4%B8%80%E6%96%87%E5%BD%BB%E5%BA%95%E6%90%9E%E6%87%82producer%E7%AB%AF%E6%B5%81%E7%A8%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%90%86/image-20240321153410330.png" alt="Featured image of post 一文彻底搞懂Producer端流程以及原理" /&gt;&lt;h4 id=&#34;一引言&#34;&gt;一、引言
-&lt;/h4&gt;&lt;p&gt;无论你是刚接触Pulsar还是使用Pulsar多年，相信你对下面这段代码都很熟悉，这就是生产者端最常写的代码没有之一，其中最核心的其实就三行代码，分别用红色数字标识出来了，其中对应的就是&lt;code&gt;1、客户端对象创建 2、生产者对象创建 3、消息发送&lt;/code&gt;。今天就分别针对这三个步骤进行深入的探索。&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E4%B8%80%E6%96%87%E5%BD%BB%E5%BA%95%E6%90%9E%E6%87%82producer%E7%AB%AF%E6%B5%81%E7%A8%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%90%86/image-20240321153410330.png" alt="Featured image of post 一文彻底搞懂Producer端流程以及原理" /&gt;&lt;h2 id=&#34;引言&#34;&gt;引言
+&lt;/h2&gt;&lt;p&gt;无论你是刚接触Pulsar还是使用Pulsar多年，相信你对下面这段代码都很熟悉，这就是生产者端最常写的代码没有之一，其中最核心的其实就三行代码，分别用红色数字标识出来了，其中对应的就是&lt;code&gt;1、客户端对象创建 2、生产者对象创建 3、消息发送&lt;/code&gt;。今天就分别针对这三个步骤进行深入的探索。&lt;/p&gt;
 &lt;img src=&#34;image-20240320153647060.png&#34; alt=&#34;image-20240320153647060&#34; style=&#34;zoom:50%;&#34; /&gt;
-&lt;h4 id=&#34;二创建客户端对象&#34;&gt;二、创建客户端对象
-&lt;/h4&gt;&lt;p&gt;无论是写生产者还是消费者端代码，第一步都是要创建客户端对象，那么客户端对象都做了些什么事情呢？这里将客户端对象创建的步骤绘制成以下图&lt;/p&gt;
+&lt;h2 id=&#34;创建客户端对象&#34;&gt;创建客户端对象
+&lt;/h2&gt;&lt;p&gt;无论是写生产者还是消费者端代码，第一步都是要创建客户端对象，那么客户端对象都做了些什么事情呢？这里将客户端对象创建的步骤绘制成以下图&lt;/p&gt;
 &lt;img src=&#34;image-20240321153410330.png&#34; alt=&#34;image-20240321153410330&#34; style=&#34;zoom:50%;&#34; /&gt;
 &lt;p&gt;客户端对象的创建以下几个东西，其中最重要的是前两个&lt;/p&gt;
 &lt;ol&gt;
@@ -3967,8 +3967,8 @@
 &lt;li&gt;内存控制器MemoryLimitController&lt;/li&gt;
 &lt;li&gt;创建客户端计数器HashedWheelTimer&lt;/li&gt;
 &lt;/ol&gt;
-&lt;h5 id=&#34;1-lookup服务&#34;&gt;1. Lookup服务
-&lt;/h5&gt;&lt;p&gt;Lookup服务负责获取Topic的归属Broker地址以及Schema信息等，非常重要。默认有HTTP和二进制传输两种实现，如果创建客户端对象时.serviceUrl方法传入的地址是http开头则使用HTTP实现，否则就是二进制传输实现。&lt;/p&gt;
+&lt;h3 id=&#34;lookup服务&#34;&gt;Lookup服务
+&lt;/h3&gt;&lt;p&gt;Lookup服务负责获取Topic的归属Broker地址以及Schema信息等，非常重要。默认有HTTP和二进制传输两种实现，如果创建客户端对象时.serviceUrl方法传入的地址是http开头则使用HTTP实现，否则就是二进制传输实现。&lt;/p&gt;
 &lt;p&gt;Lookup服务的创建如下&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
@@ -4020,8 +4020,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
 &lt;/div&gt;&lt;p&gt;跟到这里就差不多了，我们知道创建客户端对象的时候会初始化Lookup服务，而Lookup服务初始化的时候会创建跟外部进行通信的异步HTTP客户端，用于在创建生产者时去查询Topic的归属Broker的IP地址，这样生产者才知道具体去跟哪台Broker创建TCP连接&lt;/p&gt;
-&lt;h5 id=&#34;2-连接池connectionpool&#34;&gt;2. 连接池ConnectionPool
-&lt;/h5&gt;&lt;p&gt;连接池是池化技术在网络连接这个场景的使用，使用连接池可以避免重复创建关闭TCP连接造成资源浪费以及提升性能。在创建客户端对象的构造方法中，ConnectionPool的创建如下，可以是通过new方式进行创建，因此我们看下它的构造方法&lt;/p&gt;
+&lt;h3 id=&#34;连接池connectionpool&#34;&gt;连接池ConnectionPool
+&lt;/h3&gt;&lt;p&gt;连接池是池化技术在网络连接这个场景的使用，使用连接池可以避免重复创建关闭TCP连接造成资源浪费以及提升性能。在创建客户端对象的构造方法中，ConnectionPool的创建如下，可以是通过new方式进行创建，因此我们看下它的构造方法&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
@@ -4087,8 +4087,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;三生产者对象创建&#34;&gt;三、生产者对象创建
-&lt;/h4&gt;&lt;p&gt;看完了客户端对象创建，再来看看生产者对象的创建，从这条语句进行切入 &lt;code&gt;Producer&amp;lt;String&amp;gt; producer = pulsarClient.newProducer(...).create();&lt;/code&gt; 在创建生产者对象时会进行一下几步&lt;/p&gt;
+&lt;/div&gt;&lt;h2 id=&#34;生产者对象创建&#34;&gt;生产者对象创建
+&lt;/h2&gt;&lt;p&gt;看完了客户端对象创建，再来看看生产者对象的创建，从这条语句进行切入 &lt;code&gt;Producer&amp;lt;String&amp;gt; producer = pulsarClient.newProducer(...).create();&lt;/code&gt; 在创建生产者对象时会进行一下几步&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E4%B8%80%E6%96%87%E5%BD%BB%E5%BA%95%E6%90%9E%E6%87%82producer%E7%AB%AF%E6%B5%81%E7%A8%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%90%86/image-20240320183224595.png&#34;
 	width=&#34;464&#34;
 	height=&#34;732&#34;
@@ -4103,8 +4103,8 @@
 		data-flex-basis=&#34;152px&#34;
 	
 &gt;&lt;/p&gt;
-&lt;h5 id=&#34;1-指定路由策略&#34;&gt;1. 指定路由策略
-&lt;/h5&gt;&lt;p&gt;这个主要就是根据创建生产者对象时指定的，如果没有配置的话默认使用的轮询路由策略。&lt;code&gt;setMessageRoutingMode&lt;/code&gt; 这个方法就是指定路由策略的，然后指定完后下面的代码可以看到，如果有配置拦截器的话在创建生产者对象时也会把它给拦截逻辑加载进去。&lt;/p&gt;
+&lt;h3 id=&#34;指定路由策略&#34;&gt;指定路由策略
+&lt;/h3&gt;&lt;p&gt;这个主要就是根据创建生产者对象时指定的，如果没有配置的话默认使用的轮询路由策略。&lt;code&gt;setMessageRoutingMode&lt;/code&gt; 这个方法就是指定路由策略的，然后指定完后下面的代码可以看到，如果有配置拦截器的话在创建生产者对象时也会把它给拦截逻辑加载进去。&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -4172,8 +4172,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h5 id=&#34;2-获取topic分区数和schema&#34;&gt;2. 获取Topic分区数和Schema
-&lt;/h5&gt;&lt;p&gt;通过Lookup机制去Broker中查询这个Topic的Schema信息，可以看到如果服务端没有配置Schema信息的话则默认用 &lt;code&gt;Schema.BYTES&lt;/code&gt;&lt;/p&gt;
+&lt;/div&gt;&lt;h3 id=&#34;获取topic分区数和schema&#34;&gt;获取Topic分区数和Schema
+&lt;/h3&gt;&lt;p&gt;通过Lookup机制去Broker中查询这个Topic的Schema信息，可以看到如果服务端没有配置Schema信息的话则默认用 &lt;code&gt;Schema.BYTES&lt;/code&gt;&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -4425,8 +4425,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h5 id=&#34;3-创建生产者对象&#34;&gt;3. 创建生产者对象
-&lt;/h5&gt;&lt;p&gt;在上一小结可以看到已经查到分区信息，在有分区的情况是会调用 &lt;code&gt;newPartitionedProducerImpl&lt;/code&gt; 方法进行生产者对象的初始化，现在就从这里开始进行跟踪，可以看到这个方法只是封装了new PartitionedProducerImpl对象的操作，于是继续看PartitionedProducerImpl的构造函数的逻辑&lt;/p&gt;
+&lt;/div&gt;&lt;h3 id=&#34;创建生产者对象&#34;&gt;创建生产者对象
+&lt;/h3&gt;&lt;p&gt;在上一小结可以看到已经查到分区信息，在有分区的情况是会调用 &lt;code&gt;newPartitionedProducerImpl&lt;/code&gt; 方法进行生产者对象的初始化，现在就从这里开始进行跟踪，可以看到这个方法只是封装了new PartitionedProducerImpl对象的操作，于是继续看PartitionedProducerImpl的构造函数的逻辑&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -4616,8 +4616,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h5 id=&#34;4-创建连接&#34;&gt;4. 创建连接
-&lt;/h5&gt;&lt;p&gt;从上一小节可以看到代码逻辑跟到了&lt;code&gt;grabCnx&lt;/code&gt; 方法，继续一路跟踪下去，可以看到最后都会调用 &lt;code&gt;state.client.getConnection&lt;/code&gt;, 继续往里面看看&lt;/p&gt;
+&lt;/div&gt;&lt;h3 id=&#34;创建连接&#34;&gt;创建连接
+&lt;/h3&gt;&lt;p&gt;从上一小节可以看到代码逻辑跟到了&lt;code&gt;grabCnx&lt;/code&gt; 方法，继续一路跟踪下去，可以看到最后都会调用 &lt;code&gt;state.client.getConnection&lt;/code&gt;, 继续往里面看看&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;  1
@@ -4843,8 +4843,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
 &lt;/div&gt;&lt;p&gt;从上面的代码跟踪可以看到，生产者对象在创建的时候会通过Netty客户端跟Topic所在的Broker建立TCP网络连接，方便后续的通信&lt;/p&gt;
-&lt;h4 id=&#34;四消息发送&#34;&gt;四、消息发送
-&lt;/h4&gt;&lt;p&gt;消息发送流程大致如下图&lt;/p&gt;
+&lt;h2 id=&#34;消息发送&#34;&gt;消息发送
+&lt;/h2&gt;&lt;p&gt;消息发送流程大致如下图&lt;/p&gt;
 &lt;img src=&#34;image-20240321135322166.png&#34; alt=&#34;image-20240321135322166&#34; style=&#34;zoom: 50%;&#34; /&gt;
 &lt;ol&gt;
 &lt;li&gt;在选择消息发送是，生产者对象会根据路由策略来决定用目标分区所对应的ProducerImpl对象进行处理&lt;/li&gt;
@@ -4854,8 +4854,8 @@
 &lt;li&gt;Broker将数据写入成功后向客户端返回ack，客户端通过ack中携带的消息信息到待确认队列中进行消息的删除&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;那么老规矩，继续一起看下代码实现吧&lt;/p&gt;
-&lt;h5 id=&#34;1-发送流程前置操作&#34;&gt;1. 发送流程前置操作
-&lt;/h5&gt;&lt;p&gt;就从常见的这条语句进行切入 &lt;code&gt;producer.sendAsync(&amp;quot;hello java API pulsar:&amp;quot;+i+&amp;quot;, 当前时间为：&amp;quot;+new Date());&lt;/code&gt; 。通过代码中可以看到&lt;code&gt;sendAsync&lt;/code&gt; 方法是从其父类ProducerBase中继承的&lt;/p&gt;
+&lt;h3 id=&#34;发送流程前置操作&#34;&gt;发送流程前置操作
+&lt;/h3&gt;&lt;p&gt;就从常见的这条语句进行切入 &lt;code&gt;producer.sendAsync(&amp;quot;hello java API pulsar:&amp;quot;+i+&amp;quot;, 当前时间为：&amp;quot;+new Date());&lt;/code&gt; 。通过代码中可以看到&lt;code&gt;sendAsync&lt;/code&gt; 方法是从其父类ProducerBase中继承的&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -4898,8 +4898,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h5 id=&#34;2-消息处理以及包装&#34;&gt;2. 消息处理以及包装
-&lt;/h5&gt;&lt;p&gt;又回到ProducerImpl对象的逻辑了，相当于分区生产者对象只是个壳，无论分区还是非分区最终都是调用的ProducerImpl进行消息发送的真正逻辑，不废话继续往下看&lt;/p&gt;
+&lt;/div&gt;&lt;h3 id=&#34;消息处理以及包装&#34;&gt;消息处理以及包装
+&lt;/h3&gt;&lt;p&gt;又回到ProducerImpl对象的逻辑了，相当于分区生产者对象只是个壳，无论分区还是非分区最终都是调用的ProducerImpl进行消息发送的真正逻辑，不废话继续往下看&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -4974,8 +4974,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h5 id=&#34;3-消息发送&#34;&gt;3. 消息发送
-&lt;/h5&gt;&lt;p&gt;数据已经处理包装得差不多了，接下来就是发送的逻辑，咱们顺着 &lt;code&gt;processOpSendMsg&lt;/code&gt; 方法继续往下看&lt;/p&gt;
+&lt;/div&gt;&lt;h3 id=&#34;消息发送-1&#34;&gt;消息发送
+&lt;/h3&gt;&lt;p&gt;数据已经处理包装得差不多了，接下来就是发送的逻辑，咱们顺着 &lt;code&gt;processOpSendMsg&lt;/code&gt; 方法继续往下看&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -5049,8 +5049,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
 &lt;/div&gt;&lt;p&gt;跟踪到这里基本就结束了，对Netty感兴趣的朋友可以再继续往下跟，这里可以简单说一下，其实它内部是对JDK的NIO做了包装和优化，最底层也是通过Java的Socket连接网络端口进行的数据发送。不知道有没有小伙伴发现，咦，怎么没有对返回结果进行处理的逻辑呢？这就是所谓的异步设计，Netty不就是一个异步通信框架吗，客户端发送的逻辑到这里就是彻底结束了，而消息的处理结束就是要等服务端Broker向客户端发起消息ack请求了，想知道Pulsar怎么实现的吗？那就跟着我一起瞅瞅吧～&lt;/p&gt;
-&lt;h5 id=&#34;4-消息确认&#34;&gt;4. 消息确认
-&lt;/h5&gt;&lt;p&gt;消息确认流程是由Broker端发起的，那么生产者对象肯定是通过Netty客户端接收的，所以直接看Pulsar实现的ChannelInboundHandlerAdapter类的channelRead的逻辑即可&lt;/p&gt;
+&lt;h3 id=&#34;消息确认&#34;&gt;消息确认
+&lt;/h3&gt;&lt;p&gt;消息确认流程是由Broker端发起的，那么生产者对象肯定是通过Netty客户端接收的，所以直接看Pulsar实现的ChannelInboundHandlerAdapter类的channelRead的逻辑即可&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -5152,8 +5152,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;五总结&#34;&gt;五、总结
-&lt;/h4&gt;&lt;p&gt;生产者写数据的流程到这里基本就结束了，怎么样，是不是没想象中那么可怕？也许你对&lt;code&gt;1、客户端对象创建 2、生产者对象创建 3、消息发送&lt;/code&gt;  这三步之间的关系还有点迷迷糊糊，那就请允许我给你举个例子，&lt;code&gt;1、客户端对象创建&lt;/code&gt;相当于一座新城市的创建，打好城市的地基，&lt;code&gt;2、生产者对象创建&lt;/code&gt; 相当于在这个地基的基础上建起了城市，发电厂等等，最重要的是修建其通往其他各个城市的交通要道，最后的&lt;code&gt;3、消息发送&lt;/code&gt; 相当于这个新城市的居民们乘坐高铁去其他的城市。这么说相信你一定已经明白了～如果还有其他疑问欢迎在下面的评论区一起讨论&lt;/p&gt;
+&lt;/div&gt;&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;p&gt;生产者写数据的流程到这里基本就结束了，怎么样，是不是没想象中那么可怕？也许你对&lt;code&gt;1、客户端对象创建 2、生产者对象创建 3、消息发送&lt;/code&gt;  这三步之间的关系还有点迷迷糊糊，那就请允许我给你举个例子，&lt;code&gt;1、客户端对象创建&lt;/code&gt;相当于一座新城市的创建，打好城市的地基，&lt;code&gt;2、生产者对象创建&lt;/code&gt; 相当于在这个地基的基础上建起了城市，发电厂等等，最重要的是修建其通往其他各个城市的交通要道，最后的&lt;code&gt;3、消息发送&lt;/code&gt; 相当于这个新城市的居民们乘坐高铁去其他的城市。这么说相信你一定已经明白了～如果还有其他疑问欢迎在下面的评论区一起讨论&lt;/p&gt;
 </description>
         </item>
         <item>
