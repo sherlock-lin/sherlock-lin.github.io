@@ -266,18 +266,16 @@
         <div class="widget--toc">
             <nav id="TableOfContents">
   <ol>
-    <li>
+    <li><a href="#引言">引言</a></li>
+    <li><a href="#正文">正文</a></li>
+    <li><a href="#任务调度">任务调度</a>
       <ol>
-        <li>
-          <ol>
-            <li><a href="#引言">引言</a></li>
-            <li><a href="#一正文">一、正文</a></li>
-            <li><a href="#二任务调度">二、任务调度</a></li>
-            <li><a href="#三总结">三、总结</a></li>
-          </ol>
-        </li>
+        <li><a href="#worker-leader">worker-leader</a></li>
+        <li><a href="#worker-follwer">worker-follwer</a></li>
+        <li><a href="#源码解析">源码解析</a></li>
       </ol>
     </li>
+    <li><a href="#总结">总结</a></li>
   </ol>
 </nav>
         </div>
@@ -373,25 +371,25 @@
     <section class="article-content">
     
     
-    <h4 id="引言">引言
-</h4><p>Pulsar Function中最重要的角色是Worker，而Worker中最核心的类就是调度管理器SchedulerManager，本篇博客就专门对它进行剖析</p>
-<h4 id="一正文">一、正文
-</h4><p>SchedulerManager职责有以下两点</p>
+    <h2 id="引言">引言
+</h2><p>Pulsar Function中最重要的角色是Worker，而Worker中最核心的类就是调度管理器SchedulerManager，本篇博客就专门对它进行剖析</p>
+<h2 id="正文">正文
+</h2><p>SchedulerManager职责有以下两点</p>
 <ol>
 <li>任务调度</li>
 <li>重平衡</li>
 </ol>
 <p>任务调度是SchedulerManager最重要的逻辑，咱们通过 <code>pulsar-admin functions create xxx</code> 启动一个function实例时，Pulsar 如何决定在哪台worker所在节点启动这个function实例，这就是任务调度要做的事情，除此之外任务调度还包含function更新、删除以及任务的生命周期管理。而重平衡是稳定性相关的，当咱们的function实例分布不均衡时，可能会导致涝的涝死，旱的旱死，因此需要咱们做function实例的重新分配，这也是SchedulerManager要做的事情</p>
-<h4 id="二任务调度">二、任务调度
-</h4><p>在开始讲解任务调度之前，咱们先看看下面这张图</p>
+<h2 id="任务调度">任务调度
+</h2><p>在开始讲解任务调度之前，咱们先看看下面这张图</p>
 <img src="image-20240305140605827-9618768.png" alt="image-20240305140605827" style="zoom:50%;" />
 <p>图中的上下方分别是两个worker进程实例，在咱们通过 <code>bin/pulsar functions-worker</code> 启动worker进程时服务内部会启动consumer并以failover方式来在Broker进行消息订阅消费，failover机制保证同一时间内只有一个Consumer能进行订阅，因此Worker通过这个机制来进行选主，成功订阅的worker晋升为leader负责任务的派发，未成功订阅的worker变为follwer并通过Reader监听Broker中的任务。其中Leader和Follwer的主要逻辑分别如下</p>
-<h5 id="worker-leader">worker-leader
-</h5><p>通过Consumer-failver机制成为leader后，会立马启动一个Producer负责往Broker中发送任务消息，每当有新建启动function请求进来，就会往Broker中写入一条对应的任务消息。除此之外Leader还会通过Consumer消费Broker中保存的元数据，并以Map数据结构存在内存中作为Leader的元数据管理的数据来源，这里的数据有Function信息、Instance信息等，在接受到我不请求是也会同步更新这里，同时也会定期的根据元数据检查来排查出异常的Function、Instance等。</p>
-<h5 id="worker-follwer">worker-follwer
-</h5><p>在worker成为follower后，会启动Reader监听Broker中的任务，当监听到有新任务时会调用任务管理器进行处理，例如在有新增启动Function时，如果是配置的线程级别则以线程方式启动Instance，如果是配置的进程级别则会拉起一个独立的Instance进程进行Function任务的执行。</p>
-<h5 id="源码解析">源码解析
-</h5><p>调度逻辑的主要入口在SchedulerManager的invokeScheduler方法</p>
+<h3 id="worker-leader">worker-leader
+</h3><p>通过Consumer-failver机制成为leader后，会立马启动一个Producer负责往Broker中发送任务消息，每当有新建启动function请求进来，就会往Broker中写入一条对应的任务消息。除此之外Leader还会通过Consumer消费Broker中保存的元数据，并以Map数据结构存在内存中作为Leader的元数据管理的数据来源，这里的数据有Function信息、Instance信息等，在接受到我不请求是也会同步更新这里，同时也会定期的根据元数据检查来排查出异常的Function、Instance等。</p>
+<h3 id="worker-follwer">worker-follwer
+</h3><p>在worker成为follower后，会启动Reader监听Broker中的任务，当监听到有新任务时会调用任务管理器进行处理，例如在有新增启动Function时，如果是配置的线程级别则以线程方式启动Instance，如果是配置的进程级别则会拉起一个独立的Instance进程进行Function任务的执行。</p>
+<h3 id="源码解析">源码解析
+</h3><p>调度逻辑的主要入口在SchedulerManager的invokeScheduler方法</p>
 <ol>
 <li>获取所有Function 以及Instance</li>
 <li>删除所有不存在的Function/Instance的分配器，同时更新分配器的信息
@@ -637,8 +635,8 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="三总结">三、总结
-</h4><p>以上就是Pulsar中Worker的调度过程，这里主要是以Worker独立部署的方式进行讲解的，基于Broker启动的Worker感兴趣的朋友可以自行跟踪下代码。</p>
+</div><h2 id="总结">总结
+</h2><p>以上就是Pulsar中Worker的调度过程，这里主要是以Worker独立部署的方式进行讲解的，基于Broker启动的Worker感兴趣的朋友可以自行跟踪下代码。</p>
 
 </section>
 

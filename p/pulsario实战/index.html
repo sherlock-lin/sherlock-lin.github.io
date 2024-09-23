@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="zh-cn" dir="ltr">
     <head><meta charset='utf-8'>
-<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="一、引言 今天跟着 官方文档 基于docker玩一把Pulsar IO吧\n二、概要 在用户能够轻松的将消息队列跟其他系统(数据库、其他消息系统)一起使用时，消息队列的作用才是最强大的。而Pulsar IO connectors可以让你很轻松的创建、部署以及管理这些跟外部系统的连接，例如mysql、kafka、cassandra等。\n">
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="引言 今天跟着 官方文档 基于docker玩一把Pulsar IO吧\n概要 在用户能够轻松的将消息队列跟其他系统(数据库、其他消息系统)一起使用时，消息队列的作用才是最强大的。而Pulsar IO connectors可以让你很轻松的创建、部署以及管理这些跟外部系统的连接，例如mysql、kafka、cassandra等。\n">
 <title>PulsarIO实战</title>
 
 <link rel='canonical' href='https://sherlock-lin.github.io/p/pulsario%E5%AE%9E%E6%88%98/'>
 
 <link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="PulsarIO实战">
-<meta property='og:description' content="一、引言 今天跟着 官方文档 基于docker玩一把Pulsar IO吧\n二、概要 在用户能够轻松的将消息队列跟其他系统(数据库、其他消息系统)一起使用时，消息队列的作用才是最强大的。而Pulsar IO connectors可以让你很轻松的创建、部署以及管理这些跟外部系统的连接，例如mysql、kafka、cassandra等。\n">
+<meta property='og:description' content="引言 今天跟着 官方文档 基于docker玩一把Pulsar IO吧\n概要 在用户能够轻松的将消息队列跟其他系统(数据库、其他消息系统)一起使用时，消息队列的作用才是最强大的。而Pulsar IO connectors可以让你很轻松的创建、部署以及管理这些跟外部系统的连接，例如mysql、kafka、cassandra等。\n">
 <meta property='og:url' content='https://sherlock-lin.github.io/p/pulsario%E5%AE%9E%E6%88%98/'>
 <meta property='og:site_name' content='夏洛克-林'>
 <meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-03-13T10:34:55&#43;08:00'/><meta property='article:modified_time' content='2024-03-13T10:34:55&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/pulsario%E5%AE%9E%E6%88%98/image-20240313191618099.png' />
 <meta name="twitter:title" content="PulsarIO实战">
-<meta name="twitter:description" content="一、引言 今天跟着 官方文档 基于docker玩一把Pulsar IO吧\n二、概要 在用户能够轻松的将消息队列跟其他系统(数据库、其他消息系统)一起使用时，消息队列的作用才是最强大的。而Pulsar IO connectors可以让你很轻松的创建、部署以及管理这些跟外部系统的连接，例如mysql、kafka、cassandra等。\n"><meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="引言 今天跟着 官方文档 基于docker玩一把Pulsar IO吧\n概要 在用户能够轻松的将消息队列跟其他系统(数据库、其他消息系统)一起使用时，消息队列的作用才是最强大的。而Pulsar IO connectors可以让你很轻松的创建、部署以及管理这些跟外部系统的连接，例如mysql、kafka、cassandra等。\n"><meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content='https://sherlock-lin.github.io/p/pulsario%E5%AE%9E%E6%88%98/image-20240313191618099.png' />
     </head>
     <body class="
@@ -266,20 +266,16 @@
         <div class="widget--toc">
             <nav id="TableOfContents">
   <ol>
-    <li><a href="#一引言">一、引言</a></li>
-    <li><a href="#二概要">二、概要</a></li>
-    <li><a href="#三实战">三、实战</a>
+    <li><a href="#引言">引言</a></li>
+    <li><a href="#概要">概要</a></li>
+    <li><a href="#实战">实战</a>
       <ol>
-        <li>
-          <ol>
-            <li><a href="#1安装connector">1.安装connector</a></li>
-            <li><a href="#2-安装cassandra">2. 安装Cassandra</a></li>
-            <li><a href="#3-功能验证">3. 功能验证</a></li>
-          </ol>
-        </li>
+        <li><a href="#安装connector">安装connector</a></li>
+        <li><a href="#安装cassandra">安装Cassandra</a></li>
+        <li><a href="#功能验证">功能验证</a></li>
       </ol>
     </li>
-    <li><a href="#四总结">四、总结</a></li>
+    <li><a href="#总结">总结</a></li>
   </ol>
 </nav>
         </div>
@@ -375,10 +371,10 @@
     <section class="article-content">
     
     
-    <h2 id="一引言">一、引言
+    <h2 id="引言">引言
 </h2><p>今天跟着 <a class="link" href="https://pulsar.apache.org/docs/3.2.x/io-quickstart/"  target="_blank" rel="noopener"
     >官方文档 </a>基于docker玩一把Pulsar IO吧</p>
-<h2 id="二概要">二、概要
+<h2 id="概要">概要
 </h2><ul>
 <li>
 <p>在用户能够轻松的将消息队列跟其他系统(数据库、其他消息系统)一起使用时，消息队列的作用才是最强大的。而Pulsar IO connectors可以让你很轻松的创建、部署以及管理这些跟外部系统的连接，例如mysql、kafka、cassandra等。</p>
@@ -395,9 +391,9 @@
 </ul>
 </li>
 </ul>
-<h2 id="三实战">三、实战
-</h2><h4 id="1安装connector">1.安装connector
-</h4><ol>
+<h2 id="实战">实战
+</h2><h3 id="安装connector">安装connector
+</h3><ol>
 <li>
 <p>在 <a class="link" href="https://archive.apache.org/dist/pulsar/"  target="_blank" rel="noopener"
     >这里</a> 下载对应的connector，先选择对应的版本，在点进 connectors 目录选择对应的source或者sink</p>
@@ -449,8 +445,8 @@
 ></p>
 </li>
 </ol>
-<h4 id="2-安装cassandra">2. 安装Cassandra
-</h4><ol>
+<h3 id="安装cassandra">安装Cassandra
+</h3><ol>
 <li>
 <p>基于 <code>brew install --cask --appdir=/Applications docker</code> 安装docker(仅针对mac环境)</p>
 </li>
@@ -503,8 +499,8 @@
 </li>
 </ol>
 <img src="image-20240313192833909.png" alt="image-20240313192833909" style="zoom:50%;" />
-<h4 id="3-功能验证">3. 功能验证
-</h4><ol>
+<h3 id="功能验证">功能验证
+</h3><ol>
 <li>
 <p>写配置文件cassandra-sink.yml</p>
 <div class="highlight"><div class="chroma">
@@ -569,7 +565,7 @@
 </li>
 </ol>
 <img src="image-20240313193452150.png" alt="image-20240313193452150" style="zoom:50%;" />
-<h2 id="四总结">四、总结
+<h2 id="总结">总结
 </h2><p><code>纸上得来终觉浅，绝知此事要躬行。</code> 学习不能仅仅停留在纸面上或者理论，脱离使用去探讨设计或者源码都是不切实际的。因此今天一起体验了一把Pulsar IO，除此之外Pulsar还提供了非常丰富的跟其他系统交互的Connector，详细可以看上面发的下载地址并尝试使用自己感兴趣的Connector感受下实操的快乐～</p>
 
 </section>

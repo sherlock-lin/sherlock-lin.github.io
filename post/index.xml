@@ -379,24 +379,24 @@
         <pubDate>Fri, 13 Sep 2024 10:34:56 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/schema%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/schema%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/image-20240308104136110.png" alt="Featured image of post Schema深度解析" /&gt;&lt;h4 id=&#34;一引言&#34;&gt;一、引言
-&lt;/h4&gt;&lt;p&gt;关于Pulsar Schema，咱们要想想以下几个问题&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/schema%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/image-20240308104136110.png" alt="Featured image of post Schema深度解析" /&gt;&lt;h2 id=&#34;引言&#34;&gt;引言
+&lt;/h2&gt;&lt;p&gt;关于Pulsar Schema，咱们要想想以下几个问题&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;Pulsar 中的 Schema 是什么？&lt;/li&gt;
 &lt;li&gt;Pulsar Schema Registry的作用是什么？&lt;/li&gt;
 &lt;li&gt;怎么使用？&lt;/li&gt;
 &lt;li&gt;原理是什么？&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h4 id=&#34;二schema-是什么&#34;&gt;二、Schema 是什么
-&lt;/h4&gt;&lt;p&gt;Schema是定义结构化数据和二进制字节数组之间转换的逻辑，Pulsar的消息是以非结构化的二进制数组进行存储的，Schema只有在读写时才会被应用于数据上，因此生产者和消费者需要对Schema达成一致。Pulsar通过Schema Registry作为一个中央仓库存储Schema信息，它可以协调生产者和消费者保证相同的Schema，它可以存储多个版本的Schema，支持不同的兼容性配置以及根据兼容性的要求进行Schema的演进。Pulsar将Schema存储在Bookie上，Schema的写入、读取都通过Broker和Bookie交互，这个逻辑跟消息的读写操作是一只的，因此不需要额外考虑Schema的可用性和可靠性问题，因此整体看Pulsar实现Schema Registry的方式非常优雅&lt;/p&gt;
+&lt;h2 id=&#34;schema-是什么&#34;&gt;Schema 是什么
+&lt;/h2&gt;&lt;p&gt;Schema是定义结构化数据和二进制字节数组之间转换的逻辑，Pulsar的消息是以非结构化的二进制数组进行存储的，Schema只有在读写时才会被应用于数据上，因此生产者和消费者需要对Schema达成一致。Pulsar通过Schema Registry作为一个中央仓库存储Schema信息，它可以协调生产者和消费者保证相同的Schema，它可以存储多个版本的Schema，支持不同的兼容性配置以及根据兼容性的要求进行Schema的演进。Pulsar将Schema存储在Bookie上，Schema的写入、读取都通过Broker和Bookie交互，这个逻辑跟消息的读写操作是一只的，因此不需要额外考虑Schema的可用性和可靠性问题，因此整体看Pulsar实现Schema Registry的方式非常优雅&lt;/p&gt;
 &lt;p&gt;类型安全在所有数据应用中都非常重要，生产者和消费者需要某种机制协调数据类型来避免各种潜在的问题，比如序列化和反序列化方式不一致。数据安全通常有两种处理方式client-side和service-side，本质上就是客户端用时决定和服务端提前保证&lt;/p&gt;
 &lt;p&gt;client-side：将一切交给用户，客户端自行负责消息的序列化和反序列化并且保证生产消费时消息的类型安全，这种方式的最大问题就是类型是通过约定的，一旦生产者写入非约定的数据，下游的消费者将没有办法解析数据&lt;/p&gt;
 &lt;p&gt;server-side：数据安全由服务端保证，生产者和消费者都需要跟服务端提前确定数据类型。这种方式真正意义上保证了数据的类型安全，避免了生产者写入非法数据的问题&lt;/p&gt;
 &lt;p&gt;两种差异如下图&lt;/p&gt;
 &lt;img src=&#34;image-20240308104136110.png&#34; alt=&#34;image-20240308104136110&#34; style=&#34;zoom:50%;&#34; /&gt;
-&lt;h4 id=&#34;三怎么使用&#34;&gt;三、怎么使用
-&lt;/h4&gt;&lt;h5 id=&#34;1-client-side&#34;&gt;1. client-side
-&lt;/h5&gt;&lt;p&gt;生产者代码逻辑&lt;/p&gt;
+&lt;h2 id=&#34;怎么使用&#34;&gt;怎么使用
+&lt;/h2&gt;&lt;h3 id=&#34;client-side&#34;&gt;client-side
+&lt;/h3&gt;&lt;p&gt;生产者代码逻辑&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -509,8 +509,8 @@
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;消息数据为：User{name=&amp;#39;老六&amp;#39;, age=21, address=&amp;#39;海南&amp;#39;}
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h5 id=&#34;2-server-side&#34;&gt;2. server-side
-&lt;/h5&gt;&lt;p&gt;生产者代码逻辑&lt;/p&gt;
+&lt;/div&gt;&lt;h3 id=&#34;server-side&#34;&gt;server-side
+&lt;/h3&gt;&lt;p&gt;生产者代码逻辑&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -625,8 +625,8 @@
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;消息数据为：User{name=&amp;#39;王武&amp;#39;, age=36, address=&amp;#39;海南&amp;#39;}
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h5 id=&#34;3-小结&#34;&gt;3. 小结
-&lt;/h5&gt;&lt;p&gt;分别查看两个Topic的Schema信息如下图&lt;/p&gt;
+&lt;/div&gt;&lt;h3 id=&#34;小结&#34;&gt;小结
+&lt;/h3&gt;&lt;p&gt;分别查看两个Topic的Schema信息如下图&lt;/p&gt;
 &lt;p&gt;通过查询client-side的Schema信息，会发现Pulsar服务端其实并没有进行存储，相当于不指定Schema的话Pulsar默认都用byte数组&lt;/p&gt;
 &lt;img src=&#34;image-20240308113238414.png&#34; alt=&#34;image-20240308113238414&#34; style=&#34;zoom:50%;&#34; /&gt;
 &lt;p&gt;再来看看server-side的Schema信息，可以看到打印如下，namespace是pojo类的包路径，name是pojo类名，然后fields就是pojo类的各个字段的属性(像不像mysql里面的表结构，不少场景Topic就是当作表来用的)，然后type是AVRO是由于咱们是用的avro进行序列化的。&lt;/p&gt;
@@ -644,8 +644,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;pulsar&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;admin&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;schemas&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;get&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;sherlock&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;api&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;tenant&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;/&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;sherlock&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;namespace&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;/&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;partition_partition_topic_3&lt;/span&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;四原理解析&#34;&gt;四、原理解析
-&lt;/h4&gt;&lt;p&gt;Schema相关的流程咱们需要关注以下几个&lt;/p&gt;
+&lt;/div&gt;&lt;h2 id=&#34;原理解析&#34;&gt;原理解析
+&lt;/h2&gt;&lt;p&gt;Schema相关的流程咱们需要关注以下几个&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;注册Schema流程
 &lt;ul&gt;
@@ -657,8 +657,8 @@
 &lt;li&gt;Schema生效流程&lt;/li&gt;
 &lt;li&gt;更新Schema流程&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h5 id=&#34;1-注册schema流程&#34;&gt;1. 注册Schema流程
-&lt;/h5&gt;&lt;p&gt;&lt;strong&gt;生产者端侧&lt;/strong&gt;&lt;/p&gt;
+&lt;h3 id=&#34;注册schema流程&#34;&gt;注册Schema流程
+&lt;/h3&gt;&lt;p&gt;&lt;strong&gt;生产者端侧&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/schema%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/image-20240308145327614.png&#34;
 	width=&#34;1692&#34;
 	height=&#34;968&#34;
@@ -702,8 +702,8 @@
 &lt;li&gt;Broker检查是否支持自动更新schema，如果支持则注册这个schema，否则拒绝客户端&lt;/li&gt;
 &lt;li&gt;Broker进行schema兼容性检查，通过则连接否则拒绝客户端&lt;/li&gt;
 &lt;/ol&gt;
-&lt;h4 id=&#34;五源码解析&#34;&gt;五、源码解析
-&lt;/h4&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;h2 id=&#34;源码解析&#34;&gt;源码解析
+&lt;/h2&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
 &lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
@@ -757,8 +757,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;    }
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;文献&#34;&gt;文献
-&lt;/h4&gt;&lt;ol&gt;
+&lt;/div&gt;&lt;h2 id=&#34;文献&#34;&gt;文献
+&lt;/h2&gt;&lt;ol&gt;
 &lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://cloud.tencent.com/developer/article/1403326&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
     &gt;Pulsar：Schema Registry介绍&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://pulsar.apache.org/docs/next/schema-overview/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
@@ -1317,7 +1317,7 @@
         <pubDate>Wed, 17 Jul 2024 10:34:21 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651.png" alt="Featured image of post PulsarClient源码解析" /&gt;&lt;h2 id=&#34;一pulsar客户端简析&#34;&gt;一、Pulsar客户端简析
+        <description>&lt;img src="https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651.png" alt="Featured image of post PulsarClient源码解析" /&gt;&lt;h2 id=&#34;pulsar客户端简析&#34;&gt;Pulsar客户端简析
 &lt;/h2&gt;&lt;p&gt;pulsar服务是经典的C/S架构，由客户端和服务端构成。服务端提供处理读写请求服务，客户端负责发起读写请求。pulsar将客户端按照读写分成了生产者和消费者，但是无论怎么分，它们本质上都是Pulsar客户端并有很多相同的地方，本篇就针对客户端进行分析。&lt;/p&gt;
 &lt;p&gt;下图是客户端的组成部分&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651.png&#34;
@@ -1358,8 +1358,8 @@
 &lt;/ol&gt;
 &lt;/li&gt;
 &lt;/ol&gt;
-&lt;h2 id=&#34;二创建客户端对象&#34;&gt;二、创建客户端对象
-&lt;/h2&gt;&lt;h3 id=&#34;1创建流程&#34;&gt;1、创建流程
+&lt;h2 id=&#34;创建客户端对象&#34;&gt;创建客户端对象
+&lt;/h2&gt;&lt;h3 id=&#34;创建流程&#34;&gt;创建流程
 &lt;/h3&gt;&lt;p&gt;先看看下面一段代码&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715213854794.png&#34;
 	width=&#34;2066&#34;
@@ -1421,8 +1421,8 @@
 	
 &gt;&lt;/p&gt;
 &lt;p&gt;这个构造方法虽然逻辑不少，但实际上重要的就是201行的初始化&lt;/p&gt;
-&lt;h2 id=&#34;三创建网络连接池&#34;&gt;三、创建网络连接池
-&lt;/h2&gt;&lt;h3 id=&#34;1-初始化&#34;&gt;1. 初始化
+&lt;h2 id=&#34;创建网络连接池&#34;&gt;创建网络连接池
+&lt;/h2&gt;&lt;h3 id=&#34;初始化&#34;&gt;初始化
 &lt;/h3&gt;&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716144229847.png&#34;
 	width=&#34;1275&#34;
 	height=&#34;74&#34;
@@ -1453,7 +1453,7 @@
 	
 &gt;&lt;/p&gt;
 &lt;p&gt;这里初始化了Netty客户端，在跟外部创建网络连接时直接通过Netty客户端进行即可。客户端初始化阶段，网络连接池基本上就做了这些事，那么它是怎么工作的呢，让我们来往下看&lt;/p&gt;
-&lt;h3 id=&#34;2-工作流程&#34;&gt;2. 工作流程
+&lt;h3 id=&#34;工作流程&#34;&gt;工作流程
 &lt;/h3&gt;&lt;p&gt;在创建生产者对象时，会走到PulsarClientImpl#getConnection这个方法，从这里开始进行分析&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716150347627.png&#34;
 	width=&#34;1301&#34;
@@ -1561,11 +1561,11 @@
 	
 &gt;&lt;/p&gt;
 &lt;p&gt;这里应该就很熟悉了，就是通过Netty客户端创建跟目标Broker节点的TCP连接。&lt;/p&gt;
-&lt;h3 id=&#34;3-小结&#34;&gt;3. 小结
+&lt;h3 id=&#34;小结&#34;&gt;小结
 &lt;/h3&gt;&lt;p&gt;连接池是一个ConcurrentHashMap，key是IP+端口，value是ClientCnx来缓存这些连接。ClientCnx除了管理连接还管理所有的业务命令，例如发送消息是Send命令，服务端会对应一个handleSend方法来处理这个命令。&lt;/p&gt;
 &lt;p&gt;连接池是客户端最重要的内容，无论是生产者还是消费者在创建的时候，都会去连接池获取/创建跟Broker的网络连接，后续的数据读写本质上都是通过Netty的channel进行的，因此可见它是相当重要的。连接池的设计将网络连接跟其他读写功能剥离开来达到职责分离的效果，同时通过池化概念，在多个生产者/消费者情况下不仅节约了网络连接的创建，同时还提升网络连接创建的性能(复用思路)。&lt;/p&gt;
-&lt;h2 id=&#34;四其他功能&#34;&gt;四、其他功能
-&lt;/h2&gt;&lt;h3 id=&#34;1-lookupservice&#34;&gt;1. LookupService
+&lt;h2 id=&#34;其他功能&#34;&gt;其他功能
+&lt;/h2&gt;&lt;h3 id=&#34;lookupservice&#34;&gt;LookupService
 &lt;/h3&gt;&lt;p&gt;Lookup机制工作逻辑在 &lt;a class=&#34;link&#34; href=&#34;https://mp.weixin.qq.com/s?__biz=MzU4OTk0ODc1NQ==&amp;amp;mid=2247484022&amp;amp;idx=1&amp;amp;sn=1098acb29558e3f067baa0101b62554f&amp;amp;chksm=fdc4f04acab3795c2d3451cd0fecba3eaddea50be7898f33ba199637d2394e2386ff7bdf2338&amp;amp;token=2082773986&amp;amp;lang=zh_CN#rd&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
     &gt;Apache Pulsar源码解析之Lookup机制&lt;/a&gt; 这篇文章已经说明了，这里主要一起看看它的创建逻辑。在PulsarClientImpl构造函数中，我们能看到以下代码&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716175013649.png&#34;
@@ -1613,7 +1613,7 @@
 	
 &gt;&lt;/p&gt;
 &lt;p&gt;跟踪进去看，其他都是赋值、安全检查的工作，核心在161行的httpClient创建。  这里可以看到是创建的AsyncHttpClient对象，这是一个封装Netty的async-http-client-2.12.1.jar的外部包，这是支持异步处理的高性能HTTP工具包&lt;/p&gt;
-&lt;h3 id=&#34;2-memorylimitcontroller&#34;&gt;2. MemoryLimitController
+&lt;h3 id=&#34;memorylimitcontroller&#34;&gt;MemoryLimitController
 &lt;/h3&gt;&lt;p&gt;由于MemoryLimitController的内容不多，就看看它的创建以及工作流程&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716183103606.png&#34;
 	width=&#34;1295&#34;
@@ -1690,7 +1690,7 @@
 	
 &gt;&lt;/p&gt;
 &lt;p&gt;这里的限制逻辑相当于将所有消费者的接收队列的容量减半，避免队列中的数据占用过多内存。由此可见MemoryLimitController目前做的还是比较小范围的内存控制，并且整体逻辑并不复杂。&lt;/p&gt;
-&lt;h3 id=&#34;3-线程池&#34;&gt;3. 线程池
+&lt;h3 id=&#34;线程池&#34;&gt;线程池
 &lt;/h3&gt;&lt;p&gt;客户端对象初始化时候，会创建三个线程池，现在就来分析下它们的用途&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716185103767.png&#34;
 	width=&#34;1294&#34;
@@ -1751,7 +1751,7 @@
 		data-flex-basis=&#34;1536px&#34;
 	
 &gt;&lt;/p&gt;
-&lt;h2 id=&#34;五总结&#34;&gt;五、总结
+&lt;h2 id=&#34;总结&#34;&gt;总结
 &lt;/h2&gt;&lt;ol&gt;
 &lt;li&gt;PulsarClient中的EventLoopGroup负责创建TCP连接，ConnectionPool对象负责管理连接，在创建ConnectionPool对象时会通过EventLoopGroup创建连接。&lt;/li&gt;
 &lt;li&gt;PulsarClient使用Netty来创建TCP连接，并管理一个连接池和两个线程池，所有Producer和Consumer都会复用PulsarClient的连接池和线程池，这样可以避免客户端创建过多的连接和线程。因此通常一个进程中只创建一个PulsarClient，每个Topic可以自己单独创建Producer和Consumer。&lt;/li&gt;
@@ -2577,8 +2577,8 @@
         <pubDate>Tue, 16 Apr 2024 10:34:57 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91bundle%E5%88%86%E8%A3%82%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91bundle%E5%88%86%E8%A3%82%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240416181912380.png" alt="Featured image of post 主动触发Bundle分裂服务端流程源码解析" /&gt;&lt;h4 id=&#34;一正文&#34;&gt;一、正文
-&lt;/h4&gt;&lt;p&gt;Namespace下的Topic是分Bundle进行管理的，每个Namespace都是一个哈希环，而Bundle负责管理环上某个范围上的Topic。通过这种方式可以更好的进行Topic的管理。当某个Bundle上负责的Topic越来越多时，会导致负责该Bundle的Broker节点压力变大。因此Pulsar还提供了Bundle分裂的机制，这个机制支持自动触发以及手动触发，今天这篇文章就从源码的角度分析手动触发Bundle分裂时服务端会发生什么&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91bundle%E5%88%86%E8%A3%82%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240416181912380.png" alt="Featured image of post 主动触发Bundle分裂服务端流程源码解析" /&gt;&lt;h2 id=&#34;正文&#34;&gt;正文
+&lt;/h2&gt;&lt;p&gt;Namespace下的Topic是分Bundle进行管理的，每个Namespace都是一个哈希环，而Bundle负责管理环上某个范围上的Topic。通过这种方式可以更好的进行Topic的管理。当某个Bundle上负责的Topic越来越多时，会导致负责该Bundle的Broker节点压力变大。因此Pulsar还提供了Bundle分裂的机制，这个机制支持自动触发以及手动触发，今天这篇文章就从源码的角度分析手动触发Bundle分裂时服务端会发生什么&lt;/p&gt;
 &lt;img src=&#34;image-20240416181912380.png&#34; alt=&#34;image-20240416181912380&#34; style=&#34;zoom: 50%;&#34; /&gt;
 &lt;p&gt;&lt;strong&gt;主动触发Bundle分裂操作方式&lt;/strong&gt;&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
@@ -2607,8 +2607,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;bin/pulsar-admin namespaces split-bundle --bundle 0x00000000_0x10000000 public/default
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;二源码解析&#34;&gt;二、源码解析
-&lt;/h4&gt;&lt;p&gt;Pulsar管理流相关的操作都是通过HTTP的方式，因为需要支持多种客户端类型(http、client、cli)。服务端处理这些操作都在admin模块下，如下图，本次要聊的bundle分裂就在Namespaces方法中&lt;/p&gt;
+&lt;/div&gt;&lt;h2 id=&#34;源码解析&#34;&gt;源码解析
+&lt;/h2&gt;&lt;p&gt;Pulsar管理流相关的操作都是通过HTTP的方式，因为需要支持多种客户端类型(http、client、cli)。服务端处理这些操作都在admin模块下，如下图，本次要聊的bundle分裂就在Namespaces方法中&lt;/p&gt;
 &lt;img src=&#34;image-20240416155125370.png&#34; alt=&#34;image-20240416155125370&#34; style=&#34;zoom: 67%;&#34; /&gt;
 &lt;p&gt;首先从Namespaces的splitNamespaceBundle进行跟踪&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
@@ -3081,8 +3081,8 @@
 &lt;li&gt;Bundle分裂后是否会涉及到数据的迁移？&lt;/li&gt;
 &lt;li&gt;Bundle分裂算法有四种，区别是什么？&lt;/li&gt;
 &lt;/ol&gt;
-&lt;h4 id=&#34;三参考文献&#34;&gt;三、参考文献
-&lt;/h4&gt;&lt;ol&gt;
+&lt;h2 id=&#34;参考文献&#34;&gt;参考文献
+&lt;/h2&gt;&lt;ol&gt;
 &lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://pulsar.apache.org/docs/3.2.x/concepts-broker-load-balancing-quick-start/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
     &gt;官方文档&lt;/a&gt;&lt;/li&gt;
 &lt;/ol&gt;
@@ -4331,19 +4331,19 @@
         <pubDate>Tue, 02 Apr 2024 10:34:56 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/pulsar%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E4%B9%8Bttl/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/pulsar%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E4%B9%8Bttl/image-20240331111412370.png" alt="Featured image of post Pulsar源码解析之TTL" /&gt;&lt;h4 id=&#34;引言&#34;&gt;引言
-&lt;/h4&gt;&lt;p&gt;在看了 你真的了解Pulsar的消息保留、积压、TTL策略吗 后，相信有不少对技术充满热情的小伙伴会疑惑，Pulsar的TTL又是怎么去失信的呢？今天就让我们一起来看看吧&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/pulsar%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E4%B9%8Bttl/image-20240331111412370.png" alt="Featured image of post Pulsar源码解析之TTL" /&gt;&lt;h2 id=&#34;引言&#34;&gt;引言
+&lt;/h2&gt;&lt;p&gt;在看了 你真的了解Pulsar的消息保留、积压、TTL策略吗 后，相信有不少对技术充满热情的小伙伴会疑惑，Pulsar的TTL又是怎么去失信的呢？今天就让我们一起来看看吧&lt;/p&gt;
 &lt;p&gt;在看下面的文章时我们要带着以下几个问题&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;TTL是什么时候触发的&lt;/li&gt;
 &lt;li&gt;TTL机制被触发后会发生什么&lt;/li&gt;
 &lt;li&gt;过期的消息会立马被删除吗&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h4 id=&#34;整体流程&#34;&gt;整体流程
-&lt;/h4&gt;&lt;p&gt;在跟踪源码前先看看这张图，每个Broker内部都会有一个周期定时线程任务，每隔一段时间都会触发TTL任务。TTL任务会轮询当前Broker所管理的所有Topic中的所有订阅者，因为每个订阅者都会在Broker维护一个消费游标，因此Broker会根据用户配置的过期时间到轮询检查游标，看看有哪些消息是没被消费但是已经过了TTL的并会将游标移动到其的左侧(从实现的层面相当于表示它已经被消费了)，从而达到这些过了TTL的消息允许被删除的效果，最终再将游标的信息持久化到Bookkeeper中进行保存。&lt;/p&gt;
+&lt;h2 id=&#34;整体流程&#34;&gt;整体流程
+&lt;/h2&gt;&lt;p&gt;在跟踪源码前先看看这张图，每个Broker内部都会有一个周期定时线程任务，每隔一段时间都会触发TTL任务。TTL任务会轮询当前Broker所管理的所有Topic中的所有订阅者，因为每个订阅者都会在Broker维护一个消费游标，因此Broker会根据用户配置的过期时间到轮询检查游标，看看有哪些消息是没被消费但是已经过了TTL的并会将游标移动到其的左侧(从实现的层面相当于表示它已经被消费了)，从而达到这些过了TTL的消息允许被删除的效果，最终再将游标的信息持久化到Bookkeeper中进行保存。&lt;/p&gt;
 &lt;img src=&#34;image-20240331111412370.png&#34; alt=&#34;image-20240331111412370&#34; style=&#34;zoom: 50%;&#34; /&gt;
-&lt;h4 id=&#34;触发ttl流程&#34;&gt;触发TTL流程
-&lt;/h4&gt;&lt;p&gt;那么直接来跟踪下触发TTL的流程吧，先从Broker的启动方法start开始看。可以看到启动的时候还会开启一系列定时任务，这里只看TTL相关的，跟踪进去startMessageExpiryMonitor方法可以看到messageExpiryMonitor其实是JDK提供的线程池ScheduledExecutorService类，在这里通过scheduleAtFixedRate方法周期性的执行过期任务检测，间隔从Broker配置中进行读取的，默认是每隔5分钟一次&lt;/p&gt;
+&lt;h2 id=&#34;触发ttl流程&#34;&gt;触发TTL流程
+&lt;/h2&gt;&lt;p&gt;那么直接来跟踪下触发TTL的流程吧，先从Broker的启动方法start开始看。可以看到启动的时候还会开启一系列定时任务，这里只看TTL相关的，跟踪进去startMessageExpiryMonitor方法可以看到messageExpiryMonitor其实是JDK提供的线程池ScheduledExecutorService类，在这里通过scheduleAtFixedRate方法周期性的执行过期任务检测，间隔从Broker配置中进行读取的，默认是每隔5分钟一次&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -4388,8 +4388,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;ttl启动流程&#34;&gt;TTL启动流程
-&lt;/h4&gt;&lt;p&gt;通过上一节可以看到Pulsar的TTL触发就是通过JDK的定时线程池来实现的，Broker会周期性的调用checkMessageExpiry方法进行处理，因此现在就从这个方法进行跟踪，可以看到最终会调用到Topic的checkMessageExpiry方法&lt;/p&gt;
+&lt;/div&gt;&lt;h2 id=&#34;ttl启动流程&#34;&gt;TTL启动流程
+&lt;/h2&gt;&lt;p&gt;通过上一节可以看到Pulsar的TTL触发就是通过JDK的定时线程池来实现的，Broker会周期性的调用checkMessageExpiry方法进行处理，因此现在就从这个方法进行跟踪，可以看到最终会调用到Topic的checkMessageExpiry方法&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -4695,8 +4695,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
 &lt;/div&gt;&lt;p&gt;通过上面的跟踪可以看得到最终是通过Bookkeeper的客户端对象LedgerHandle的asyncAddEntry方法将游标信息持久化到了Bookkeeper，这里就不继续跟踪下去了，因为已经到了TTL左右范围的尽头了。&lt;/p&gt;
-&lt;h4 id=&#34;总结&#34;&gt;总结
-&lt;/h4&gt;&lt;p&gt;以上就是Pulsar中TTL的实现源码流程，我在这个过程中尽量省略了一些非必要的逻辑，主要是跟踪了主线，像一些地方也是值得跟踪的，感兴趣的伙伴可以自行跟踪。同时在这里我们可以看到，TTL过程只移动了游标位置并不涉及到数据的删除，说明在Pulsar的设计中将两者进行了分离，这是一种很好的职责设计思路，各自负责自己的一那部分。一方面在程序维护时可以避免改动引起一些相关性不那么大的影响，另一方面对于程序执行的整体性能来说也是比较高效的。&lt;/p&gt;
+&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;p&gt;以上就是Pulsar中TTL的实现源码流程，我在这个过程中尽量省略了一些非必要的逻辑，主要是跟踪了主线，像一些地方也是值得跟踪的，感兴趣的伙伴可以自行跟踪。同时在这里我们可以看到，TTL过程只移动了游标位置并不涉及到数据的删除，说明在Pulsar的设计中将两者进行了分离，这是一种很好的职责设计思路，各自负责自己的一那部分。一方面在程序维护时可以避免改动引起一些相关性不那么大的影响，另一方面对于程序执行的整体性能来说也是比较高效的。&lt;/p&gt;
 </description>
         </item>
         <item>
@@ -4809,10 +4809,10 @@
         <pubDate>Wed, 27 Mar 2024 10:34:55 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/pulsar%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E4%B9%8Bpersistenttopic%E7%B1%BB/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/pulsar%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E4%B9%8Bpersistenttopic%E7%B1%BB/image-20240327210450901-6219390.png" alt="Featured image of post Pulsar源码解析之PersistentTopic类" /&gt;&lt;h4 id=&#34;引言&#34;&gt;引言
-&lt;/h4&gt;&lt;p&gt;今天一起来看看Pulsar服务端消息相关最重要的一个类PersistentTopic，看看它都负责哪些事情以及是如何设计的&lt;/p&gt;
-&lt;h4 id=&#34;正文&#34;&gt;正文
-&lt;/h4&gt;&lt;p&gt;在Topic被创建时，Pulsar集群中会有一台Broker维护这个Topic，在实现上就是维护一个PersistentTopic对象，这个PersistentTopic对象处理针对该Topic相关的一切操作，具体负责的相关操作如下&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/pulsar%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E4%B9%8Bpersistenttopic%E7%B1%BB/image-20240327210450901-6219390.png" alt="Featured image of post Pulsar源码解析之PersistentTopic类" /&gt;&lt;h2 id=&#34;引言&#34;&gt;引言
+&lt;/h2&gt;&lt;p&gt;今天一起来看看Pulsar服务端消息相关最重要的一个类PersistentTopic，看看它都负责哪些事情以及是如何设计的&lt;/p&gt;
+&lt;h2 id=&#34;正文&#34;&gt;正文
+&lt;/h2&gt;&lt;p&gt;在Topic被创建时，Pulsar集群中会有一台Broker维护这个Topic，在实现上就是维护一个PersistentTopic对象，这个PersistentTopic对象处理针对该Topic相关的一切操作，具体负责的相关操作如下&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;处理订阅以及下线订阅&lt;/li&gt;
 &lt;li&gt;新增生产者对象以及下线生产者对象&lt;/li&gt;
@@ -4842,8 +4842,8 @@
 &lt;li&gt;PersistentTopic的创建流程都会发生什么？&lt;/li&gt;
 &lt;li&gt;上面那些相关操作大概是什么实现的？&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h4 id=&#34;一何时创建&#34;&gt;一、何时创建
-&lt;/h4&gt;&lt;p&gt;以下列出创建的时机，基本上流程都是发起创建Topic的时候会通过一致性哈希计算出这个Topic所归属的Bundle，然后去zookeeper获取这个Bundle所归属的Broker机器，最后请求这台Broker节点创建对应的PersistentTopic对象&lt;/p&gt;
+&lt;h2 id=&#34;何时创建&#34;&gt;何时创建
+&lt;/h2&gt;&lt;p&gt;以下列出创建的时机，基本上流程都是发起创建Topic的时候会通过一致性哈希计算出这个Topic所归属的Bundle，然后去zookeeper获取这个Bundle所归属的Broker机器，最后请求这台Broker节点创建对应的PersistentTopic对象&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;管理流创建
 &lt;ul&gt;
@@ -4974,10 +4974,10 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;   &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;二创建流程&#34;&gt;二、创建流程
-&lt;/h4&gt;&lt;p&gt;创建流程主要分为构建和初始化两个阶段，一般是先通过构造函数创建PersistentTopic，创建好后在调用其initialize方法进行初始化&lt;/p&gt;
-&lt;h5 id=&#34;1-构造函数&#34;&gt;1. 构造函数
-&lt;/h5&gt;&lt;p&gt;构造函数主要做三件事：1. 更新Broker级别策略 2. 创建发布限流 3. 初始化容器。具体代码实现如下&lt;/p&gt;
+&lt;/div&gt;&lt;h2 id=&#34;创建流程&#34;&gt;创建流程
+&lt;/h2&gt;&lt;p&gt;创建流程主要分为构建和初始化两个阶段，一般是先通过构造函数创建PersistentTopic，创建好后在调用其initialize方法进行初始化&lt;/p&gt;
+&lt;h3 id=&#34;构造函数&#34;&gt;构造函数
+&lt;/h3&gt;&lt;p&gt;构造函数主要做三件事：1. 更新Broker级别策略 2. 创建发布限流 3. 初始化容器。具体代码实现如下&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -5072,8 +5072,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h5 id=&#34;2-initialize方法&#34;&gt;2. initialize方法
-&lt;/h5&gt;&lt;p&gt;初始化方法的逻辑相比下要丰富写，归纳起来有以下四点&lt;/p&gt;
+&lt;/div&gt;&lt;h3 id=&#34;initialize方法&#34;&gt;initialize方法
+&lt;/h3&gt;&lt;p&gt;初始化方法的逻辑相比下要丰富写，归纳起来有以下四点&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;
 &lt;p&gt;获取压缩服务&lt;/p&gt;
@@ -5214,10 +5214,10 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;三负责内容&#34;&gt;三、负责内容
-&lt;/h4&gt;&lt;h5 id=&#34;1生产者相关&#34;&gt;1、生产者相关
-&lt;/h5&gt;&lt;h6 id=&#34;新增&#34;&gt;新增
-&lt;/h6&gt;&lt;p&gt;生产者客户端启动时会跟Topic归属的Broker建立TCP连接并请求Broker端ServerCnx的handleProducer方法进行处理，这个方法最终会调用PersistentTopic的addProducer方法进行创建，咱们来看看实现&lt;/p&gt;
+&lt;/div&gt;&lt;h2 id=&#34;负责内容&#34;&gt;负责内容
+&lt;/h2&gt;&lt;h3 id=&#34;生产者相关&#34;&gt;生产者相关
+&lt;/h3&gt;&lt;h4 id=&#34;新增&#34;&gt;新增
+&lt;/h4&gt;&lt;p&gt;生产者客户端启动时会跟Topic归属的Broker建立TCP连接并请求Broker端ServerCnx的handleProducer方法进行处理，这个方法最终会调用PersistentTopic的addProducer方法进行创建，咱们来看看实现&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -5276,12 +5276,12 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h6 id=&#34;删除&#34;&gt;删除
-&lt;/h6&gt;&lt;p&gt;删除的逻辑很简单，也是通过TCP接收到客户端断开连接的请求后，会调用Producer的close方法进行资源释放，同时从维护的producers中移除此对象&lt;/p&gt;
-&lt;h5 id=&#34;2-订阅相关&#34;&gt;2. 订阅相关
-&lt;/h5&gt;&lt;p&gt;消费者客户端启动时会跟Topic归属的Broker建立TCP连接并请求Broker端，请求由ServerCnx的handleSubscribe方法进行处理，这个方法最终会调用PersistentTopic的internalSubscribe方法进行创建，咱们来看看实现&lt;/p&gt;
-&lt;h6 id=&#34;新增-1&#34;&gt;新增
-&lt;/h6&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;/div&gt;&lt;h4 id=&#34;删除&#34;&gt;删除
+&lt;/h4&gt;&lt;p&gt;删除的逻辑很简单，也是通过TCP接收到客户端断开连接的请求后，会调用Producer的close方法进行资源释放，同时从维护的producers中移除此对象&lt;/p&gt;
+&lt;h3 id=&#34;订阅相关&#34;&gt;订阅相关
+&lt;/h3&gt;&lt;p&gt;消费者客户端启动时会跟Topic归属的Broker建立TCP连接并请求Broker端，请求由ServerCnx的handleSubscribe方法进行处理，这个方法最终会调用PersistentTopic的internalSubscribe方法进行创建，咱们来看看实现&lt;/p&gt;
+&lt;h4 id=&#34;新增-1&#34;&gt;新增
+&lt;/h4&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
 &lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
@@ -5341,24 +5341,24 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h6 id=&#34;删除-1&#34;&gt;删除
-&lt;/h6&gt;&lt;p&gt;删除的逻辑也是比较简单的，就是从subscriptions中进行移除&lt;/p&gt;
-&lt;h5 id=&#34;3-处理消息写入&#34;&gt;3. 处理消息写入
-&lt;/h5&gt;&lt;p&gt;消息写入的流程相对比较复杂，后面再单独分析，暂时跳过&lt;/p&gt;
-&lt;h5 id=&#34;4-跨集群复制&#34;&gt;4. 跨集群复制
-&lt;/h5&gt;&lt;p&gt;跨集群复制这里实现逻辑其实不难，相当于在Broker上去读取Bookkeeper获取数据并通过启动生产者往其他集群进行数据写入，具体细节后面也单独写文章进行分析&lt;/p&gt;
-&lt;h5 id=&#34;5-消息清理&#34;&gt;5. 消息清理
-&lt;/h5&gt;&lt;p&gt;Pulsar的消息TTL、积压、压缩都是在Broker启动时往线程池中加入定时任务轮询触发的&lt;/p&gt;
-&lt;h6 id=&#34;ttl&#34;&gt;TTL
-&lt;/h6&gt;&lt;p&gt;TTL会循环扫描每个Topic过期的消息位置，并通过改变游标进行标记，而清理是由专门的线程根据游标进行处理的&lt;/p&gt;
-&lt;h6 id=&#34;积压&#34;&gt;积压
-&lt;/h6&gt;&lt;p&gt;消息积压也是会定期检测，分两种情况，一种是消息超过限制额度，另一种是消息时间超过额度。这两种情况都会触发积压策略的处理，具体的策略在BacklogQuota.RetentionPolicy中定义&lt;/p&gt;
-&lt;h6 id=&#34;压缩&#34;&gt;压缩
-&lt;/h6&gt;&lt;p&gt;跟上面一样，轮询检测进行处理&lt;/p&gt;
-&lt;h6 id=&#34;配置更新&#34;&gt;配置更新
-&lt;/h6&gt;&lt;p&gt;在PersistentTopic启动的初始化initialize方法中会调用onUpdate进行策略更新，那Pulsar又是如何做的支持配置动态更新的呢？这个问题保留给大家&lt;/p&gt;
-&lt;h4 id=&#34;四总结&#34;&gt;四、总结
-&lt;/h4&gt;&lt;p&gt;本文主要强调PersistentTopic类的重要性、聊聊它都负责哪些事情以及大概实现，具体每个细节展开都能单独写一篇文章，这个敬请期待～&lt;/p&gt;
+&lt;/div&gt;&lt;h4 id=&#34;删除-1&#34;&gt;删除
+&lt;/h4&gt;&lt;p&gt;删除的逻辑也是比较简单的，就是从subscriptions中进行移除&lt;/p&gt;
+&lt;h3 id=&#34;处理消息写入&#34;&gt;处理消息写入
+&lt;/h3&gt;&lt;p&gt;消息写入的流程相对比较复杂，后面再单独分析，暂时跳过&lt;/p&gt;
+&lt;h3 id=&#34;跨集群复制&#34;&gt;跨集群复制
+&lt;/h3&gt;&lt;p&gt;跨集群复制这里实现逻辑其实不难，相当于在Broker上去读取Bookkeeper获取数据并通过启动生产者往其他集群进行数据写入，具体细节后面也单独写文章进行分析&lt;/p&gt;
+&lt;h3 id=&#34;消息清理&#34;&gt;消息清理
+&lt;/h3&gt;&lt;p&gt;Pulsar的消息TTL、积压、压缩都是在Broker启动时往线程池中加入定时任务轮询触发的&lt;/p&gt;
+&lt;h3 id=&#34;ttl&#34;&gt;TTL
+&lt;/h3&gt;&lt;p&gt;TTL会循环扫描每个Topic过期的消息位置，并通过改变游标进行标记，而清理是由专门的线程根据游标进行处理的&lt;/p&gt;
+&lt;h3 id=&#34;积压&#34;&gt;积压
+&lt;/h3&gt;&lt;p&gt;消息积压也是会定期检测，分两种情况，一种是消息超过限制额度，另一种是消息时间超过额度。这两种情况都会触发积压策略的处理，具体的策略在BacklogQuota.RetentionPolicy中定义&lt;/p&gt;
+&lt;h3 id=&#34;压缩&#34;&gt;压缩
+&lt;/h3&gt;&lt;p&gt;跟上面一样，轮询检测进行处理&lt;/p&gt;
+&lt;h3 id=&#34;配置更新&#34;&gt;配置更新
+&lt;/h3&gt;&lt;p&gt;在PersistentTopic启动的初始化initialize方法中会调用onUpdate进行策略更新，那Pulsar又是如何做的支持配置动态更新的呢？这个问题保留给大家&lt;/p&gt;
+&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;p&gt;本文主要强调PersistentTopic类的重要性、聊聊它都负责哪些事情以及大概实现，具体每个细节展开都能单独写一篇文章，这个敬请期待～&lt;/p&gt;
 </description>
         </item>
         <item>
@@ -6617,12 +6617,12 @@
         <pubDate>Sat, 16 Mar 2024 10:34:56 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/pulsar%E4%BB%8E%E5%85%A5%E8%BF%B7%E5%88%B0%E5%85%A5%E9%AD%94%E4%B9%8B%E8%B7%AF/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/pulsar%E4%BB%8E%E5%85%A5%E8%BF%B7%E5%88%B0%E5%85%A5%E9%AD%94%E4%B9%8B%E8%B7%AF/image-20240316103554735.png" alt="Featured image of post Pulsar从入迷到入魔之路" /&gt;&lt;h2 id=&#34;一引言&#34;&gt;一、引言
+        <description>&lt;img src="https://sherlock-lin.github.io/p/pulsar%E4%BB%8E%E5%85%A5%E8%BF%B7%E5%88%B0%E5%85%A5%E9%AD%94%E4%B9%8B%E8%B7%AF/image-20240316103554735.png" alt="Featured image of post Pulsar从入迷到入魔之路" /&gt;&lt;h2 id=&#34;引言&#34;&gt;引言
 &lt;/h2&gt;&lt;p&gt;系统学习Pulsar的大纲&lt;/p&gt;
-&lt;h2 id=&#34;二正文&#34;&gt;二、正文
+&lt;h2 id=&#34;正文&#34;&gt;正文
 &lt;/h2&gt;&lt;p&gt;下图是我绘制的Pulsar大纲 (由于时间缘故花的比较粗糙，这张图会不定期更新)&lt;/p&gt;
 &lt;img src=&#34;image-20240316103554735.png&#34; alt=&#34;image-20240316103554735&#34; style=&#34;zoom:50%;&#34; /&gt;
-&lt;h2 id=&#34;三学习大纲&#34;&gt;三、学习大纲
+&lt;h2 id=&#34;学习大纲&#34;&gt;学习大纲
 &lt;/h2&gt;&lt;h4 id=&#34;一pulsar-client&#34;&gt;一、Pulsar Client
 &lt;/h4&gt;&lt;h4 id=&#34;二生产者&#34;&gt;二、生产者
 &lt;/h4&gt;&lt;ol&gt;
@@ -6656,7 +6656,7 @@
 &lt;/ol&gt;
 &lt;h4 id=&#34;八综合&#34;&gt;八、综合
 &lt;/h4&gt;&lt;h4 id=&#34;九高可用&#34;&gt;九、高可用
-&lt;/h4&gt;&lt;h2 id=&#34;四学习资料&#34;&gt;四、学习资料
+&lt;/h4&gt;&lt;h2 id=&#34;学习资料&#34;&gt;学习资料
 &lt;/h2&gt;&lt;ol&gt;
 &lt;li&gt;
 &lt;p&gt;&lt;a class=&#34;link&#34; href=&#34;https://pulsar.apache.org/docs/3.2.x/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
@@ -6673,7 +6673,7 @@
     &gt;Pulsar官方整理资料大全&lt;/a&gt;：收录了大量Pulsar使用、原理、业务场景等精彩的文章资料&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ol&gt;
-&lt;h2 id=&#34;五想对本系列文章读者说的话&#34;&gt;五、想对本系列文章读者说的话
+&lt;h2 id=&#34;想对本系列文章读者说的话&#34;&gt;想对本系列文章读者说的话
 &lt;/h2&gt;&lt;p&gt;坦白了说，现如今的网络环境不像过去那么友好(这个观点不做任何讨论，如果你觉得不对，那么你是对的)，如今还能坚持在网络上输出高质量的作者都是值得尊敬的。我之所以写这系列文章的目的有以下三点：1. 接触技术这些年，受到不少大佬文章的熏陶，技术和思维都有了不少的提升，因此也想做些回馈于技术社区的事情  2. 我知道一定有不少对技术充满热情的小白，我希望能够以Pulsar为切入点给你带来技术的乐趣 3. 通过输出文章来倒推自己持续阅读、提升自己提炼抽象能力。&lt;/p&gt;
 &lt;p&gt;我能保证的是以下几点&lt;/p&gt;
 &lt;ol&gt;
@@ -6691,7 +6691,7 @@
         <pubDate>Wed, 13 Mar 2024 10:34:56 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/pulsar%E6%B6%88%E6%81%AF%E8%B7%AF%E7%94%B1%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/pulsar%E6%B6%88%E6%81%AF%E8%B7%AF%E7%94%B1%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90/image-20240306152645225.png" alt="Featured image of post Pulsar消息路由深入剖析" /&gt;&lt;h2 id=&#34;一概述&#34;&gt;一、概述
+        <description>&lt;img src="https://sherlock-lin.github.io/p/pulsar%E6%B6%88%E6%81%AF%E8%B7%AF%E7%94%B1%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90/image-20240306152645225.png" alt="Featured image of post Pulsar消息路由深入剖析" /&gt;&lt;h2 id=&#34;概述&#34;&gt;概述
 &lt;/h2&gt;&lt;p&gt;大数据背景下，分区应该是所有组件必备的基本条件，否则面对海量数据时无论是计算还是存储都容易遇到瓶颈。跟其他消息系统一样，Pulsar通过Topic将消息数据进行业务层面划分管理，同时也支持Topic分区，通过将多个分区分布在多台Broker/机器上从而带来性能上的巨大提升以及无限的横向拓展能力。而一旦有了分区之后就会面临一个问题，但一条数据请求时应该将其发往哪个分区？目前Pulsar跟其他消息系统一样支持以下三种路由模式。&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;轮询路由
@@ -6701,10 +6701,10 @@
 &lt;li&gt;自定义分区路由
 自定义分区路由支持你通过实现MessageRouter接口来自定义路由逻辑，例如将特定key的消息发到指定的分区等&lt;/li&gt;
 &lt;/ol&gt;
-&lt;h2 id=&#34;二实战&#34;&gt;二、实战
+&lt;h2 id=&#34;实战&#34;&gt;实战
 &lt;/h2&gt;&lt;p&gt;消息路由发生在生产者端，在创建生产者是通过 &lt;code&gt;.messageRoutingMode()&lt;/code&gt; 进行指定，下面就分别实战对比下这三种的路由效果&lt;/p&gt;
-&lt;h4 id=&#34;1-轮询路由&#34;&gt;1. 轮询路由
-&lt;/h4&gt;&lt;p&gt;先试试轮询路由的策略，这是最常见也是默认的路由策略，通过  &lt;code&gt;.messageRoutingMode(MessageRoutingMode.RoundRobinPartition)&lt;/code&gt; 进行指定，然后往里面通过同步方式往分区Topic里面写入数据&lt;/p&gt;
+&lt;h3 id=&#34;轮询路由&#34;&gt;轮询路由
+&lt;/h3&gt;&lt;p&gt;先试试轮询路由的策略，这是最常见也是默认的路由策略，通过  &lt;code&gt;.messageRoutingMode(MessageRoutingMode.RoundRobinPartition)&lt;/code&gt; 进行指定，然后往里面通过同步方式往分区Topic里面写入数据&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -6737,8 +6737,8 @@
 &lt;/div&gt;
 &lt;/div&gt;&lt;p&gt;通过管理页面可以看到数据基本均匀的落在各个分区，从这个结果是能够反向验证数据是符合轮询发送后的效果&lt;/p&gt;
 &lt;img src=&#34;image-20240306152645225.png&#34; alt=&#34;image-20240306152645225&#34; style=&#34;zoom:50%;&#34; /&gt;
-&lt;h4 id=&#34;2-单分区路由&#34;&gt;2. 单分区路由
-&lt;/h4&gt;&lt;p&gt;现在试试单分区路由的策略，通过  &lt;code&gt;.messageRoutingMode(MessageRoutingMode.SinglePartition)&lt;/code&gt; 进行指定，并往分区Topic里面写入一批数据&lt;/p&gt;
+&lt;h3 id=&#34;单分区路由&#34;&gt;单分区路由
+&lt;/h3&gt;&lt;p&gt;现在试试单分区路由的策略，通过  &lt;code&gt;.messageRoutingMode(MessageRoutingMode.SinglePartition)&lt;/code&gt; 进行指定，并往分区Topic里面写入一批数据&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -6782,8 +6782,8 @@
 		data-flex-basis=&#34;446px&#34;
 	
 &gt;&lt;/p&gt;
-&lt;h4 id=&#34;3-自定义路由&#34;&gt;3. 自定义路由
-&lt;/h4&gt;&lt;p&gt;在有些业务场景，我们需要将自己的业务逻辑“融入”路由策略，因此像Pulsar、Kafka等消息中间件都是支持用户进行路由规则的自定义的。这里为了好玩，咱们尝试将数据按照 1:2:3:4 等比例分别落在四个分区如何？说干就干，自定义路由也是比较简单的，只需要实现Pulsar MessageRouter接口的choosePartition方法即可，实现逻辑如下&lt;/p&gt;
+&lt;h3 id=&#34;自定义路由&#34;&gt;自定义路由
+&lt;/h3&gt;&lt;p&gt;在有些业务场景，我们需要将自己的业务逻辑“融入”路由策略，因此像Pulsar、Kafka等消息中间件都是支持用户进行路由规则的自定义的。这里为了好玩，咱们尝试将数据按照 1:2:3:4 等比例分别落在四个分区如何？说干就干，自定义路由也是比较简单的，只需要实现Pulsar MessageRouter接口的choosePartition方法即可，实现逻辑如下&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -6858,9 +6858,9 @@
 &lt;/div&gt;
 &lt;/div&gt;&lt;p&gt;在管理页面可以看到，数据是按照咱们预期的逻辑 1:2:3:4等比落在分区里面，嘿嘿～&lt;/p&gt;
 &lt;img src=&#34;image-20240306153829061.png&#34; alt=&#34;image-20240306153829061&#34; style=&#34;zoom:50%;&#34; /&gt;
-&lt;h2 id=&#34;三源码分析&#34;&gt;三、源码分析
-&lt;/h2&gt;&lt;h4 id=&#34;1-接口以及父类&#34;&gt;1. 接口以及父类
-&lt;/h4&gt;&lt;p&gt;Pulsar中所有路由规则都是基于MessageRouter接口进行实现的，这个接口主要提供了choosePartition方法，只要重写这个方法即可自定义任意自己预期的逻辑&lt;/p&gt;
+&lt;h2 id=&#34;源码分析&#34;&gt;源码分析
+&lt;/h2&gt;&lt;h3 id=&#34;接口以及父类&#34;&gt;接口以及父类
+&lt;/h3&gt;&lt;p&gt;Pulsar中所有路由规则都是基于MessageRouter接口进行实现的，这个接口主要提供了choosePartition方法，只要重写这个方法即可自定义任意自己预期的逻辑&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -6964,8 +6964,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;2-轮询路由的实现&#34;&gt;2. 轮询路由的实现
-&lt;/h4&gt;&lt;p&gt;主要看choosePartition 方法的逻辑，首先如果消息带有key则针对key进行哈希然后取模，这样可以保证相同key的消息落在同一个分区。然后就是判断消息是否按批次进行发送的，如果是单条消息发送的话则通过一个累加计数器进行轮询分区，即可达到消息按照分区顺序逐个发送的效果；如果是按批次发送的话，则是根据时间戳进行取模，这样达到的效果就是每批数据都会随机发送到某一个分区&lt;/p&gt;
+&lt;/div&gt;&lt;h3 id=&#34;轮询路由的实现&#34;&gt;轮询路由的实现
+&lt;/h3&gt;&lt;p&gt;主要看choosePartition 方法的逻辑，首先如果消息带有key则针对key进行哈希然后取模，这样可以保证相同key的消息落在同一个分区。然后就是判断消息是否按批次进行发送的，如果是单条消息发送的话则通过一个累加计数器进行轮询分区，即可达到消息按照分区顺序逐个发送的效果；如果是按批次发送的话，则是根据时间戳进行取模，这样达到的效果就是每批数据都会随机发送到某一个分区&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -7026,8 +7026,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;3-单分区路由&#34;&gt;3. 单分区路由
-&lt;/h4&gt;&lt;p&gt;可以看到单分区的逻辑是比较简单且清晰的，如果有key就进行哈希取模，否则就发送到partitionIndex这个成员变量指定的分区去，那么这个partitionIndex指定的是哪个分区呢？通过代码能看到是从构造函数里面传进来的，因此跟踪下代码看看&lt;/p&gt;
+&lt;/div&gt;&lt;h3 id=&#34;单分区路由-1&#34;&gt;单分区路由
+&lt;/h3&gt;&lt;p&gt;可以看到单分区的逻辑是比较简单且清晰的，如果有key就进行哈希取模，否则就发送到partitionIndex这个成员变量指定的分区去，那么这个partitionIndex指定的是哪个分区呢？通过代码能看到是从构造函数里面传进来的，因此跟踪下代码看看&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -7125,7 +7125,7 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h2 id=&#34;四总结&#34;&gt;四、总结
+&lt;/div&gt;&lt;h2 id=&#34;总结&#34;&gt;总结
 &lt;/h2&gt;&lt;p&gt;通过以上内容相信你对Pulsar的路由规则有一定的了解了，如果想进一步了解可以尝试按照自己喜好实现下路由规则并观测是否按照预期运行，同时也可以跟踪Pulsar的源码看看实现是否符合预期。如果想彻底掌握Pulsar，最好自己跟踪下Pulsar的一些核心逻辑，这样不仅了解其底层是如何运作的，也能加深你对一些设计/特性的印象。&lt;/p&gt;
 </description>
         </item>
@@ -7135,10 +7135,10 @@
         <pubDate>Wed, 13 Mar 2024 10:34:55 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/pulsario%E5%AE%9E%E6%88%98/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/pulsario%E5%AE%9E%E6%88%98/image-20240313191618099.png" alt="Featured image of post PulsarIO实战" /&gt;&lt;h2 id=&#34;一引言&#34;&gt;一、引言
+        <description>&lt;img src="https://sherlock-lin.github.io/p/pulsario%E5%AE%9E%E6%88%98/image-20240313191618099.png" alt="Featured image of post PulsarIO实战" /&gt;&lt;h2 id=&#34;引言&#34;&gt;引言
 &lt;/h2&gt;&lt;p&gt;今天跟着 &lt;a class=&#34;link&#34; href=&#34;https://pulsar.apache.org/docs/3.2.x/io-quickstart/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
     &gt;官方文档 &lt;/a&gt;基于docker玩一把Pulsar IO吧&lt;/p&gt;
-&lt;h2 id=&#34;二概要&#34;&gt;二、概要
+&lt;h2 id=&#34;概要&#34;&gt;概要
 &lt;/h2&gt;&lt;ul&gt;
 &lt;li&gt;
 &lt;p&gt;在用户能够轻松的将消息队列跟其他系统(数据库、其他消息系统)一起使用时，消息队列的作用才是最强大的。而Pulsar IO connectors可以让你很轻松的创建、部署以及管理这些跟外部系统的连接，例如mysql、kafka、cassandra等。&lt;/p&gt;
@@ -7155,9 +7155,9 @@
 &lt;/ul&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
-&lt;h2 id=&#34;三实战&#34;&gt;三、实战
-&lt;/h2&gt;&lt;h4 id=&#34;1安装connector&#34;&gt;1.安装connector
-&lt;/h4&gt;&lt;ol&gt;
+&lt;h2 id=&#34;实战&#34;&gt;实战
+&lt;/h2&gt;&lt;h3 id=&#34;安装connector&#34;&gt;安装connector
+&lt;/h3&gt;&lt;ol&gt;
 &lt;li&gt;
 &lt;p&gt;在 &lt;a class=&#34;link&#34; href=&#34;https://archive.apache.org/dist/pulsar/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
     &gt;这里&lt;/a&gt; 下载对应的connector，先选择对应的版本，在点进 connectors 目录选择对应的source或者sink&lt;/p&gt;
@@ -7209,8 +7209,8 @@
 &gt;&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ol&gt;
-&lt;h4 id=&#34;2-安装cassandra&#34;&gt;2. 安装Cassandra
-&lt;/h4&gt;&lt;ol&gt;
+&lt;h3 id=&#34;安装cassandra&#34;&gt;安装Cassandra
+&lt;/h3&gt;&lt;ol&gt;
 &lt;li&gt;
 &lt;p&gt;基于 &lt;code&gt;brew install --cask --appdir=/Applications docker&lt;/code&gt; 安装docker(仅针对mac环境)&lt;/p&gt;
 &lt;/li&gt;
@@ -7263,8 +7263,8 @@
 &lt;/li&gt;
 &lt;/ol&gt;
 &lt;img src=&#34;image-20240313192833909.png&#34; alt=&#34;image-20240313192833909&#34; style=&#34;zoom:50%;&#34; /&gt;
-&lt;h4 id=&#34;3-功能验证&#34;&gt;3. 功能验证
-&lt;/h4&gt;&lt;ol&gt;
+&lt;h3 id=&#34;功能验证&#34;&gt;功能验证
+&lt;/h3&gt;&lt;ol&gt;
 &lt;li&gt;
 &lt;p&gt;写配置文件cassandra-sink.yml&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
@@ -7329,7 +7329,7 @@
 &lt;/li&gt;
 &lt;/ol&gt;
 &lt;img src=&#34;image-20240313193452150.png&#34; alt=&#34;image-20240313193452150&#34; style=&#34;zoom:50%;&#34; /&gt;
-&lt;h2 id=&#34;四总结&#34;&gt;四、总结
+&lt;h2 id=&#34;总结&#34;&gt;总结
 &lt;/h2&gt;&lt;p&gt;&lt;code&gt;纸上得来终觉浅，绝知此事要躬行。&lt;/code&gt; 学习不能仅仅停留在纸面上或者理论，脱离使用去探讨设计或者源码都是不切实际的。因此今天一起体验了一把Pulsar IO，除此之外Pulsar还提供了非常丰富的跟其他系统交互的Connector，详细可以看上面发的下载地址并尝试使用自己感兴趣的Connector感受下实操的快乐～&lt;/p&gt;
 </description>
         </item>
@@ -7339,16 +7339,16 @@
         <pubDate>Tue, 05 Mar 2024 15:09:15 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/%E4%B8%87%E7%89%A9%E7%9A%86%E5%8F%AF%E6%A8%A1%E5%9D%97%E5%8C%96%E5%88%86%E8%A7%A3/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/%E4%B8%87%E7%89%A9%E7%9A%86%E5%8F%AF%E6%A8%A1%E5%9D%97%E5%8C%96%E5%88%86%E8%A7%A3/image-20240920152044106.png" alt="Featured image of post 万物皆可模块化分解" /&gt;&lt;h4 id=&#34;引言&#34;&gt;引言
-&lt;/h4&gt;&lt;p&gt;为何要模块化，这里的主体是人，客体是事物。当事物很小时，人可以很轻松的解决；但是当事物远大于人能处理的范围时，我们就可以考虑对它进行模块化分解。模块化是一种解决复杂问题的方式，放之四海而皆可用，以下就举几个例子聊聊模块化&lt;/p&gt;
-&lt;h4 id=&#34;分封制&#34;&gt;分封制
-&lt;/h4&gt;&lt;p&gt;商朝之前，统治者一个人管理硕大的疆域，整个疆域大大小小事都要自己操心亲力亲为，像商朝不就是最后被偷家了，手动狗头。因此周朝的统治者采用分封制进行管理，庞大的帝国不好打理那就划分成多块领域也就是将大的东西分解成不那么大的东西分别进行管理，而随后春秋战国直到秦朝后，开始实行郡县制，本质上就是将模块分解更加精细化，这样打理整个庞大的帝国就方便很多，并且非常大幅提高了整体的效率，这不在短短几十年修长城、统一度量衡、文字等等。这些事情要是放在秦朝前那几乎是难以想象的，但因为模块化了，相当于每个县都是一个独立的单元具备自我管理的功能，而统治者到县之间的这些层级本质上都是在做政令的传达以及结果反馈。这种设计如下图，模块化的符号化其实就是一颗多叉树，原本要一个人管理的国家分成了6个县，原本一个人要打理的事情分成了6个人处理并且这是可以无限扩展的。每一层各司其职，从而整体达到最大的效率。&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E4%B8%87%E7%89%A9%E7%9A%86%E5%8F%AF%E6%A8%A1%E5%9D%97%E5%8C%96%E5%88%86%E8%A7%A3/image-20240920152044106.png" alt="Featured image of post 万物皆可模块化分解" /&gt;&lt;h2 id=&#34;引言&#34;&gt;引言
+&lt;/h2&gt;&lt;p&gt;为何要模块化，这里的主体是人，客体是事物。当事物很小时，人可以很轻松的解决；但是当事物远大于人能处理的范围时，我们就可以考虑对它进行模块化分解。模块化是一种解决复杂问题的方式，放之四海而皆可用，以下就举几个例子聊聊模块化&lt;/p&gt;
+&lt;h2 id=&#34;分封制&#34;&gt;分封制
+&lt;/h2&gt;&lt;p&gt;商朝之前，统治者一个人管理硕大的疆域，整个疆域大大小小事都要自己操心亲力亲为，像商朝不就是最后被偷家了，手动狗头。因此周朝的统治者采用分封制进行管理，庞大的帝国不好打理那就划分成多块领域也就是将大的东西分解成不那么大的东西分别进行管理，而随后春秋战国直到秦朝后，开始实行郡县制，本质上就是将模块分解更加精细化，这样打理整个庞大的帝国就方便很多，并且非常大幅提高了整体的效率，这不在短短几十年修长城、统一度量衡、文字等等。这些事情要是放在秦朝前那几乎是难以想象的，但因为模块化了，相当于每个县都是一个独立的单元具备自我管理的功能，而统治者到县之间的这些层级本质上都是在做政令的传达以及结果反馈。这种设计如下图，模块化的符号化其实就是一颗多叉树，原本要一个人管理的国家分成了6个县，原本一个人要打理的事情分成了6个人处理并且这是可以无限扩展的。每一层各司其职，从而整体达到最大的效率。&lt;/p&gt;
 &lt;img src=&#34;image-20240305183559655.png&#34; alt=&#34;image-20240305183559655&#34; style=&#34;zoom:50%;&#34; /&gt;
-&lt;h4 id=&#34;大数据&#34;&gt;大数据
-&lt;/h4&gt;&lt;p&gt;大数据时代迎来的数据的爆炸式增长，庞大的数据在存储和计算上都成了很大的难题，因此大佬们通过设计最终采用了目前下面这种方案，将数据进行拆解，各个小数据集合再落在具体的某台Linux机器上进行存储或者计算&lt;/p&gt;
+&lt;h2 id=&#34;大数据&#34;&gt;大数据
+&lt;/h2&gt;&lt;p&gt;大数据时代迎来的数据的爆炸式增长，庞大的数据在存储和计算上都成了很大的难题，因此大佬们通过设计最终采用了目前下面这种方案，将数据进行拆解，各个小数据集合再落在具体的某台Linux机器上进行存储或者计算&lt;/p&gt;
 &lt;img src=&#34;image-20240920152044106.png&#34; alt=&#34;image-20240920152044106&#34; style=&#34;zoom:50%;&#34; /&gt;
-&lt;h4 id=&#34;总结&#34;&gt;总结
-&lt;/h4&gt;&lt;p&gt;上面就是模块化的好处，原本看似不可能完成的东西通过模块化分解后都是可以完成的。因此在这里想表达的是，虽然学海无涯，但是对于咱们热爱的事情，可以利用好这个方式，将要做的大任务或者要学习的大的方向进行分解，然后在逐个攻克一个个小单元，因此不用害怕任何事情，大胆折腾起来&lt;/p&gt;
+&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;p&gt;上面就是模块化的好处，原本看似不可能完成的东西通过模块化分解后都是可以完成的。因此在这里想表达的是，虽然学海无涯，但是对于咱们热爱的事情，可以利用好这个方式，将要做的大任务或者要学习的大的方向进行分解，然后在逐个攻克一个个小单元，因此不用害怕任何事情，大胆折腾起来&lt;/p&gt;
 </description>
         </item>
         <item>
@@ -7357,25 +7357,25 @@
         <pubDate>Tue, 05 Mar 2024 10:34:57 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/worker%E8%B0%83%E5%BA%A6%E7%AE%A1%E7%90%86%E5%99%A8%E5%8E%9F%E7%90%86%E8%A7%A3%E6%9E%90/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/worker%E8%B0%83%E5%BA%A6%E7%AE%A1%E7%90%86%E5%99%A8%E5%8E%9F%E7%90%86%E8%A7%A3%E6%9E%90/image-20240305140605827-9618768.png" alt="Featured image of post Worker调度管理器原理解析" /&gt;&lt;h4 id=&#34;引言&#34;&gt;引言
-&lt;/h4&gt;&lt;p&gt;Pulsar Function中最重要的角色是Worker，而Worker中最核心的类就是调度管理器SchedulerManager，本篇博客就专门对它进行剖析&lt;/p&gt;
-&lt;h4 id=&#34;一正文&#34;&gt;一、正文
-&lt;/h4&gt;&lt;p&gt;SchedulerManager职责有以下两点&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/worker%E8%B0%83%E5%BA%A6%E7%AE%A1%E7%90%86%E5%99%A8%E5%8E%9F%E7%90%86%E8%A7%A3%E6%9E%90/image-20240305140605827-9618768.png" alt="Featured image of post Worker调度管理器原理解析" /&gt;&lt;h2 id=&#34;引言&#34;&gt;引言
+&lt;/h2&gt;&lt;p&gt;Pulsar Function中最重要的角色是Worker，而Worker中最核心的类就是调度管理器SchedulerManager，本篇博客就专门对它进行剖析&lt;/p&gt;
+&lt;h2 id=&#34;正文&#34;&gt;正文
+&lt;/h2&gt;&lt;p&gt;SchedulerManager职责有以下两点&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;任务调度&lt;/li&gt;
 &lt;li&gt;重平衡&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;任务调度是SchedulerManager最重要的逻辑，咱们通过 &lt;code&gt;pulsar-admin functions create xxx&lt;/code&gt; 启动一个function实例时，Pulsar 如何决定在哪台worker所在节点启动这个function实例，这就是任务调度要做的事情，除此之外任务调度还包含function更新、删除以及任务的生命周期管理。而重平衡是稳定性相关的，当咱们的function实例分布不均衡时，可能会导致涝的涝死，旱的旱死，因此需要咱们做function实例的重新分配，这也是SchedulerManager要做的事情&lt;/p&gt;
-&lt;h4 id=&#34;二任务调度&#34;&gt;二、任务调度
-&lt;/h4&gt;&lt;p&gt;在开始讲解任务调度之前，咱们先看看下面这张图&lt;/p&gt;
+&lt;h2 id=&#34;任务调度&#34;&gt;任务调度
+&lt;/h2&gt;&lt;p&gt;在开始讲解任务调度之前，咱们先看看下面这张图&lt;/p&gt;
 &lt;img src=&#34;image-20240305140605827-9618768.png&#34; alt=&#34;image-20240305140605827&#34; style=&#34;zoom:50%;&#34; /&gt;
 &lt;p&gt;图中的上下方分别是两个worker进程实例，在咱们通过 &lt;code&gt;bin/pulsar functions-worker&lt;/code&gt; 启动worker进程时服务内部会启动consumer并以failover方式来在Broker进行消息订阅消费，failover机制保证同一时间内只有一个Consumer能进行订阅，因此Worker通过这个机制来进行选主，成功订阅的worker晋升为leader负责任务的派发，未成功订阅的worker变为follwer并通过Reader监听Broker中的任务。其中Leader和Follwer的主要逻辑分别如下&lt;/p&gt;
-&lt;h5 id=&#34;worker-leader&#34;&gt;worker-leader
-&lt;/h5&gt;&lt;p&gt;通过Consumer-failver机制成为leader后，会立马启动一个Producer负责往Broker中发送任务消息，每当有新建启动function请求进来，就会往Broker中写入一条对应的任务消息。除此之外Leader还会通过Consumer消费Broker中保存的元数据，并以Map数据结构存在内存中作为Leader的元数据管理的数据来源，这里的数据有Function信息、Instance信息等，在接受到我不请求是也会同步更新这里，同时也会定期的根据元数据检查来排查出异常的Function、Instance等。&lt;/p&gt;
-&lt;h5 id=&#34;worker-follwer&#34;&gt;worker-follwer
-&lt;/h5&gt;&lt;p&gt;在worker成为follower后，会启动Reader监听Broker中的任务，当监听到有新任务时会调用任务管理器进行处理，例如在有新增启动Function时，如果是配置的线程级别则以线程方式启动Instance，如果是配置的进程级别则会拉起一个独立的Instance进程进行Function任务的执行。&lt;/p&gt;
-&lt;h5 id=&#34;源码解析&#34;&gt;源码解析
-&lt;/h5&gt;&lt;p&gt;调度逻辑的主要入口在SchedulerManager的invokeScheduler方法&lt;/p&gt;
+&lt;h3 id=&#34;worker-leader&#34;&gt;worker-leader
+&lt;/h3&gt;&lt;p&gt;通过Consumer-failver机制成为leader后，会立马启动一个Producer负责往Broker中发送任务消息，每当有新建启动function请求进来，就会往Broker中写入一条对应的任务消息。除此之外Leader还会通过Consumer消费Broker中保存的元数据，并以Map数据结构存在内存中作为Leader的元数据管理的数据来源，这里的数据有Function信息、Instance信息等，在接受到我不请求是也会同步更新这里，同时也会定期的根据元数据检查来排查出异常的Function、Instance等。&lt;/p&gt;
+&lt;h3 id=&#34;worker-follwer&#34;&gt;worker-follwer
+&lt;/h3&gt;&lt;p&gt;在worker成为follower后，会启动Reader监听Broker中的任务，当监听到有新任务时会调用任务管理器进行处理，例如在有新增启动Function时，如果是配置的线程级别则以线程方式启动Instance，如果是配置的进程级别则会拉起一个独立的Instance进程进行Function任务的执行。&lt;/p&gt;
+&lt;h3 id=&#34;源码解析&#34;&gt;源码解析
+&lt;/h3&gt;&lt;p&gt;调度逻辑的主要入口在SchedulerManager的invokeScheduler方法&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;获取所有Function 以及Instance&lt;/li&gt;
 &lt;li&gt;删除所有不存在的Function/Instance的分配器，同时更新分配器的信息
@@ -7621,8 +7621,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;三总结&#34;&gt;三、总结
-&lt;/h4&gt;&lt;p&gt;以上就是Pulsar中Worker的调度过程，这里主要是以Worker独立部署的方式进行讲解的，基于Broker启动的Worker感兴趣的朋友可以自行跟踪下代码。&lt;/p&gt;
+&lt;/div&gt;&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;p&gt;以上就是Pulsar中Worker的调度过程，这里主要是以Worker独立部署的方式进行讲解的，基于Broker启动的Worker感兴趣的朋友可以自行跟踪下代码。&lt;/p&gt;
 </description>
         </item>
         <item>
@@ -7631,10 +7631,10 @@
         <pubDate>Wed, 28 Feb 2024 15:09:16 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/%E4%B8%80%E5%89%AF%E7%9A%AE%E5%9B%8A%E7%9A%84%E4%BD%BF%E5%91%BD/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/%E4%B8%80%E5%89%AF%E7%9A%AE%E5%9B%8A%E7%9A%84%E4%BD%BF%E5%91%BD/image-20240228143652107.png" alt="Featured image of post 一副皮囊的使命" /&gt;&lt;h4 id=&#34;引言&#34;&gt;引言
-&lt;/h4&gt;&lt;p&gt;《皮囊》里告诉我们，每个人都是由一副皮囊和一个灵魂组成，皮囊就像一辆汽车，灵魂就像这辆汽车的驾驶员，从母亲的羊水中离开那一刻就启动汽车，而终点就是我们离开这个世界的那一刻。但这个生命周期是这副皮囊的，那么灵魂呢？围绕这个问题几千年来的智者们已经给出很多结论，以及根据一些理论创办对应自洽的的宗教信仰，这篇文章并不是要讨论是否有来世的问题(以我目前的知识量也没法想到什么有用的结论)，但这篇文章想表达的是，在汽车行驶的这段路程，咱们作为驾驶员有哪些值得我们思考的。&lt;/p&gt;
-&lt;h4 id=&#34;皮囊-灵魂依赖反转&#34;&gt;皮囊-灵魂依赖反转
-&lt;/h4&gt;&lt;p&gt;人开车，理想情况下应该是开往人想去的地方，而不是任由车“自动驾驶”，或者是参考车是什么颜色，开了多少里程数了来决定自己想去的地方。那么，为什么要用年龄、环境等东西来捆绑住自己的“皮囊”呢，例如以下问题&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E4%B8%80%E5%89%AF%E7%9A%AE%E5%9B%8A%E7%9A%84%E4%BD%BF%E5%91%BD/image-20240228143652107.png" alt="Featured image of post 一副皮囊的使命" /&gt;&lt;h2 id=&#34;引言&#34;&gt;引言
+&lt;/h2&gt;&lt;p&gt;《皮囊》里告诉我们，每个人都是由一副皮囊和一个灵魂组成，皮囊就像一辆汽车，灵魂就像这辆汽车的驾驶员，从母亲的羊水中离开那一刻就启动汽车，而终点就是我们离开这个世界的那一刻。但这个生命周期是这副皮囊的，那么灵魂呢？围绕这个问题几千年来的智者们已经给出很多结论，以及根据一些理论创办对应自洽的的宗教信仰，这篇文章并不是要讨论是否有来世的问题(以我目前的知识量也没法想到什么有用的结论)，但这篇文章想表达的是，在汽车行驶的这段路程，咱们作为驾驶员有哪些值得我们思考的。&lt;/p&gt;
+&lt;h2 id=&#34;皮囊-灵魂依赖反转&#34;&gt;皮囊-灵魂依赖反转
+&lt;/h2&gt;&lt;p&gt;人开车，理想情况下应该是开往人想去的地方，而不是任由车“自动驾驶”，或者是参考车是什么颜色，开了多少里程数了来决定自己想去的地方。那么，为什么要用年龄、环境等东西来捆绑住自己的“皮囊”呢，例如以下问题&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;我今年已经三十一了，喜欢编程想学编程是不是有些晚了&lt;/li&gt;
 &lt;li&gt;要是三年前就XXX就好了&lt;/li&gt;
@@ -7643,13 +7643,13 @@
 &lt;/ol&gt;
 &lt;p&gt;更多的例子就不一一例举了，本质上都是用皮囊束缚住了灵魂，如果你想透彻了你会发现这件事情没那么复杂，喜欢去做就完了，就这   么简单，如下图所示，灵魂不该给皮囊服务或让步，应该折腾好皮囊，利用它服务好我们的灵魂&lt;/p&gt;
 &lt;img src=&#34;image-20240228143652107.png&#34; alt=&#34;image-20240228143652107&#34; style=&#34;zoom: 67%;&#34; /&gt;
-&lt;h4 id=&#34;使命感&#34;&gt;使命感
-&lt;/h4&gt;&lt;p&gt;&amp;ldquo;人活着是为了什么？&amp;quot;，对于这个问题，我听过无数个答案，听过一个比较认同的就是，“每个人来到这个世界上都有自己的一个使命，每个灵魂要做的就是发现这个使命，并为它奉上自己的一切”。这就是我在这里想提的使命感，如今的生活是个物质充裕但精神匮乏的世界，虽然不少朋友已经解决温饱过上所谓的“小资”生活，但成天闷闷不乐，甚至有个别患上精神疾病如抑郁症。针对精神问题我也曾经饱受困扰，现如今逐渐醒悟过来也希望能够帮到你，我的方式就是找到自己热爱的东西也就是自己的使命，然后彻底贯彻它，但你将全部的精力集中在这个点时，分散在其他不快乐的精力就会少很多很多，同时由于你在做一件你热爱的事情时，你不会容易觉得累甚至会觉得有无穷的精力。&lt;/p&gt;
-&lt;h4 id=&#34;我的使命&#34;&gt;我的使命
-&lt;/h4&gt;&lt;p&gt;在大学接触编程时，也曾幻想用代码改变世界，同时也在钻研沉淀自己的专业技能。但是在工作后发现公司是个盈利的机构，有时候它所追求的东西会限制住你的发挥，甚至会有很多你不喜欢的东西充斥着你的生活，开不完的会、干不完的活以及很多消耗你精气神的事情，经过这些东西消磨后你发现自己对技术的热情不再，但是当你真的一段时间不接触技术后你陷入了更大的痛苦，仿佛丢了罗盘的航海船一般浑浑噩噩。&lt;/p&gt;
+&lt;h2 id=&#34;使命感&#34;&gt;使命感
+&lt;/h2&gt;&lt;p&gt;&amp;ldquo;人活着是为了什么？&amp;quot;，对于这个问题，我听过无数个答案，听过一个比较认同的就是，“每个人来到这个世界上都有自己的一个使命，每个灵魂要做的就是发现这个使命，并为它奉上自己的一切”。这就是我在这里想提的使命感，如今的生活是个物质充裕但精神匮乏的世界，虽然不少朋友已经解决温饱过上所谓的“小资”生活，但成天闷闷不乐，甚至有个别患上精神疾病如抑郁症。针对精神问题我也曾经饱受困扰，现如今逐渐醒悟过来也希望能够帮到你，我的方式就是找到自己热爱的东西也就是自己的使命，然后彻底贯彻它，但你将全部的精力集中在这个点时，分散在其他不快乐的精力就会少很多很多，同时由于你在做一件你热爱的事情时，你不会容易觉得累甚至会觉得有无穷的精力。&lt;/p&gt;
+&lt;h2 id=&#34;我的使命&#34;&gt;我的使命
+&lt;/h2&gt;&lt;p&gt;在大学接触编程时，也曾幻想用代码改变世界，同时也在钻研沉淀自己的专业技能。但是在工作后发现公司是个盈利的机构，有时候它所追求的东西会限制住你的发挥，甚至会有很多你不喜欢的东西充斥着你的生活，开不完的会、干不完的活以及很多消耗你精气神的事情，经过这些东西消磨后你发现自己对技术的热情不再，但是当你真的一段时间不接触技术后你陷入了更大的痛苦，仿佛丢了罗盘的航海船一般浑浑噩噩。&lt;/p&gt;
 &lt;p&gt;最终经过分析发现，其实是违背了自己的使命以及给自己的不努力找借口，当你真的热爱一个东西的时候，即便是神明都无法阻挡你去追求它。如今在技术层面我不会再去思考这个东西会不会给自己带来收益，只要感兴趣的那就学以及深挖；在形式上，我不在局限于给开源社区贡献代码，像输出技术文章，输出心得体会也是一种创造价值的方式，只要能够多影响到一个就够了，这是我的初衷，至于结果会是什么交给未来吧，只要坚持做自己热爱的事情就够了。说了这么多，我的使命是什么呢，简单的说就是创造，写软件改变世界也是创造，输出文章影响读者也是一种创造，这就是我热爱的事情并不断在这个过程中提升自己的思维，用皮囊服务于灵魂。&lt;/p&gt;
-&lt;h4 id=&#34;总结&#34;&gt;总结
-&lt;/h4&gt;&lt;p&gt;最后与各位读者分享一句话：人有两次生命的诞生，一次是你肉体出生，一次是你灵魂觉醒。&lt;/p&gt;
+&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;p&gt;最后与各位读者分享一句话：人有两次生命的诞生，一次是你肉体出生，一次是你灵魂觉醒。&lt;/p&gt;
 </description>
         </item>
         <item>
@@ -7838,12 +7838,12 @@
         <pubDate>Fri, 05 Jan 2024 15:09:13 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/%E5%AD%A6%E4%B9%A0%E5%BD%95/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/%E5%AD%A6%E4%B9%A0%E5%BD%95/the-creative-exchange-d2zvqp3fpro-unsplash.jpg" alt="Featured image of post 学习录" /&gt;&lt;h4 id=&#34;概述&#34;&gt;概述
-&lt;/h4&gt;&lt;p&gt;这几年在迷茫中看了不少资料，有觉得写得很棒的，也有写的很糟糕的。所以一直想写这块的总结来进行归纳，同时也希望能给其他处于迷茫中的朋友提供一份高质量的资料列表(也许一个读者也没有)，以下清单个人觉得值得反复看以及思考&lt;/p&gt;
-&lt;h4 id=&#34;关于学习这件事&#34;&gt;关于学习这件事
-&lt;/h4&gt;&lt;p&gt;博主觉得自己对学习的热情最高的时候恰恰是在小学二三年级左右，入学的第一天，大家都坐在座位上，眼巴巴的看着隔壁班的同学领着书过去，迫不及待的等着老师发新课本。在听到老师点到自己名字时会兴奋的跑到讲台，然后激动的抱着属于自己的一垒书📚在其他人的目光下像个凯旋的大将军，回到座位上后像猎豹贪婪的吸着自己的猎物一般闻着新书的味道，然后一页页翻开新书，看着上面讲阅的新的故事，以及有趣好玩的插画，仿佛自己也置身其中，等回过神来已经是下课铃了。但随着年纪的增长以及应试教育的背景下，学习逐渐成为了一件功利心很强的事情，学习—&amp;gt; 分数—&amp;gt; 学府—&amp;gt; good 公司—&amp;gt; money。这条链路很直观也很现实，特别是对一些家境不太好的人来说是一条“必须”走的路。步入社会后，通过几年逐步熟悉工作内容后，慢慢的进入了所谓的舒适圈。每天日复一日做着重复的工作，当然也赚到了一些钱，就认为这条链路已经到达尽头了这辈子都不需要学习了，就像一个工具感觉用不到了就直接丢弃。博主写这篇博客目的并不是劝学，仅仅单纯从自己的视角做些分析，孰对孰错不重要，重要的是在分析或者讨论后对咱们自身的思维想法有什么作用不是吗？&lt;/p&gt;
-&lt;h4 id=&#34;关于如何学习这件事&#34;&gt;关于如何学习这件事
-&lt;/h4&gt;&lt;p&gt;在刚开始学习时，本人以为学习是有捷径的，但在经过投机取巧被现实按在地上摩擦后并被告知学习是没有捷径的，唯一的捷径就是努力。之后就各种无脑卷，死记硬背，各种压榨时间投入到里面。在经过多年后，现在博主想说，学习，tmd是真的有捷径的！&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E5%AD%A6%E4%B9%A0%E5%BD%95/the-creative-exchange-d2zvqp3fpro-unsplash.jpg" alt="Featured image of post 学习录" /&gt;&lt;h2 id=&#34;概述&#34;&gt;概述
+&lt;/h2&gt;&lt;p&gt;这几年在迷茫中看了不少资料，有觉得写得很棒的，也有写的很糟糕的。所以一直想写这块的总结来进行归纳，同时也希望能给其他处于迷茫中的朋友提供一份高质量的资料列表(也许一个读者也没有)，以下清单个人觉得值得反复看以及思考&lt;/p&gt;
+&lt;h2 id=&#34;关于学习这件事&#34;&gt;关于学习这件事
+&lt;/h2&gt;&lt;p&gt;博主觉得自己对学习的热情最高的时候恰恰是在小学二三年级左右，入学的第一天，大家都坐在座位上，眼巴巴的看着隔壁班的同学领着书过去，迫不及待的等着老师发新课本。在听到老师点到自己名字时会兴奋的跑到讲台，然后激动的抱着属于自己的一垒书📚在其他人的目光下像个凯旋的大将军，回到座位上后像猎豹贪婪的吸着自己的猎物一般闻着新书的味道，然后一页页翻开新书，看着上面讲阅的新的故事，以及有趣好玩的插画，仿佛自己也置身其中，等回过神来已经是下课铃了。但随着年纪的增长以及应试教育的背景下，学习逐渐成为了一件功利心很强的事情，学习—&amp;gt; 分数—&amp;gt; 学府—&amp;gt; good 公司—&amp;gt; money。这条链路很直观也很现实，特别是对一些家境不太好的人来说是一条“必须”走的路。步入社会后，通过几年逐步熟悉工作内容后，慢慢的进入了所谓的舒适圈。每天日复一日做着重复的工作，当然也赚到了一些钱，就认为这条链路已经到达尽头了这辈子都不需要学习了，就像一个工具感觉用不到了就直接丢弃。博主写这篇博客目的并不是劝学，仅仅单纯从自己的视角做些分析，孰对孰错不重要，重要的是在分析或者讨论后对咱们自身的思维想法有什么作用不是吗？&lt;/p&gt;
+&lt;h2 id=&#34;关于如何学习这件事&#34;&gt;关于如何学习这件事
+&lt;/h2&gt;&lt;p&gt;在刚开始学习时，本人以为学习是有捷径的，但在经过投机取巧被现实按在地上摩擦后并被告知学习是没有捷径的，唯一的捷径就是努力。之后就各种无脑卷，死记硬背，各种压榨时间投入到里面。在经过多年后，现在博主想说，学习，tmd是真的有捷径的！&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E5%AD%A6%E4%B9%A0%E5%BD%95/image-20230621191025476.png&#34;
 	width=&#34;749&#34;
 	height=&#34;262&#34;
@@ -7880,8 +7880,8 @@
 &lt;li&gt;成事，并构成循环&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;成事简单来说就是将一件事情做好，哪怕是一件小事。这点是博主四个里面做的最烂的，这也直接导致了博主颠簸的职业生涯。无论上级给你交代什么事情，务必要事事有着落，事事有回响，哪怕是做不了也要第一时间同步。在职场中，你的绩效不会跟你的技术挂钩，只会跟你的成事呈正相关。借用易经的话“天行健，君子以自强不息；地势坤，君子以厚德载物”，无论你技术再牛，如果上级给你派的活你总是做得很糟糕让他不省心，那想必他以后也不敢再派重要的任务给你并且也不会给你太好看的绩效。因此在职场中德行是非常重要的，这里面就包括上级对你的信任。通过不断成事来增强上级对你的信心、依赖，你会获得更多丰厚的资源(除了工资还包括能让你提升打磨技术的任务等)。在不断积累这些经验后，距离下一个跃迁也是很快的一件事。在这里推荐《冯唐成事心法》以及《跃迁: 成为高手的技术》&lt;/p&gt;
-&lt;h4 id=&#34;关于卡bug的这件事&#34;&gt;关于卡bug的这件事
-&lt;/h4&gt;&lt;p&gt;如果你要问我这个世界能不能卡bug，我会毫不犹豫的告诉你，能。大致举几点&lt;/p&gt;
+&lt;h2 id=&#34;关于卡bug的这件事&#34;&gt;关于卡bug的这件事
+&lt;/h2&gt;&lt;p&gt;如果你要问我这个世界能不能卡bug，我会毫不犹豫的告诉你，能。大致举几点&lt;/p&gt;
 &lt;p&gt;ps：博主对卡bug的定义是，如果别人学习一个东西要十天，你通过这个方式只要五天那就是；如果别人成为专业的要8年，你通过这个方式只要5年甚至更少，那就是。&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;&lt;strong&gt;增强回路&lt;/strong&gt;&lt;/li&gt;
@@ -7915,22 +7915,22 @@
 &lt;p&gt;在工作中遇到一些难题时，我也常常使用这种方式，找个安静的会议室或者回家路上，进入这个自我世界，清空一切杂念，然后输入已知信息，并不断地快速推导可行的解决方案，这个方式替我解决了不少问题。如果繁杂的工作环境下没法得出答案，可以试试这个方式。&lt;/p&gt;
 &lt;p&gt;当然这个方式更多的可以应用在学习上，尽量避免过多的干扰物。可以考虑去图书馆或者一些自习室沉浸式的学习，当你进入这个状态时学习的速度和深度往往会远超平时的状态。&lt;/p&gt;
 &lt;p&gt;话又说回来，你说为啥古时候或者武侠小说里动不动就去山洞里修炼，要我说很大程度上就是要进入心流状态来达到高效的结果。王守仁在龙场悟道我相信也是在心流的基础上，也许他所进入的那个世界真的有老子、孔夫子、朱熹等等跟他聚在一块探讨世界的奥秘。不过这些就扯远了，但对于咱们普通人来说，合理利用心流一定是学习路上的一大杀器。&lt;/p&gt;
-&lt;h4 id=&#34;注意事项&#34;&gt;注意事项
-&lt;/h4&gt;&lt;ol&gt;
+&lt;h2 id=&#34;注意事项&#34;&gt;注意事项
+&lt;/h2&gt;&lt;ol&gt;
 &lt;li&gt;切记陷入自我满足的学习，如果你重读书轻技能、重输入轻输出的话很有可能你的学习是不被这个世界认可并无法获得对应的“酬劳”&lt;/li&gt;
 &lt;li&gt;切记不要闭门造车，很有可能你闷头做了几年的东西再业内已经有了很好的产品或者说方向有可能是夕阳方向，相信我这不值得，你的热血值得挥洒在于你而言更有价值的东西并且你的努力理应获得更多的回报。可以试试加一些技术交流群、拥抱开源社区、以及看一些高质量的技术网站如：medium.com、InfoQ等，且尽量用google来进行知识的探索&lt;/li&gt;
 &lt;li&gt;切记学东西浅尝辄止，学任何东西都不要仅仅停留在皮毛，那样只会浪费你的大好时光以及消磨你的技术热情。学任何东西都分 道术器三个层次，对于你热爱的东西理应不断打磨，不断地探索下一个层次。要时不时将灵魂跳出肉身，俯视当前的这个人思维所处的环境是那个级别，是否过于死扣细节而忽略原理等。相信你跟我一样，对于大部分粗糙看的东西都忘得差不多了，但你一定清晰得记得，在你苦思冥想分析的那个bug的根因是什么，在你挑灯夜读所探索某个技术的原理是什么，这些哪怕到了退休都会清楚的记得。因为这是你在脑海里反复推敲过的东西，这些东西才是真正属于你的。而外面熙熙攘攘的那些所谓看了很多的知识其实并不属于你，它们与你而言只是匆匆赶路时的一抹景色，并不是你心中的东西。因此学习务必要有深度&lt;/li&gt;
 &lt;li&gt;切勿拖延，完美主义是成事的天敌。像博主之前每件事都想做到极致，每个功能都想彻底开发好再上线，每个优化都想优化到极致再上线等，这些在职场上都是致命的，要学会拥抱瑕疵。要知道对于公司什么最重要，功能可否迭代发布，先上线用户急迫需要的那部分开放出去，在慢慢开发剩下的？优化是否可以优化提升最显著的那部分，剩下的在慢慢搞？你学习可以没有输出或者晚点输出，但是公司不行，归根结底公司是个营利组织，是以结果为导向的。想起大气帝国崛起中嬴驷对嬴华说的 “何为战之本？曰，为国取利益”；那么何为 工作之本？曰，为公司取利。即便你的设计、代码不完美，只要能解决公司的问题那么就可以先上线，进一步优化的事对公司来说至少没那么紧急重要。先解决问题，先成事才是头等大事。&lt;/li&gt;
 &lt;/ol&gt;
-&lt;h4 id=&#34;对于未来我想说的&#34;&gt;对于未来我想说的
-&lt;/h4&gt;&lt;p&gt;对于未来，我想说持续保持热爱，不忘初心，就像二三年级时候拿到课本那般热情去学习新的知识。在这里安利下此专访，每当我偶尔迷茫时都会翻来看，时刻提醒自己，只要这是你热爱的东西就去做，当做一辈子的事情那样去做 &lt;a class=&#34;link&#34; href=&#34;https://www.infoq.cn/article/3xtSDtHUgTKRsyw3kZXH&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+&lt;h2 id=&#34;对于未来我想说的&#34;&gt;对于未来我想说的
+&lt;/h2&gt;&lt;p&gt;对于未来，我想说持续保持热爱，不忘初心，就像二三年级时候拿到课本那般热情去学习新的知识。在这里安利下此专访，每当我偶尔迷茫时都会翻来看，时刻提醒自己，只要这是你热爱的东西就去做，当做一辈子的事情那样去做 &lt;a class=&#34;link&#34; href=&#34;https://www.infoq.cn/article/3xtSDtHUgTKRsyw3kZXH&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
     &gt;专访“MySQL 之父”：我曾创造 MySQL，也将颠覆 MySQL&lt;/a&gt; 。至于路怎么走继续参考陈皓老师的 &lt;a class=&#34;link&#34; href=&#34;https://coolshell.cn/articles/19464.html&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
     &gt;如何超过大多数人&lt;/a&gt; 以及&lt;a class=&#34;link&#34; href=&#34;https://coolshell.cn/articles/17583.html&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
     &gt;技术人员的发展之路&lt;/a&gt;。&lt;/p&gt;
-&lt;h4 id=&#34;总结&#34;&gt;总结
-&lt;/h4&gt;&lt;p&gt;看完的读者会发现，博主通篇没有给任何东西定义对错。应试教育、功利心强、毕业了赚到钱不学习、投机取巧走捷径、只读书不转化为技能、不看完这篇博客或者否定这篇博客中所有的观点，可能都是“对”的。但所谓的对错真的重要吗？人生是一场求仁得仁的路程，你追求的是什么并且最终得到相信你的内心一定是富足的(前提是你以为你要的真的是你内心真正的追求)。有人追求金钱、有人追求名望、也有人心怀天下等等都没错，写这篇博客只是想给赶路的你我整理一篇“章法”。这个世界是符合一定规律的，你我置身其中岂能外乎？因此一定是有某个子规律，在符合它时能放大你努力的收益，这里所说的“章法”就是这个子规律。在“章法”这块其实已经有很多优秀的资料了，博主写得算不上好，但即便如此博主还是要写，借用一句诗来表达所想，“他强任他强，清风拂山岗”。最后，祝你我在人生的最终阶段，都能不留遗憾。爱你所爱，行你所行，听从你心，无问西东！&lt;/p&gt;
-&lt;h4 id=&#34;参考博客书籍&#34;&gt;参考博客/书籍
-&lt;/h4&gt;&lt;ol&gt;
+&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;p&gt;看完的读者会发现，博主通篇没有给任何东西定义对错。应试教育、功利心强、毕业了赚到钱不学习、投机取巧走捷径、只读书不转化为技能、不看完这篇博客或者否定这篇博客中所有的观点，可能都是“对”的。但所谓的对错真的重要吗？人生是一场求仁得仁的路程，你追求的是什么并且最终得到相信你的内心一定是富足的(前提是你以为你要的真的是你内心真正的追求)。有人追求金钱、有人追求名望、也有人心怀天下等等都没错，写这篇博客只是想给赶路的你我整理一篇“章法”。这个世界是符合一定规律的，你我置身其中岂能外乎？因此一定是有某个子规律，在符合它时能放大你努力的收益，这里所说的“章法”就是这个子规律。在“章法”这块其实已经有很多优秀的资料了，博主写得算不上好，但即便如此博主还是要写，借用一句诗来表达所想，“他强任他强，清风拂山岗”。最后，祝你我在人生的最终阶段，都能不留遗憾。爱你所爱，行你所行，听从你心，无问西东！&lt;/p&gt;
+&lt;h2 id=&#34;参考博客书籍&#34;&gt;参考博客/书籍
+&lt;/h2&gt;&lt;ol&gt;
 &lt;li&gt;
 &lt;p&gt;&lt;a class=&#34;link&#34; href=&#34;https://zhuanlan.zhihu.com/p/55804099&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
     &gt;书魔的学习方法-1:读书的飞轮&lt;/a&gt;&lt;/p&gt;
@@ -7979,8 +7979,8 @@
         <pubDate>Thu, 04 Jan 2024 12:00:10 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/%E8%AF%A6%E8%A7%A3bookkeeper%E4%B9%8Bautorecovery%E6%9C%BA%E5%88%B6/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/%E8%AF%A6%E8%A7%A3bookkeeper%E4%B9%8Bautorecovery%E6%9C%BA%E5%88%B6/image-20231215102118251.png" alt="Featured image of post 详解bookkeeper之AutoRecovery机制" /&gt;&lt;h4 id=&#34;引言小故事&#34;&gt;引言小故事
-&lt;/h4&gt;&lt;p&gt;张三在一家小型互联网公司上班，由于公司实行的996，因此经常有同事“不辞而别”，为了工作的正常推进，团队内达成了某种默契，这种默契就是通过某个规则来选出一个同事，这个同事除了工作之余还有额外看看每天是否有同事“不辞而别”，当发现有同事李四离职时，就会去把李四负责的工作的内容进行拆分给其他的同事进行处理。整个过程大致如下图&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E8%AF%A6%E8%A7%A3bookkeeper%E4%B9%8Bautorecovery%E6%9C%BA%E5%88%B6/image-20231215102118251.png" alt="Featured image of post 详解bookkeeper之AutoRecovery机制" /&gt;&lt;h2 id=&#34;引言小故事&#34;&gt;引言小故事
+&lt;/h2&gt;&lt;p&gt;张三在一家小型互联网公司上班，由于公司实行的996，因此经常有同事“不辞而别”，为了工作的正常推进，团队内达成了某种默契，这种默契就是通过某个规则来选出一个同事，这个同事除了工作之余还有额外看看每天是否有同事“不辞而别”，当发现有同事李四离职时，就会去把李四负责的工作的内容进行拆分给其他的同事进行处理。整个过程大致如下图&lt;/p&gt;
 &lt;img src=&#34;image-20231215102118251.png&#34; alt=&#34;image-20231215102118251&#34; style=&#34;zoom:50%;&#34; /&gt;
 &lt;p&gt;由上图可以看到这个公司通过一个签到本和工作进度表来完成整个流程，每个同事上班时都要在签到本上进行签到，每天下班前要在工作进度表上同步今天的工作进展；例如今天李四“不辞而别”溜了，张三在签到本上看到李四没有签到记录，就判定这家伙不干了同时在工作进度表中把李四的任务进行拆分给大狗和二狗来做&amp;hellip;&lt;/p&gt;
 &lt;p&gt;通过上面的故事会发现有几个问题&lt;/p&gt;
@@ -7991,8 +7991,8 @@
 &lt;li&gt;&amp;hellip;.&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;咱们可以带着这些种种心里的疑惑看下面的文章，这个故事其实是一个分布式存储组件的雏形，刚刚所讨论的那些问题也是这些组件所会遇到的且大部分都是有解法的，所以咱们接下来就来看看bookkeeper这个分布式存储组件是如何解决上述问题的&lt;/p&gt;
-&lt;h4 id=&#34;bookkeeper基础&#34;&gt;bookkeeper基础
-&lt;/h4&gt;&lt;p&gt;“硬件无法保证不故障”，在这个大前提下，所有运行在硬件上的存储组件都一定会做一件很重要的事情，这件事就是数据恢复，要么是在组件内部来做，要么是在组件外部来做。&lt;/p&gt;
+&lt;h2 id=&#34;bookkeeper基础&#34;&gt;bookkeeper基础
+&lt;/h2&gt;&lt;p&gt;“硬件无法保证不故障”，在这个大前提下，所有运行在硬件上的存储组件都一定会做一件很重要的事情，这件事就是数据恢复，要么是在组件内部来做，要么是在组件外部来做。&lt;/p&gt;
 &lt;p&gt;bk是一个具有容错的分布式存储组件，同一份数据会有多个副本，分别存在多个bookie中来提供容错保证，那么当一台bookie不可用时，其上面保存的数据都少了一个副本，如果不进行数据恢复/复制的话再有其他的bookie不可用就很容易造成数据的丢失。因此bk自身内部提供了数据恢复的机制，今天通篇大论都是围绕bk的这个机制进行展开的&lt;/p&gt;
 &lt;p&gt;数据恢复一般分为手动和自动，bk同时支持这两种方式，接下来就看看具体怎么操作的&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;手动恢复&lt;/strong&gt;&lt;/p&gt;
@@ -8027,8 +8027,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
 &lt;/div&gt;&lt;p&gt;除了通过指令的方式启动，bk还支持配置的方式，只需要在bookie节点配置autoRecoveryDaemonEnabled为false，这个bookie节点在启动的时候也同样会启动autorecovery服务&lt;/p&gt;
-&lt;h4 id=&#34;autorecovery机制&#34;&gt;autorecovery机制
-&lt;/h4&gt;&lt;p&gt;&lt;em&gt;上一章节讲了怎么使用，本章节主要讲明autorecovery这个机制&lt;/em&gt;&lt;/p&gt;
+&lt;h2 id=&#34;autorecovery机制&#34;&gt;autorecovery机制
+&lt;/h2&gt;&lt;p&gt;&lt;em&gt;上一章节讲了怎么使用，本章节主要讲明autorecovery这个机制&lt;/em&gt;&lt;/p&gt;
 &lt;p&gt;自动恢复机制中有两个角色Auditor和replication worker，在启动自动恢复机制后，会在每个bookie实例中启动这两个角色&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;Auditor&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;bk集群中的Auditor们会通过zookeeper选举产生一位leader，这个leader负责监听  zookeeper /ledgers/available 节点变化情况来判定是否要做数据恢复动作，因为所有节点启动都会注册在上面，如果有服务不可用由于zookeeper的临时目录机制，会自动删除在此目录下自己节点的信息，因此leader通过watch机制可以轻松感知到有节点不可用，当Auditor leader感知到有节点不可用时，会将此bookie所负责的所有Ledger加在zookeeper /ledgers/underreplicated 路径下，通过这种方式通知replication worker做数据恢复过程&lt;/p&gt;
@@ -8045,8 +8045,8 @@
 &lt;li&gt;ReplicationWorker通过watch监听到此目录有需要做数据恢复的Ledger后，会先在zk加锁再进行数据恢复逻辑；通过将Ledger划分为多个Fragment来轮训进行数据恢复，通过读取其他正常bookie上该Ledger的数据并写到其他没有该数据的bookie的节点上从而保证每份数据都有多个副本，直到将/ledgers/underreplicated 下的所有Ledger进行复制完，本次 autorecovery就算完成了。而Auditor线程和ReplicationWorker线程会不停的监听zookeeper直到下一个bookie节点不可用&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;通过此机制给bookkeeper提高了稳定性以及高可用能力，在有个别节点挂掉的时候依然能自动做到数据完备不丢，这种设计是一个成熟的组件该具备的能力&lt;/p&gt;
-&lt;h4 id=&#34;autorecovery启动源码&#34;&gt;autorecovery启动源码
-&lt;/h4&gt;&lt;p&gt;源码主要分 启动流程以及工作流程进行讲解，同时在这里给需要阅读的朋友提供一个可能会用上的“词典”&lt;/p&gt;
+&lt;h2 id=&#34;autorecovery启动源码&#34;&gt;autorecovery启动源码
+&lt;/h2&gt;&lt;p&gt;源码主要分 启动流程以及工作流程进行讲解，同时在这里给需要阅读的朋友提供一个可能会用上的“词典”&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
@@ -8594,8 +8594,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;autorecovery工作源码&#34;&gt;autorecovery工作源码
-&lt;/h4&gt;&lt;p&gt;这块由于逻辑相对较多，因此针对autorecovery工作流程单独开一章。经过上面我们可以清晰的知道在经过启动后都发生了哪些事情，接下来咱们看看autorecovery真正工作的逻辑。在Auditor start的时候，会通过监听zookeeper来感知数据的动态变化&lt;/p&gt;
+&lt;/div&gt;&lt;h2 id=&#34;autorecovery工作源码&#34;&gt;autorecovery工作源码
+&lt;/h2&gt;&lt;p&gt;这块由于逻辑相对较多，因此针对autorecovery工作流程单独开一章。经过上面我们可以清晰的知道在经过启动后都发生了哪些事情，接下来咱们看看autorecovery真正工作的逻辑。在Auditor start的时候，会通过监听zookeeper来感知数据的动态变化&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
 &lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
 &lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
@@ -10092,8 +10092,8 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
 &lt;/div&gt;
-&lt;/div&gt;&lt;h4 id=&#34;总结&#34;&gt;总结
-&lt;/h4&gt;&lt;p&gt;在这里解答下引言小故事&lt;/p&gt;
+&lt;/div&gt;&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;p&gt;在这里解答下引言小故事&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;
 &lt;p&gt;张三是通过什么规则被选成“监督者”的？&lt;/p&gt;
@@ -10108,8 +10108,8 @@
 &lt;p&gt;通过签到本的方式比较节约张三的时间，否则当员工比较多的时候并且对感知时间比较快的时候，张三就要每隔几分钟就要跑去挨个挨个看，这样没多久张三也要“不辞而别”了。通过签到本如果某个同事不签到了张三就能很轻松感知到并做相对应的处理了&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
-&lt;h4 id=&#34;参考资料&#34;&gt;参考资料
-&lt;/h4&gt;&lt;ol&gt;
+&lt;h2 id=&#34;参考资料&#34;&gt;参考资料
+&lt;/h2&gt;&lt;ol&gt;
 &lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://bookkeeper.apache.org/docs/admin/autorecovery/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
     &gt;https://bookkeeper.apache.org/docs/admin/autorecovery/&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;bk项目 site3/website/docs/admin/* 指令使用说明&lt;/li&gt;
@@ -10123,8 +10123,8 @@
         
         <guid>https://sherlock-lin.github.io/p/%E4%B8%80%E5%B0%81%E5%86%99%E7%BB%99%E5%B9%B4%E6%9C%AB%E8%87%AA%E5%B7%B1%E7%9A%84%E4%BF%A1/</guid>
         <description>&lt;img src="https://sherlock-lin.github.io/p/%E4%B8%80%E5%B0%81%E5%86%99%E7%BB%99%E5%B9%B4%E6%9C%AB%E8%87%AA%E5%B7%B1%E7%9A%84%E4%BF%A1/matt-le-SJSpo9hQf7s-unsplash.jpg" alt="Featured image of post 一封写给年末自己的信" /&gt;&lt;p&gt;不知不觉一年又快结束了，今天写了不少文章，那就专门写一份给自己的信&lt;/p&gt;
-&lt;h4 id=&#34;工作&#34;&gt;工作
-&lt;/h4&gt;&lt;p&gt;2023年整体过得还算平稳，先说说工作上的事，岗位上顺利升职，有个比较大的感慨，就是写好PPT是真的很有必要的，看了一些大佬们的晋升PPT发现人家对产品的剖析非常清晰并且很多结果都是有数据指标来支撑的，通过PPT就能明显感觉到大佬对产品的理解是很透彻的。因此自己也给自己定了个任务，就是每年都要给自己写当年的答辩PPT以及简历，通过写这些东西能够帮你思考提炼这个年度的收获以及指导未来的方向。除此之外还有三个觉得比较值得写得点&lt;/p&gt;
+&lt;h2 id=&#34;工作&#34;&gt;工作
+&lt;/h2&gt;&lt;p&gt;2023年整体过得还算平稳，先说说工作上的事，岗位上顺利升职，有个比较大的感慨，就是写好PPT是真的很有必要的，看了一些大佬们的晋升PPT发现人家对产品的剖析非常清晰并且很多结果都是有数据指标来支撑的，通过PPT就能明显感觉到大佬对产品的理解是很透彻的。因此自己也给自己定了个任务，就是每年都要给自己写当年的答辩PPT以及简历，通过写这些东西能够帮你思考提炼这个年度的收获以及指导未来的方向。除此之外还有三个觉得比较值得写得点&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;对业务务必要深入了解
 对业务理解这个好处有3点，第一就是当你对业务有足够的了解时，无论发生任何事情你都心里有底，即便有故障如果你能清晰的知道没有影响到线上流量那就不用太担心，
@@ -10138,15 +10138,15 @@
 城市放空自己，忘记自己的工作与生活，就跟自己跟世界对话，然后像看其他人的人生一样看自己这段时间的经历，客观的思考哪些是自己追求的，哪些是自己不需要的
 等等。每年都要如此几次，通过这样来调整自己的节奏，让自己整体有条不絮的往自己的终极目标前进&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h4 id=&#34;学习&#34;&gt;学习
-&lt;/h4&gt;&lt;p&gt;说完工作，再聊聊学习上的事情，今年比较大的收获是坚持了半年的背单词，每天保持背50～70个单词，不追求每个都背下来，更多的是背一个感觉，就是看到这个单词能猜到一个大概，这是从“学习飞轮”那片文章上得到的灵感，就是有些东西一定要快起来，背单词也是一样的，与其追求完美导致止步不前，不如先保持背的习惯以及对大部分单词有个认识，后续要用到的单词也会频繁的出现在自己面前加深自己的印象。除了背单词之外还有比较好的点是终于重新拾起写博客的习惯，相比于前两年的犹豫不决，今年的自己算是从迷茫逐渐走向坚定，虽然自己现在还没想明白自己的使命，但是可以确定的事就是，我希望能够继续深挖技术能力，不设边界，任何编程语言，任何领域知识只要感兴趣都可以学习以及深挖，这个过程中主要看的是这个领域的大佬是如何设计解决方案来解决对应场景的问题的。因此在这个背景下希望自己能够多输出高质量的文章，不仅能够倒逼自己学习、思考提炼，还能够通过这种方式影响更多的人，让读者能够爱上编程、爱上大数据、爱上设计、爱上生活&amp;hellip;.
+&lt;h2 id=&#34;学习&#34;&gt;学习
+&lt;/h2&gt;&lt;p&gt;说完工作，再聊聊学习上的事情，今年比较大的收获是坚持了半年的背单词，每天保持背50～70个单词，不追求每个都背下来，更多的是背一个感觉，就是看到这个单词能猜到一个大概，这是从“学习飞轮”那片文章上得到的灵感，就是有些东西一定要快起来，背单词也是一样的，与其追求完美导致止步不前，不如先保持背的习惯以及对大部分单词有个认识，后续要用到的单词也会频繁的出现在自己面前加深自己的印象。除了背单词之外还有比较好的点是终于重新拾起写博客的习惯，相比于前两年的犹豫不决，今年的自己算是从迷茫逐渐走向坚定，虽然自己现在还没想明白自己的使命，但是可以确定的事就是，我希望能够继续深挖技术能力，不设边界，任何编程语言，任何领域知识只要感兴趣都可以学习以及深挖，这个过程中主要看的是这个领域的大佬是如何设计解决方案来解决对应场景的问题的。因此在这个背景下希望自己能够多输出高质量的文章，不仅能够倒逼自己学习、思考提炼，还能够通过这种方式影响更多的人，让读者能够爱上编程、爱上大数据、爱上设计、爱上生活&amp;hellip;.
 除了这些以外还发现了一个拦路虎，就是写文章喜欢拖延，很多东西想一下子写到最后，然后反复推敲某个点，或者希望能够等绘制出更详细的图辅助说明等等导致无限期拖延，今年就有十多篇文章因为这个导致无限延期，因此明年希望自己在这方面能够快速闭环，有合适的想法的时候写得差不多就发出来，先闭环，等后续有新的见解可以再更新或者输出新的文章等，简单来说还是要知行合一，有时候不发出来你也会永远不知道差在哪里&lt;/p&gt;
-&lt;h4 id=&#34;开心与遗憾&#34;&gt;开心与遗憾
-&lt;/h4&gt;&lt;p&gt;在这里罗列三件开心和遗憾的事，先说说开心的事，第一件是终于想清楚要认真学习以及输出文章这件事了，相比前两年犹豫要不要放弃编程，也许设计代码这件事情更符合自己内心的追求，认真学技术以及输出文章也算是 follower 自己的内心了。第二件就是改用VSCode来写文章，这个真的太爽了，不用再纠结markdown的语法，不用纠结于文件不好管理维护等等，就沉浸于码字，用字将自己的思绪串联起来然后通过手指敲动以字节流的方式持久化到设备上，有时能进入心流的状态，这种感觉可能只有懂得才懂。第三件就是要去湖南浏阳跨年了，也就是后天，在漫天的烟花中送走2023年，并迎来新的一年的自己，对于多年没看到烟花以及自己放烟花的自己来说这是
+&lt;h2 id=&#34;开心与遗憾&#34;&gt;开心与遗憾
+&lt;/h2&gt;&lt;p&gt;在这里罗列三件开心和遗憾的事，先说说开心的事，第一件是终于想清楚要认真学习以及输出文章这件事了，相比前两年犹豫要不要放弃编程，也许设计代码这件事情更符合自己内心的追求，认真学技术以及输出文章也算是 follower 自己的内心了。第二件就是改用VSCode来写文章，这个真的太爽了，不用再纠结markdown的语法，不用纠结于文件不好管理维护等等，就沉浸于码字，用字将自己的思绪串联起来然后通过手指敲动以字节流的方式持久化到设备上，有时能进入心流的状态，这种感觉可能只有懂得才懂。第三件就是要去湖南浏阳跨年了，也就是后天，在漫天的烟花中送走2023年，并迎来新的一年的自己，对于多年没看到烟花以及自己放烟花的自己来说这是
 莫大值得激动的事情～
 说了开心的事，再说说遗憾的事吧，第一件是自己今年始终没有勇敢的迈出那一步，大学室友勇敢的去自己创业开奶茶店，同事豪哥也去尝试自己喜欢生意，而我还是选择了相对稳定工作，希望明年我也能勇敢的去尝试更多自己喜欢的事情。第二件就是在国庆时候跟家人去香港澳门游玩，由于自己没有提前做好攻略，感觉有些地方有些遗憾，毕竟家人很少离开小岛。第三件事就是改补的牙由于忙导致一直拖着，现在的牙洞逐渐扩展，内心开始有些紧张了，还是穿了又要做根管治疗了～&lt;/p&gt;
-&lt;h4 id=&#34;展望&#34;&gt;展望
-&lt;/h4&gt;&lt;p&gt;然后也希望明天的这个时候，能够在更多自己喜欢的领域深耕并输出更多优质的文章，然后最后想给大家分享的是，大胆去做你想做的那个人吧，把你的想法写出来然后
+&lt;h2 id=&#34;展望&#34;&gt;展望
+&lt;/h2&gt;&lt;p&gt;然后也希望明天的这个时候，能够在更多自己喜欢的领域深耕并输出更多优质的文章，然后最后想给大家分享的是，大胆去做你想做的那个人吧，把你的想法写出来然后
 去实现，不用在乎别人的看法说法，首先真的没有那么多的人去关注我们，其次，在我们的世界我们才是主角，做让自己开心的事就好了。走正确的路，
 就是做自己真正热爱的事，哪条是正确的路？只有自己能定义。路不止一条，坚持做你在乎的事，走出自己在乎的路，给出你对这个世界独有的回答！&lt;/p&gt;
 &lt;p&gt;再见2023，你好2024！&lt;/p&gt;
@@ -10158,21 +10158,21 @@
         <pubDate>Tue, 12 Dec 2023 15:09:15 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/%E4%B8%BA%E5%95%A5%E8%A6%81%E5%86%99%E8%BF%99%E4%BA%9B%E7%8E%A9%E6%84%8F/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/%E4%B8%BA%E5%95%A5%E8%A6%81%E5%86%99%E8%BF%99%E4%BA%9B%E7%8E%A9%E6%84%8F/the-creative-exchange-d2zvqp3fpro-unsplash.jpg" alt="Featured image of post 为啥要写这些玩意" /&gt;&lt;h4 id=&#34;引言&#34;&gt;引言
-&lt;/h4&gt;&lt;p&gt;距离第一次写博客已经过去将近10年时间了，今年就专门以问答形式写写为什么要写下这些玩意&lt;/p&gt;
-&lt;h4 id=&#34;正文&#34;&gt;正文
-&lt;/h4&gt;&lt;p&gt;&lt;strong&gt;为什么要写这些玩意&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;作者是一个什么事情都喜欢思考有没有意义的功利性的人，但本次写作的源头却事出反常，就单纯觉得把弄懂的东西以某种媒介记录下来，在未来的某个时间点回过头来看以时间轴将这些思想穿起来的这样一部“电影”一定很有意思，如果诸君感兴趣也可一同观看&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;打算写哪些方向的文章&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;这块没有给自己设限，目前个人知识方向主要是 编程、大数据、操作系统、历史、以及读书心得这几个方向，正如一千个读者有一千个哈姆雷特，作者也是一样，即便是现在已经有很多现成的文章了，但通过不同作者的视角下看到的东西可能也不太一样。本人擅长抽象以及提炼，对不少东西都有自己的一番见解，因此有信心将一些普罗大众觉得复杂的东西 提炼成简单的图或者故事来给自己以及读者解惑。不要求文章多，但一定是要经过自己大脑思考、咀嚼消化过后的东西，流水账的东西尽量不写或少些。一言以蔽之，就是写值得写的东西&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;使命感&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;最近在跟朋友聊天有聊到这个，他希望自己能找到自己来到这个世界的使命，本人其实也一样在寻找，写文章不是使命感驱动的，更多的是作为找到使命前的“历练”，如果要功利点算的话，那就是通过写作来磨练自己的思维框架这把利剑，并将它送给未来找到使命的自己，也许写着写着就找到了也说不定呢&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;会不会觉得浪费时间&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;说实话，曾经有段时间觉得挺浪费时间的，写了自己也不怎么会看，也不会有什么读者去看，那写这些东西的意义何在呢？所以最终放弃了一段时间，但后来发现不写文章的时间要么也是刷短视频、打游戏、发呆等等，那好像更没啥意义，对于那些日复一日年复一年没任何积累的东西，写作反而可爱得像个养成游戏，每天陪伴它一会，它就会茁壮成长，长成一颗苍天大树，供自己安放那颗躁动的心以及给行人遮阴凉&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;孤独吗&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;有句话说，每个作者都是孤独的。本人也不例外，但很幸运的是可以通过文字这种工具来跨时空地域跟很多人聊天，像远在贵阳龙场的王阳明，在岳阳楼上写下“博，一介书生，三尺微命”的那个少年，“也无风雨也无晴”的东坡先生，甚至有那么一刻，我是我，也是他们，也懂了他们的孤独、惆怅、无奈，如今经历得越多那份情绪就更加浓郁几分。现如今，我也想通过文字跟不同时空的自己沟通，以及另一个时空的你，因为我，就是你啊&lt;/p&gt;
-&lt;h4 id=&#34;小结&#34;&gt;小结
-&lt;/h4&gt;&lt;p&gt;好像写着写着有些跑题了，主要是结合近期思考的知识回答下一些自己心中的疑问，同时也提醒自己勿忘初心并保持写作思考的节奏&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E4%B8%BA%E5%95%A5%E8%A6%81%E5%86%99%E8%BF%99%E4%BA%9B%E7%8E%A9%E6%84%8F/the-creative-exchange-d2zvqp3fpro-unsplash.jpg" alt="Featured image of post 为啥要写这些玩意" /&gt;&lt;h2 id=&#34;引言&#34;&gt;引言
+&lt;/h2&gt;&lt;p&gt;距离第一次写博客已经过去将近10年时间了，今年就专门以问答形式写写为什么要写下这些玩意&lt;/p&gt;
+&lt;h2 id=&#34;正文&#34;&gt;正文
+&lt;/h2&gt;&lt;h3 id=&#34;为什么要写这些玩意&#34;&gt;为什么要写这些玩意
+&lt;/h3&gt;&lt;p&gt;作者是一个什么事情都喜欢思考有没有意义的功利性的人，但本次写作的源头却事出反常，就单纯觉得把弄懂的东西以某种媒介记录下来，在未来的某个时间点回过头来看以时间轴将这些思想穿起来的这样一部“电影”一定很有意思，如果诸君感兴趣也可一同观看&lt;/p&gt;
+&lt;h3 id=&#34;打算写哪些方向的文章&#34;&gt;打算写哪些方向的文章
+&lt;/h3&gt;&lt;p&gt;这块没有给自己设限，目前个人知识方向主要是 编程、大数据、操作系统、历史、以及读书心得这几个方向，正如一千个读者有一千个哈姆雷特，作者也是一样，即便是现在已经有很多现成的文章了，但通过不同作者的视角下看到的东西可能也不太一样。本人擅长抽象以及提炼，对不少东西都有自己的一番见解，因此有信心将一些普罗大众觉得复杂的东西 提炼成简单的图或者故事来给自己以及读者解惑。不要求文章多，但一定是要经过自己大脑思考、咀嚼消化过后的东西，流水账的东西尽量不写或少些。一言以蔽之，就是写值得写的东西&lt;/p&gt;
+&lt;h3 id=&#34;使命感&#34;&gt;使命感
+&lt;/h3&gt;&lt;p&gt;最近在跟朋友聊天有聊到这个，他希望自己能找到自己来到这个世界的使命，本人其实也一样在寻找，写文章不是使命感驱动的，更多的是作为找到使命前的“历练”，如果要功利点算的话，那就是通过写作来磨练自己的思维框架这把利剑，并将它送给未来找到使命的自己，也许写着写着就找到了也说不定呢&lt;/p&gt;
+&lt;h3 id=&#34;会不会觉得浪费时间&#34;&gt;会不会觉得浪费时间
+&lt;/h3&gt;&lt;p&gt;说实话，曾经有段时间觉得挺浪费时间的，写了自己也不怎么会看，也不会有什么读者去看，那写这些东西的意义何在呢？所以最终放弃了一段时间，但后来发现不写文章的时间要么也是刷短视频、打游戏、发呆等等，那好像更没啥意义，对于那些日复一日年复一年没任何积累的东西，写作反而可爱得像个养成游戏，每天陪伴它一会，它就会茁壮成长，长成一颗苍天大树，供自己安放那颗躁动的心以及给行人遮阴凉&lt;/p&gt;
+&lt;h3 id=&#34;孤独吗&#34;&gt;孤独吗
+&lt;/h3&gt;&lt;p&gt;有句话说，每个作者都是孤独的。本人也不例外，但很幸运的是可以通过文字这种工具来跨时空地域跟很多人聊天，像远在贵阳龙场的王阳明，在岳阳楼上写下“博，一介书生，三尺微命”的那个少年，“也无风雨也无晴”的东坡先生，甚至有那么一刻，我是我，也是他们，也懂了他们的孤独、惆怅、无奈，如今经历得越多那份情绪就更加浓郁几分。现如今，我也想通过文字跟不同时空的自己沟通，以及另一个时空的你，因为我，就是你啊&lt;/p&gt;
+&lt;h2 id=&#34;小结&#34;&gt;小结
+&lt;/h2&gt;&lt;p&gt;好像写着写着有些跑题了，主要是结合近期思考的知识回答下一些自己心中的疑问，同时也提醒自己勿忘初心并保持写作思考的节奏&lt;/p&gt;
 </description>
         </item>
         <item>
@@ -10181,12 +10181,12 @@
         <pubDate>Mon, 07 Aug 2023 15:09:15 +0800</pubDate>
         
         <guid>https://sherlock-lin.github.io/p/%E9%9A%8F%E6%B3%A2%E9%80%90%E6%B5%81or%E7%8B%AC%E7%AB%8B%E6%80%9D%E8%80%83/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/p/%E9%9A%8F%E6%B3%A2%E9%80%90%E6%B5%81or%E7%8B%AC%E7%AB%8B%E6%80%9D%E8%80%83/matt-le-SJSpo9hQf7s-unsplash.jpg" alt="Featured image of post 随波逐流or独立思考" /&gt;&lt;h4 id=&#34;写在前面&#34;&gt;写在前面
-&lt;/h4&gt;&lt;p&gt;过去的十多年，随着国内互联网的蓬勃发展，信息呈现爆炸式增长；一方面，咱们接受信息的渠道变得多样化如搜索引擎、博客、朋友圈、短视频等等，另一方面，投入制造这些内容的人也多了，效率也更高了，因此我们每天接受的信息数不胜数。有些 制造者 为了自己的内容能够在众多内容中脱颖而出，因此诞生了不少 标题党、贩卖焦虑的制造者。这些内容会在用户刷手机时，仅通过0.5秒的时间就能抓住用户的眼球或者击中用户的心理，从而创造流量进而从中获利。久而久之就成了这批人在用户的大脑内圈地跑马，往用户大脑内注入自己大量的信息以及暗示，最最重要的是他们注入的都是经过他们进行“消化”过的N手知识，用户如果长期习惯于这种“被投喂”的方式，逐渐会丧失独立思考能力，从而彻底依赖于他们。借用《肖申克的救赎》里的一句话，“一开始，你痛恨周围的高墙，满满地，你习惯了生活在其中，最终你会发现自己不得不依靠它而生活”。&lt;/p&gt;
-&lt;h4 id=&#34;经历&#34;&gt;经历
-&lt;/h4&gt;&lt;p&gt;说说自己的经历吧，几年前在房价腾飞的时候，当时很流行一套方案，“借钱付首付，然后房租抵月供，然后每个月的工资用来还借的首付，过几年卖了房子相当于白赚几十万”，通过这种空手套白狼的方式来达到快速赚钱。当时人云亦云，相信不少朋友那个时候周围或多或少都有这样的声音，博主当时也是深信不疑，一方面是大家都这么说久而久之大脑内部也深度相信这个理论，另一方面是随着房价xiuxiuxiu往上涨自己也说服自己，这不是现实验证理论吗，但随后几年就给大众啪啪啪打脸了，甚至也不少人血本无亏。现在反思这个事情，大家都能清楚的知道，这套方案的成立是有大前提的，“经济要一直蓬勃发展”，没有什么稳赚不赔的买卖。但当时没有看清的最主要原因就是，没有什么独立批判的能力，别人说什么，只要说的频繁以及说的人多，自己就全信，这样的人出了社会往往就成了所谓的“韭菜”。在现如今，这样的群里依然不在少数，人云亦云，你只要稍微多问几个问题他就答不上来，或者说的全是“标准答案”。如果说每个人都是一辆行驶的汽车，那这样做无疑是将方向盘毫无疑问的交给一个未知的人，你希望这样吗？&lt;/p&gt;
-&lt;h4 id=&#34;思考&#34;&gt;思考
-&lt;/h4&gt;&lt;p&gt;前两段主要描述的是我们遇到的情况，这一段主要是聊聊如何去应对。首先最重要的是，一定要保持充电也就是知识的学习，方式不重要，其中包括但不仅限于 书籍、视频、与人探讨等等，最主要的是要自己搭建属于自己的一套“知识系统”并且不断自我完善。在有新的知识或者新的风口跳出来时，你可以基于自己的“知识系统”对其进行批判性的学习以及了解，不要人云亦云，今天追逐短视频、明天追逐gpt，这样除了了解新东西的皮毛，最终只剩下一颗焦虑的心，因为你会发现虽然不断的学新东西，不停的追逐新事物，但属于你手中，脑中的东西会越来越少，与日俱增的只有无穷的空虚以及焦虑。&lt;/p&gt;
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E9%9A%8F%E6%B3%A2%E9%80%90%E6%B5%81or%E7%8B%AC%E7%AB%8B%E6%80%9D%E8%80%83/matt-le-SJSpo9hQf7s-unsplash.jpg" alt="Featured image of post 随波逐流or独立思考" /&gt;&lt;h2 id=&#34;写在前面&#34;&gt;写在前面
+&lt;/h2&gt;&lt;p&gt;过去的十多年，随着国内互联网的蓬勃发展，信息呈现爆炸式增长；一方面，咱们接受信息的渠道变得多样化如搜索引擎、博客、朋友圈、短视频等等，另一方面，投入制造这些内容的人也多了，效率也更高了，因此我们每天接受的信息数不胜数。有些 制造者 为了自己的内容能够在众多内容中脱颖而出，因此诞生了不少 标题党、贩卖焦虑的制造者。这些内容会在用户刷手机时，仅通过0.5秒的时间就能抓住用户的眼球或者击中用户的心理，从而创造流量进而从中获利。久而久之就成了这批人在用户的大脑内圈地跑马，往用户大脑内注入自己大量的信息以及暗示，最最重要的是他们注入的都是经过他们进行“消化”过的N手知识，用户如果长期习惯于这种“被投喂”的方式，逐渐会丧失独立思考能力，从而彻底依赖于他们。借用《肖申克的救赎》里的一句话，“一开始，你痛恨周围的高墙，满满地，你习惯了生活在其中，最终你会发现自己不得不依靠它而生活”。&lt;/p&gt;
+&lt;h2 id=&#34;经历&#34;&gt;经历
+&lt;/h2&gt;&lt;p&gt;说说自己的经历吧，几年前在房价腾飞的时候，当时很流行一套方案，“借钱付首付，然后房租抵月供，然后每个月的工资用来还借的首付，过几年卖了房子相当于白赚几十万”，通过这种空手套白狼的方式来达到快速赚钱。当时人云亦云，相信不少朋友那个时候周围或多或少都有这样的声音，博主当时也是深信不疑，一方面是大家都这么说久而久之大脑内部也深度相信这个理论，另一方面是随着房价xiuxiuxiu往上涨自己也说服自己，这不是现实验证理论吗，但随后几年就给大众啪啪啪打脸了，甚至也不少人血本无亏。现在反思这个事情，大家都能清楚的知道，这套方案的成立是有大前提的，“经济要一直蓬勃发展”，没有什么稳赚不赔的买卖。但当时没有看清的最主要原因就是，没有什么独立批判的能力，别人说什么，只要说的频繁以及说的人多，自己就全信，这样的人出了社会往往就成了所谓的“韭菜”。在现如今，这样的群里依然不在少数，人云亦云，你只要稍微多问几个问题他就答不上来，或者说的全是“标准答案”。如果说每个人都是一辆行驶的汽车，那这样做无疑是将方向盘毫无疑问的交给一个未知的人，你希望这样吗？&lt;/p&gt;
+&lt;h2 id=&#34;思考&#34;&gt;思考
+&lt;/h2&gt;&lt;p&gt;前两段主要描述的是我们遇到的情况，这一段主要是聊聊如何去应对。首先最重要的是，一定要保持充电也就是知识的学习，方式不重要，其中包括但不仅限于 书籍、视频、与人探讨等等，最主要的是要自己搭建属于自己的一套“知识系统”并且不断自我完善。在有新的知识或者新的风口跳出来时，你可以基于自己的“知识系统”对其进行批判性的学习以及了解，不要人云亦云，今天追逐短视频、明天追逐gpt，这样除了了解新东西的皮毛，最终只剩下一颗焦虑的心，因为你会发现虽然不断的学新东西，不停的追逐新事物，但属于你手中，脑中的东西会越来越少，与日俱增的只有无穷的空虚以及焦虑。&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;保持充电，构建自己的“知识系统”&lt;/li&gt;
 &lt;li&gt;切忌盲目追逐新事物，新东西有新东西的好，老东西有老东西的好，毕竟经典的东西都是经过时间洗礼的，减少试错成本&lt;/li&gt;
@@ -10194,8 +10194,8 @@
 &lt;li&gt;避免过多的沉溺于“多巴胺陷阱”，比如花过多的时间在短视频、游戏等等上面&lt;/li&gt;
 &lt;li&gt;定期锻炼，保持愉悦积极的心态&lt;/li&gt;
 &lt;/ol&gt;
-&lt;h4 id=&#34;总结&#34;&gt;总结
-&lt;/h4&gt;&lt;p&gt;最后，虽然本篇博客提出了一个问题，已经提出了自认为的“应对方法”，但也不是每个人都必须这么去做的。首先第一点，随波逐流和独立思考也有各自的两面性，有些人选择随波逐流一样可以过得好好，这就看个人选择。第二点，选择独立思考的背景下，应对博客提出的问题其实也有很多解法，建议读者也批判性的看待这篇博客，如果觉得这篇博客也是“标题党”或者“制造焦虑”也正常，重要的是，保持独立思考，特别是深度思考，在沉浸其中时，你会忘了时间、忘了一切，仅仅沉浸于你的世界，去构造属于你自己的系统，也就是你自己。最后，祝大家都能成为自己想成为的那种人。&lt;/p&gt;
+&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;p&gt;最后，虽然本篇博客提出了一个问题，已经提出了自认为的“应对方法”，但也不是每个人都必须这么去做的。首先第一点，随波逐流和独立思考也有各自的两面性，有些人选择随波逐流一样可以过得好好，这就看个人选择。第二点，选择独立思考的背景下，应对博客提出的问题其实也有很多解法，建议读者也批判性的看待这篇博客，如果觉得这篇博客也是“标题党”或者“制造焦虑”也正常，重要的是，保持独立思考，特别是深度思考，在沉浸其中时，你会忘了时间、忘了一切，仅仅沉浸于你的世界，去构造属于你自己的系统，也就是你自己。最后，祝大家都能成为自己想成为的那种人。&lt;/p&gt;
 </description>
         </item>
         

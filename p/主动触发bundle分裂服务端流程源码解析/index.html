@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="zh-cn" dir="ltr">
     <head><meta charset='utf-8'>
-<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="一、正文 Namespace下的Topic是分Bundle进行管理的，每个Namespace都是一个哈希环，而Bundle负责管理环上某个范围上的Topic。通过这种方式可以更好的进行Topic的管理。当某个Bundle上负责的Topic越来越多时，会导致负责该Bundle的Broker节点压力变大。因此Pulsar还提供了Bundle分裂的机制，这个机制支持自动触发以及手动触发，今天这篇文章就从源码的角度分析手动触发Bundle分裂时服务端会发生什么\n">
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="正文 Namespace下的Topic是分Bundle进行管理的，每个Namespace都是一个哈希环，而Bundle负责管理环上某个范围上的Topic。通过这种方式可以更好的进行Topic的管理。当某个Bundle上负责的Topic越来越多时，会导致负责该Bundle的Broker节点压力变大。因此Pulsar还提供了Bundle分裂的机制，这个机制支持自动触发以及手动触发，今天这篇文章就从源码的角度分析手动触发Bundle分裂时服务端会发生什么\n">
 <title>主动触发Bundle分裂服务端流程源码解析</title>
 
 <link rel='canonical' href='https://sherlock-lin.github.io/p/%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91bundle%E5%88%86%E8%A3%82%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/'>
 
 <link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="主动触发Bundle分裂服务端流程源码解析">
-<meta property='og:description' content="一、正文 Namespace下的Topic是分Bundle进行管理的，每个Namespace都是一个哈希环，而Bundle负责管理环上某个范围上的Topic。通过这种方式可以更好的进行Topic的管理。当某个Bundle上负责的Topic越来越多时，会导致负责该Bundle的Broker节点压力变大。因此Pulsar还提供了Bundle分裂的机制，这个机制支持自动触发以及手动触发，今天这篇文章就从源码的角度分析手动触发Bundle分裂时服务端会发生什么\n">
+<meta property='og:description' content="正文 Namespace下的Topic是分Bundle进行管理的，每个Namespace都是一个哈希环，而Bundle负责管理环上某个范围上的Topic。通过这种方式可以更好的进行Topic的管理。当某个Bundle上负责的Topic越来越多时，会导致负责该Bundle的Broker节点压力变大。因此Pulsar还提供了Bundle分裂的机制，这个机制支持自动触发以及手动触发，今天这篇文章就从源码的角度分析手动触发Bundle分裂时服务端会发生什么\n">
 <meta property='og:url' content='https://sherlock-lin.github.io/p/%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91bundle%E5%88%86%E8%A3%82%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/'>
 <meta property='og:site_name' content='夏洛克-林'>
 <meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-04-16T10:34:57&#43;08:00'/><meta property='article:modified_time' content='2024-04-16T10:34:57&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91bundle%E5%88%86%E8%A3%82%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240416181912380.png' />
 <meta name="twitter:title" content="主动触发Bundle分裂服务端流程源码解析">
-<meta name="twitter:description" content="一、正文 Namespace下的Topic是分Bundle进行管理的，每个Namespace都是一个哈希环，而Bundle负责管理环上某个范围上的Topic。通过这种方式可以更好的进行Topic的管理。当某个Bundle上负责的Topic越来越多时，会导致负责该Bundle的Broker节点压力变大。因此Pulsar还提供了Bundle分裂的机制，这个机制支持自动触发以及手动触发，今天这篇文章就从源码的角度分析手动触发Bundle分裂时服务端会发生什么\n"><meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="正文 Namespace下的Topic是分Bundle进行管理的，每个Namespace都是一个哈希环，而Bundle负责管理环上某个范围上的Topic。通过这种方式可以更好的进行Topic的管理。当某个Bundle上负责的Topic越来越多时，会导致负责该Bundle的Broker节点压力变大。因此Pulsar还提供了Bundle分裂的机制，这个机制支持自动触发以及手动触发，今天这篇文章就从源码的角度分析手动触发Bundle分裂时服务端会发生什么\n"><meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91bundle%E5%88%86%E8%A3%82%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240416181912380.png' />
     </head>
     <body class="
@@ -266,17 +266,9 @@
         <div class="widget--toc">
             <nav id="TableOfContents">
   <ol>
-    <li>
-      <ol>
-        <li>
-          <ol>
-            <li><a href="#一正文">一、正文</a></li>
-            <li><a href="#二源码解析">二、源码解析</a></li>
-            <li><a href="#三参考文献">三、参考文献</a></li>
-          </ol>
-        </li>
-      </ol>
-    </li>
+    <li><a href="#正文">正文</a></li>
+    <li><a href="#源码解析">源码解析</a></li>
+    <li><a href="#参考文献">参考文献</a></li>
   </ol>
 </nav>
         </div>
@@ -372,8 +364,8 @@
     <section class="article-content">
     
     
-    <h4 id="一正文">一、正文
-</h4><p>Namespace下的Topic是分Bundle进行管理的，每个Namespace都是一个哈希环，而Bundle负责管理环上某个范围上的Topic。通过这种方式可以更好的进行Topic的管理。当某个Bundle上负责的Topic越来越多时，会导致负责该Bundle的Broker节点压力变大。因此Pulsar还提供了Bundle分裂的机制，这个机制支持自动触发以及手动触发，今天这篇文章就从源码的角度分析手动触发Bundle分裂时服务端会发生什么</p>
+    <h2 id="正文">正文
+</h2><p>Namespace下的Topic是分Bundle进行管理的，每个Namespace都是一个哈希环，而Bundle负责管理环上某个范围上的Topic。通过这种方式可以更好的进行Topic的管理。当某个Bundle上负责的Topic越来越多时，会导致负责该Bundle的Broker节点压力变大。因此Pulsar还提供了Bundle分裂的机制，这个机制支持自动触发以及手动触发，今天这篇文章就从源码的角度分析手动触发Bundle分裂时服务端会发生什么</p>
 <img src="image-20240416181912380.png" alt="image-20240416181912380" style="zoom: 50%;" />
 <p><strong>主动触发Bundle分裂操作方式</strong></p>
 <div class="highlight"><div class="chroma">
@@ -402,8 +394,8 @@
 </span></span><span class="line"><span class="cl">bin/pulsar-admin namespaces split-bundle --bundle 0x00000000_0x10000000 public/default
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="二源码解析">二、源码解析
-</h4><p>Pulsar管理流相关的操作都是通过HTTP的方式，因为需要支持多种客户端类型(http、client、cli)。服务端处理这些操作都在admin模块下，如下图，本次要聊的bundle分裂就在Namespaces方法中</p>
+</div><h2 id="源码解析">源码解析
+</h2><p>Pulsar管理流相关的操作都是通过HTTP的方式，因为需要支持多种客户端类型(http、client、cli)。服务端处理这些操作都在admin模块下，如下图，本次要聊的bundle分裂就在Namespaces方法中</p>
 <img src="image-20240416155125370.png" alt="image-20240416155125370" style="zoom: 67%;" />
 <p>首先从Namespaces的splitNamespaceBundle进行跟踪</p>
 <div class="highlight"><div class="chroma">
@@ -876,8 +868,8 @@
 <li>Bundle分裂后是否会涉及到数据的迁移？</li>
 <li>Bundle分裂算法有四种，区别是什么？</li>
 </ol>
-<h4 id="三参考文献">三、参考文献
-</h4><ol>
+<h2 id="参考文献">参考文献
+</h2><ol>
 <li><a class="link" href="https://pulsar.apache.org/docs/3.2.x/concepts-broker-load-balancing-quick-start/"  target="_blank" rel="noopener"
     >官方文档</a></li>
 </ol>

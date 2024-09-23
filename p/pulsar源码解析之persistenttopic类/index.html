@@ -266,20 +266,39 @@
         <div class="widget--toc">
             <nav id="TableOfContents">
   <ol>
-    <li>
+    <li><a href="#引言">引言</a></li>
+    <li><a href="#正文">正文</a></li>
+    <li><a href="#何时创建">何时创建</a></li>
+    <li><a href="#创建流程">创建流程</a>
       <ol>
-        <li>
-          <ol>
-            <li><a href="#引言">引言</a></li>
-            <li><a href="#正文">正文</a></li>
-            <li><a href="#一何时创建">一、何时创建</a></li>
-            <li><a href="#二创建流程">二、创建流程</a></li>
-            <li><a href="#三负责内容">三、负责内容</a></li>
-            <li><a href="#四总结">四、总结</a></li>
-          </ol>
-        </li>
+        <li><a href="#构造函数">构造函数</a></li>
+        <li><a href="#initialize方法">initialize方法</a></li>
       </ol>
     </li>
+    <li><a href="#负责内容">负责内容</a>
+      <ol>
+        <li><a href="#生产者相关">生产者相关</a>
+          <ol>
+            <li><a href="#新增">新增</a></li>
+            <li><a href="#删除">删除</a></li>
+          </ol>
+        </li>
+        <li><a href="#订阅相关">订阅相关</a>
+          <ol>
+            <li><a href="#新增-1">新增</a></li>
+            <li><a href="#删除-1">删除</a></li>
+          </ol>
+        </li>
+        <li><a href="#处理消息写入">处理消息写入</a></li>
+        <li><a href="#跨集群复制">跨集群复制</a></li>
+        <li><a href="#消息清理">消息清理</a></li>
+        <li><a href="#ttl">TTL</a></li>
+        <li><a href="#积压">积压</a></li>
+        <li><a href="#压缩">压缩</a></li>
+        <li><a href="#配置更新">配置更新</a></li>
+      </ol>
+    </li>
+    <li><a href="#总结">总结</a></li>
   </ol>
 </nav>
         </div>
@@ -375,10 +394,10 @@
     <section class="article-content">
     
     
-    <h4 id="引言">引言
-</h4><p>今天一起来看看Pulsar服务端消息相关最重要的一个类PersistentTopic，看看它都负责哪些事情以及是如何设计的</p>
-<h4 id="正文">正文
-</h4><p>在Topic被创建时，Pulsar集群中会有一台Broker维护这个Topic，在实现上就是维护一个PersistentTopic对象，这个PersistentTopic对象处理针对该Topic相关的一切操作，具体负责的相关操作如下</p>
+    <h2 id="引言">引言
+</h2><p>今天一起来看看Pulsar服务端消息相关最重要的一个类PersistentTopic，看看它都负责哪些事情以及是如何设计的</p>
+<h2 id="正文">正文
+</h2><p>在Topic被创建时，Pulsar集群中会有一台Broker维护这个Topic，在实现上就是维护一个PersistentTopic对象，这个PersistentTopic对象处理针对该Topic相关的一切操作，具体负责的相关操作如下</p>
 <ul>
 <li>处理订阅以及下线订阅</li>
 <li>新增生产者对象以及下线生产者对象</li>
@@ -408,8 +427,8 @@
 <li>PersistentTopic的创建流程都会发生什么？</li>
 <li>上面那些相关操作大概是什么实现的？</li>
 </ul>
-<h4 id="一何时创建">一、何时创建
-</h4><p>以下列出创建的时机，基本上流程都是发起创建Topic的时候会通过一致性哈希计算出这个Topic所归属的Bundle，然后去zookeeper获取这个Bundle所归属的Broker机器，最后请求这台Broker节点创建对应的PersistentTopic对象</p>
+<h2 id="何时创建">何时创建
+</h2><p>以下列出创建的时机，基本上流程都是发起创建Topic的时候会通过一致性哈希计算出这个Topic所归属的Bundle，然后去zookeeper获取这个Bundle所归属的Broker机器，最后请求这台Broker节点创建对应的PersistentTopic对象</p>
 <ol>
 <li>管理流创建
 <ul>
@@ -540,10 +559,10 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="二创建流程">二、创建流程
-</h4><p>创建流程主要分为构建和初始化两个阶段，一般是先通过构造函数创建PersistentTopic，创建好后在调用其initialize方法进行初始化</p>
-<h5 id="1-构造函数">1. 构造函数
-</h5><p>构造函数主要做三件事：1. 更新Broker级别策略 2. 创建发布限流 3. 初始化容器。具体代码实现如下</p>
+</div><h2 id="创建流程">创建流程
+</h2><p>创建流程主要分为构建和初始化两个阶段，一般是先通过构造函数创建PersistentTopic，创建好后在调用其initialize方法进行初始化</p>
+<h3 id="构造函数">构造函数
+</h3><p>构造函数主要做三件事：1. 更新Broker级别策略 2. 创建发布限流 3. 初始化容器。具体代码实现如下</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -638,8 +657,8 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h5 id="2-initialize方法">2. initialize方法
-</h5><p>初始化方法的逻辑相比下要丰富写，归纳起来有以下四点</p>
+</div><h3 id="initialize方法">initialize方法
+</h3><p>初始化方法的逻辑相比下要丰富写，归纳起来有以下四点</p>
 <ol>
 <li>
 <p>获取压缩服务</p>
@@ -780,10 +799,10 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="三负责内容">三、负责内容
-</h4><h5 id="1生产者相关">1、生产者相关
-</h5><h6 id="新增">新增
-</h6><p>生产者客户端启动时会跟Topic归属的Broker建立TCP连接并请求Broker端ServerCnx的handleProducer方法进行处理，这个方法最终会调用PersistentTopic的addProducer方法进行创建，咱们来看看实现</p>
+</div><h2 id="负责内容">负责内容
+</h2><h3 id="生产者相关">生产者相关
+</h3><h4 id="新增">新增
+</h4><p>生产者客户端启动时会跟Topic归属的Broker建立TCP连接并请求Broker端ServerCnx的handleProducer方法进行处理，这个方法最终会调用PersistentTopic的addProducer方法进行创建，咱们来看看实现</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -842,12 +861,12 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h6 id="删除">删除
-</h6><p>删除的逻辑很简单，也是通过TCP接收到客户端断开连接的请求后，会调用Producer的close方法进行资源释放，同时从维护的producers中移除此对象</p>
-<h5 id="2-订阅相关">2. 订阅相关
-</h5><p>消费者客户端启动时会跟Topic归属的Broker建立TCP连接并请求Broker端，请求由ServerCnx的handleSubscribe方法进行处理，这个方法最终会调用PersistentTopic的internalSubscribe方法进行创建，咱们来看看实现</p>
-<h6 id="新增-1">新增
-</h6><div class="highlight"><div class="chroma">
+</div><h4 id="删除">删除
+</h4><p>删除的逻辑很简单，也是通过TCP接收到客户端断开连接的请求后，会调用Producer的close方法进行资源释放，同时从维护的producers中移除此对象</p>
+<h3 id="订阅相关">订阅相关
+</h3><p>消费者客户端启动时会跟Topic归属的Broker建立TCP连接并请求Broker端，请求由ServerCnx的handleSubscribe方法进行处理，这个方法最终会调用PersistentTopic的internalSubscribe方法进行创建，咱们来看看实现</p>
+<h4 id="新增-1">新增
+</h4><div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
@@ -907,24 +926,24 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h6 id="删除-1">删除
-</h6><p>删除的逻辑也是比较简单的，就是从subscriptions中进行移除</p>
-<h5 id="3-处理消息写入">3. 处理消息写入
-</h5><p>消息写入的流程相对比较复杂，后面再单独分析，暂时跳过</p>
-<h5 id="4-跨集群复制">4. 跨集群复制
-</h5><p>跨集群复制这里实现逻辑其实不难，相当于在Broker上去读取Bookkeeper获取数据并通过启动生产者往其他集群进行数据写入，具体细节后面也单独写文章进行分析</p>
-<h5 id="5-消息清理">5. 消息清理
-</h5><p>Pulsar的消息TTL、积压、压缩都是在Broker启动时往线程池中加入定时任务轮询触发的</p>
-<h6 id="ttl">TTL
-</h6><p>TTL会循环扫描每个Topic过期的消息位置，并通过改变游标进行标记，而清理是由专门的线程根据游标进行处理的</p>
-<h6 id="积压">积压
-</h6><p>消息积压也是会定期检测，分两种情况，一种是消息超过限制额度，另一种是消息时间超过额度。这两种情况都会触发积压策略的处理，具体的策略在BacklogQuota.RetentionPolicy中定义</p>
-<h6 id="压缩">压缩
-</h6><p>跟上面一样，轮询检测进行处理</p>
-<h6 id="配置更新">配置更新
-</h6><p>在PersistentTopic启动的初始化initialize方法中会调用onUpdate进行策略更新，那Pulsar又是如何做的支持配置动态更新的呢？这个问题保留给大家</p>
-<h4 id="四总结">四、总结
-</h4><p>本文主要强调PersistentTopic类的重要性、聊聊它都负责哪些事情以及大概实现，具体每个细节展开都能单独写一篇文章，这个敬请期待～</p>
+</div><h4 id="删除-1">删除
+</h4><p>删除的逻辑也是比较简单的，就是从subscriptions中进行移除</p>
+<h3 id="处理消息写入">处理消息写入
+</h3><p>消息写入的流程相对比较复杂，后面再单独分析，暂时跳过</p>
+<h3 id="跨集群复制">跨集群复制
+</h3><p>跨集群复制这里实现逻辑其实不难，相当于在Broker上去读取Bookkeeper获取数据并通过启动生产者往其他集群进行数据写入，具体细节后面也单独写文章进行分析</p>
+<h3 id="消息清理">消息清理
+</h3><p>Pulsar的消息TTL、积压、压缩都是在Broker启动时往线程池中加入定时任务轮询触发的</p>
+<h3 id="ttl">TTL
+</h3><p>TTL会循环扫描每个Topic过期的消息位置，并通过改变游标进行标记，而清理是由专门的线程根据游标进行处理的</p>
+<h3 id="积压">积压
+</h3><p>消息积压也是会定期检测，分两种情况，一种是消息超过限制额度，另一种是消息时间超过额度。这两种情况都会触发积压策略的处理，具体的策略在BacklogQuota.RetentionPolicy中定义</p>
+<h3 id="压缩">压缩
+</h3><p>跟上面一样，轮询检测进行处理</p>
+<h3 id="配置更新">配置更新
+</h3><p>在PersistentTopic启动的初始化initialize方法中会调用onUpdate进行策略更新，那Pulsar又是如何做的支持配置动态更新的呢？这个问题保留给大家</p>
+<h2 id="总结">总结
+</h2><p>本文主要强调PersistentTopic类的重要性、聊聊它都负责哪些事情以及大概实现，具体每个细节展开都能单独写一篇文章，这个敬请期待～</p>
 
 </section>
 

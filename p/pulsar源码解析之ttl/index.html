@@ -266,19 +266,11 @@
         <div class="widget--toc">
             <nav id="TableOfContents">
   <ol>
-    <li>
-      <ol>
-        <li>
-          <ol>
-            <li><a href="#引言">引言</a></li>
-            <li><a href="#整体流程">整体流程</a></li>
-            <li><a href="#触发ttl流程">触发TTL流程</a></li>
-            <li><a href="#ttl启动流程">TTL启动流程</a></li>
-            <li><a href="#总结">总结</a></li>
-          </ol>
-        </li>
-      </ol>
-    </li>
+    <li><a href="#引言">引言</a></li>
+    <li><a href="#整体流程">整体流程</a></li>
+    <li><a href="#触发ttl流程">触发TTL流程</a></li>
+    <li><a href="#ttl启动流程">TTL启动流程</a></li>
+    <li><a href="#总结">总结</a></li>
   </ol>
 </nav>
         </div>
@@ -374,19 +366,19 @@
     <section class="article-content">
     
     
-    <h4 id="引言">引言
-</h4><p>在看了 你真的了解Pulsar的消息保留、积压、TTL策略吗 后，相信有不少对技术充满热情的小伙伴会疑惑，Pulsar的TTL又是怎么去失信的呢？今天就让我们一起来看看吧</p>
+    <h2 id="引言">引言
+</h2><p>在看了 你真的了解Pulsar的消息保留、积压、TTL策略吗 后，相信有不少对技术充满热情的小伙伴会疑惑，Pulsar的TTL又是怎么去失信的呢？今天就让我们一起来看看吧</p>
 <p>在看下面的文章时我们要带着以下几个问题</p>
 <ul>
 <li>TTL是什么时候触发的</li>
 <li>TTL机制被触发后会发生什么</li>
 <li>过期的消息会立马被删除吗</li>
 </ul>
-<h4 id="整体流程">整体流程
-</h4><p>在跟踪源码前先看看这张图，每个Broker内部都会有一个周期定时线程任务，每隔一段时间都会触发TTL任务。TTL任务会轮询当前Broker所管理的所有Topic中的所有订阅者，因为每个订阅者都会在Broker维护一个消费游标，因此Broker会根据用户配置的过期时间到轮询检查游标，看看有哪些消息是没被消费但是已经过了TTL的并会将游标移动到其的左侧(从实现的层面相当于表示它已经被消费了)，从而达到这些过了TTL的消息允许被删除的效果，最终再将游标的信息持久化到Bookkeeper中进行保存。</p>
+<h2 id="整体流程">整体流程
+</h2><p>在跟踪源码前先看看这张图，每个Broker内部都会有一个周期定时线程任务，每隔一段时间都会触发TTL任务。TTL任务会轮询当前Broker所管理的所有Topic中的所有订阅者，因为每个订阅者都会在Broker维护一个消费游标，因此Broker会根据用户配置的过期时间到轮询检查游标，看看有哪些消息是没被消费但是已经过了TTL的并会将游标移动到其的左侧(从实现的层面相当于表示它已经被消费了)，从而达到这些过了TTL的消息允许被删除的效果，最终再将游标的信息持久化到Bookkeeper中进行保存。</p>
 <img src="image-20240331111412370.png" alt="image-20240331111412370" style="zoom: 50%;" />
-<h4 id="触发ttl流程">触发TTL流程
-</h4><p>那么直接来跟踪下触发TTL的流程吧，先从Broker的启动方法start开始看。可以看到启动的时候还会开启一系列定时任务，这里只看TTL相关的，跟踪进去startMessageExpiryMonitor方法可以看到messageExpiryMonitor其实是JDK提供的线程池ScheduledExecutorService类，在这里通过scheduleAtFixedRate方法周期性的执行过期任务检测，间隔从Broker配置中进行读取的，默认是每隔5分钟一次</p>
+<h2 id="触发ttl流程">触发TTL流程
+</h2><p>那么直接来跟踪下触发TTL的流程吧，先从Broker的启动方法start开始看。可以看到启动的时候还会开启一系列定时任务，这里只看TTL相关的，跟踪进去startMessageExpiryMonitor方法可以看到messageExpiryMonitor其实是JDK提供的线程池ScheduledExecutorService类，在这里通过scheduleAtFixedRate方法周期性的执行过期任务检测，间隔从Broker配置中进行读取的，默认是每隔5分钟一次</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -431,8 +423,8 @@
 </span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="ttl启动流程">TTL启动流程
-</h4><p>通过上一节可以看到Pulsar的TTL触发就是通过JDK的定时线程池来实现的，Broker会周期性的调用checkMessageExpiry方法进行处理，因此现在就从这个方法进行跟踪，可以看到最终会调用到Topic的checkMessageExpiry方法</p>
+</div><h2 id="ttl启动流程">TTL启动流程
+</h2><p>通过上一节可以看到Pulsar的TTL触发就是通过JDK的定时线程池来实现的，Broker会周期性的调用checkMessageExpiry方法进行处理，因此现在就从这个方法进行跟踪，可以看到最终会调用到Topic的checkMessageExpiry方法</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -738,8 +730,8 @@
 </span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>通过上面的跟踪可以看得到最终是通过Bookkeeper的客户端对象LedgerHandle的asyncAddEntry方法将游标信息持久化到了Bookkeeper，这里就不继续跟踪下去了，因为已经到了TTL左右范围的尽头了。</p>
-<h4 id="总结">总结
-</h4><p>以上就是Pulsar中TTL的实现源码流程，我在这个过程中尽量省略了一些非必要的逻辑，主要是跟踪了主线，像一些地方也是值得跟踪的，感兴趣的伙伴可以自行跟踪。同时在这里我们可以看到，TTL过程只移动了游标位置并不涉及到数据的删除，说明在Pulsar的设计中将两者进行了分离，这是一种很好的职责设计思路，各自负责自己的一那部分。一方面在程序维护时可以避免改动引起一些相关性不那么大的影响，另一方面对于程序执行的整体性能来说也是比较高效的。</p>
+<h2 id="总结">总结
+</h2><p>以上就是Pulsar中TTL的实现源码流程，我在这个过程中尽量省略了一些非必要的逻辑，主要是跟踪了主线，像一些地方也是值得跟踪的，感兴趣的伙伴可以自行跟踪。同时在这里我们可以看到，TTL过程只移动了游标位置并不涉及到数据的删除，说明在Pulsar的设计中将两者进行了分离，这是一种很好的职责设计思路，各自负责自己的一那部分。一方面在程序维护时可以避免改动引起一些相关性不那么大的影响，另一方面对于程序执行的整体性能来说也是比较高效的。</p>
 
 </section>
 

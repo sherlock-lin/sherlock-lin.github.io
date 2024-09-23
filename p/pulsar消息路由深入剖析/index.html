@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="zh-cn" dir="ltr">
     <head><meta charset='utf-8'>
-<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="一、概述 大数据背景下，分区应该是所有组件必备的基本条件，否则面对海量数据时无论是计算还是存储都容易遇到瓶颈。跟其他消息系统一样，Pulsar通过Topic将消息数据进行业务层面划分管理，同时也支持Topic分区，通过将多个分区分布在多台Broker/机器上从而带来性能上的巨大提升以及无限的横向拓展能力。而一旦有了分区之后就会面临一个问题，但一条数据请求时应该将其发往哪个分区？目前Pulsar跟其他消息系统一样支持以下三种路由模式。\n">
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="概述 大数据背景下，分区应该是所有组件必备的基本条件，否则面对海量数据时无论是计算还是存储都容易遇到瓶颈。跟其他消息系统一样，Pulsar通过Topic将消息数据进行业务层面划分管理，同时也支持Topic分区，通过将多个分区分布在多台Broker/机器上从而带来性能上的巨大提升以及无限的横向拓展能力。而一旦有了分区之后就会面临一个问题，但一条数据请求时应该将其发往哪个分区？目前Pulsar跟其他消息系统一样支持以下三种路由模式。\n">
 <title>Pulsar消息路由深入剖析</title>
 
 <link rel='canonical' href='https://sherlock-lin.github.io/p/pulsar%E6%B6%88%E6%81%AF%E8%B7%AF%E7%94%B1%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90/'>
 
 <link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="Pulsar消息路由深入剖析">
-<meta property='og:description' content="一、概述 大数据背景下，分区应该是所有组件必备的基本条件，否则面对海量数据时无论是计算还是存储都容易遇到瓶颈。跟其他消息系统一样，Pulsar通过Topic将消息数据进行业务层面划分管理，同时也支持Topic分区，通过将多个分区分布在多台Broker/机器上从而带来性能上的巨大提升以及无限的横向拓展能力。而一旦有了分区之后就会面临一个问题，但一条数据请求时应该将其发往哪个分区？目前Pulsar跟其他消息系统一样支持以下三种路由模式。\n">
+<meta property='og:description' content="概述 大数据背景下，分区应该是所有组件必备的基本条件，否则面对海量数据时无论是计算还是存储都容易遇到瓶颈。跟其他消息系统一样，Pulsar通过Topic将消息数据进行业务层面划分管理，同时也支持Topic分区，通过将多个分区分布在多台Broker/机器上从而带来性能上的巨大提升以及无限的横向拓展能力。而一旦有了分区之后就会面临一个问题，但一条数据请求时应该将其发往哪个分区？目前Pulsar跟其他消息系统一样支持以下三种路由模式。\n">
 <meta property='og:url' content='https://sherlock-lin.github.io/p/pulsar%E6%B6%88%E6%81%AF%E8%B7%AF%E7%94%B1%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90/'>
 <meta property='og:site_name' content='夏洛克-林'>
 <meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-03-13T10:34:56&#43;08:00'/><meta property='article:modified_time' content='2024-03-13T10:34:56&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/pulsar%E6%B6%88%E6%81%AF%E8%B7%AF%E7%94%B1%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90/image-20240306152645225.png' />
 <meta name="twitter:title" content="Pulsar消息路由深入剖析">
-<meta name="twitter:description" content="一、概述 大数据背景下，分区应该是所有组件必备的基本条件，否则面对海量数据时无论是计算还是存储都容易遇到瓶颈。跟其他消息系统一样，Pulsar通过Topic将消息数据进行业务层面划分管理，同时也支持Topic分区，通过将多个分区分布在多台Broker/机器上从而带来性能上的巨大提升以及无限的横向拓展能力。而一旦有了分区之后就会面临一个问题，但一条数据请求时应该将其发往哪个分区？目前Pulsar跟其他消息系统一样支持以下三种路由模式。\n"><meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="概述 大数据背景下，分区应该是所有组件必备的基本条件，否则面对海量数据时无论是计算还是存储都容易遇到瓶颈。跟其他消息系统一样，Pulsar通过Topic将消息数据进行业务层面划分管理，同时也支持Topic分区，通过将多个分区分布在多台Broker/机器上从而带来性能上的巨大提升以及无限的横向拓展能力。而一旦有了分区之后就会面临一个问题，但一条数据请求时应该将其发往哪个分区？目前Pulsar跟其他消息系统一样支持以下三种路由模式。\n"><meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content='https://sherlock-lin.github.io/p/pulsar%E6%B6%88%E6%81%AF%E8%B7%AF%E7%94%B1%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90/image-20240306152645225.png' />
     </head>
     <body class="
@@ -266,30 +266,22 @@
         <div class="widget--toc">
             <nav id="TableOfContents">
   <ol>
-    <li><a href="#一概述">一、概述</a></li>
-    <li><a href="#二实战">二、实战</a>
+    <li><a href="#概述">概述</a></li>
+    <li><a href="#实战">实战</a>
       <ol>
-        <li>
-          <ol>
-            <li><a href="#1-轮询路由">1. 轮询路由</a></li>
-            <li><a href="#2-单分区路由">2. 单分区路由</a></li>
-            <li><a href="#3-自定义路由">3. 自定义路由</a></li>
-          </ol>
-        </li>
+        <li><a href="#轮询路由">轮询路由</a></li>
+        <li><a href="#单分区路由">单分区路由</a></li>
+        <li><a href="#自定义路由">自定义路由</a></li>
       </ol>
     </li>
-    <li><a href="#三源码分析">三、源码分析</a>
+    <li><a href="#源码分析">源码分析</a>
       <ol>
-        <li>
-          <ol>
-            <li><a href="#1-接口以及父类">1. 接口以及父类</a></li>
-            <li><a href="#2-轮询路由的实现">2. 轮询路由的实现</a></li>
-            <li><a href="#3-单分区路由">3. 单分区路由</a></li>
-          </ol>
-        </li>
+        <li><a href="#接口以及父类">接口以及父类</a></li>
+        <li><a href="#轮询路由的实现">轮询路由的实现</a></li>
+        <li><a href="#单分区路由-1">单分区路由</a></li>
       </ol>
     </li>
-    <li><a href="#四总结">四、总结</a></li>
+    <li><a href="#总结">总结</a></li>
   </ol>
 </nav>
         </div>
@@ -385,7 +377,7 @@
     <section class="article-content">
     
     
-    <h2 id="一概述">一、概述
+    <h2 id="概述">概述
 </h2><p>大数据背景下，分区应该是所有组件必备的基本条件，否则面对海量数据时无论是计算还是存储都容易遇到瓶颈。跟其他消息系统一样，Pulsar通过Topic将消息数据进行业务层面划分管理，同时也支持Topic分区，通过将多个分区分布在多台Broker/机器上从而带来性能上的巨大提升以及无限的横向拓展能力。而一旦有了分区之后就会面临一个问题，但一条数据请求时应该将其发往哪个分区？目前Pulsar跟其他消息系统一样支持以下三种路由模式。</p>
 <ol>
 <li>轮询路由
@@ -395,10 +387,10 @@
 <li>自定义分区路由
 自定义分区路由支持你通过实现MessageRouter接口来自定义路由逻辑，例如将特定key的消息发到指定的分区等</li>
 </ol>
-<h2 id="二实战">二、实战
+<h2 id="实战">实战
 </h2><p>消息路由发生在生产者端，在创建生产者是通过 <code>.messageRoutingMode()</code> 进行指定，下面就分别实战对比下这三种的路由效果</p>
-<h4 id="1-轮询路由">1. 轮询路由
-</h4><p>先试试轮询路由的策略，这是最常见也是默认的路由策略，通过  <code>.messageRoutingMode(MessageRoutingMode.RoundRobinPartition)</code> 进行指定，然后往里面通过同步方式往分区Topic里面写入数据</p>
+<h3 id="轮询路由">轮询路由
+</h3><p>先试试轮询路由的策略，这是最常见也是默认的路由策略，通过  <code>.messageRoutingMode(MessageRoutingMode.RoundRobinPartition)</code> 进行指定，然后往里面通过同步方式往分区Topic里面写入数据</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -431,8 +423,8 @@
 </div>
 </div><p>通过管理页面可以看到数据基本均匀的落在各个分区，从这个结果是能够反向验证数据是符合轮询发送后的效果</p>
 <img src="image-20240306152645225.png" alt="image-20240306152645225" style="zoom:50%;" />
-<h4 id="2-单分区路由">2. 单分区路由
-</h4><p>现在试试单分区路由的策略，通过  <code>.messageRoutingMode(MessageRoutingMode.SinglePartition)</code> 进行指定，并往分区Topic里面写入一批数据</p>
+<h3 id="单分区路由">单分区路由
+</h3><p>现在试试单分区路由的策略，通过  <code>.messageRoutingMode(MessageRoutingMode.SinglePartition)</code> 进行指定，并往分区Topic里面写入一批数据</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -476,8 +468,8 @@
 		data-flex-basis="446px"
 	
 ></p>
-<h4 id="3-自定义路由">3. 自定义路由
-</h4><p>在有些业务场景，我们需要将自己的业务逻辑“融入”路由策略，因此像Pulsar、Kafka等消息中间件都是支持用户进行路由规则的自定义的。这里为了好玩，咱们尝试将数据按照 1:2:3:4 等比例分别落在四个分区如何？说干就干，自定义路由也是比较简单的，只需要实现Pulsar MessageRouter接口的choosePartition方法即可，实现逻辑如下</p>
+<h3 id="自定义路由">自定义路由
+</h3><p>在有些业务场景，我们需要将自己的业务逻辑“融入”路由策略，因此像Pulsar、Kafka等消息中间件都是支持用户进行路由规则的自定义的。这里为了好玩，咱们尝试将数据按照 1:2:3:4 等比例分别落在四个分区如何？说干就干，自定义路由也是比较简单的，只需要实现Pulsar MessageRouter接口的choosePartition方法即可，实现逻辑如下</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -552,9 +544,9 @@
 </div>
 </div><p>在管理页面可以看到，数据是按照咱们预期的逻辑 1:2:3:4等比落在分区里面，嘿嘿～</p>
 <img src="image-20240306153829061.png" alt="image-20240306153829061" style="zoom:50%;" />
-<h2 id="三源码分析">三、源码分析
-</h2><h4 id="1-接口以及父类">1. 接口以及父类
-</h4><p>Pulsar中所有路由规则都是基于MessageRouter接口进行实现的，这个接口主要提供了choosePartition方法，只要重写这个方法即可自定义任意自己预期的逻辑</p>
+<h2 id="源码分析">源码分析
+</h2><h3 id="接口以及父类">接口以及父类
+</h3><p>Pulsar中所有路由规则都是基于MessageRouter接口进行实现的，这个接口主要提供了choosePartition方法，只要重写这个方法即可自定义任意自己预期的逻辑</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -658,8 +650,8 @@
 </span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="2-轮询路由的实现">2. 轮询路由的实现
-</h4><p>主要看choosePartition 方法的逻辑，首先如果消息带有key则针对key进行哈希然后取模，这样可以保证相同key的消息落在同一个分区。然后就是判断消息是否按批次进行发送的，如果是单条消息发送的话则通过一个累加计数器进行轮询分区，即可达到消息按照分区顺序逐个发送的效果；如果是按批次发送的话，则是根据时间戳进行取模，这样达到的效果就是每批数据都会随机发送到某一个分区</p>
+</div><h3 id="轮询路由的实现">轮询路由的实现
+</h3><p>主要看choosePartition 方法的逻辑，首先如果消息带有key则针对key进行哈希然后取模，这样可以保证相同key的消息落在同一个分区。然后就是判断消息是否按批次进行发送的，如果是单条消息发送的话则通过一个累加计数器进行轮询分区，即可达到消息按照分区顺序逐个发送的效果；如果是按批次发送的话，则是根据时间戳进行取模，这样达到的效果就是每批数据都会随机发送到某一个分区</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -720,8 +712,8 @@
 </span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="3-单分区路由">3. 单分区路由
-</h4><p>可以看到单分区的逻辑是比较简单且清晰的，如果有key就进行哈希取模，否则就发送到partitionIndex这个成员变量指定的分区去，那么这个partitionIndex指定的是哪个分区呢？通过代码能看到是从构造函数里面传进来的，因此跟踪下代码看看</p>
+</div><h3 id="单分区路由-1">单分区路由
+</h3><p>可以看到单分区的逻辑是比较简单且清晰的，如果有key就进行哈希取模，否则就发送到partitionIndex这个成员变量指定的分区去，那么这个partitionIndex指定的是哪个分区呢？通过代码能看到是从构造函数里面传进来的，因此跟踪下代码看看</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -819,7 +811,7 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h2 id="四总结">四、总结
+</div><h2 id="总结">总结
 </h2><p>通过以上内容相信你对Pulsar的路由规则有一定的了解了，如果想进一步了解可以尝试按照自己喜好实现下路由规则并观测是否按照预期运行，同时也可以跟踪Pulsar的源码看看实现是否符合预期。如果想彻底掌握Pulsar，最好自己跟踪下Pulsar的一些核心逻辑，这样不仅了解其底层是如何运作的，也能加深你对一些设计/特性的印象。</p>
 
 </section>

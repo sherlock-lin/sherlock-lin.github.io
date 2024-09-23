@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="zh-cn" dir="ltr">
     <head><meta charset='utf-8'>
-<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="一、Pulsar客户端简析 pulsar服务是经典的C/S架构，由客户端和服务端构成。服务端提供处理读写请求服务，客户端负责发起读写请求。pulsar将客户端按照读写分成了生产者和消费者，但是无论怎么分，它们本质上都是Pulsar客户端并有很多相同的地方，本篇就针对客户端进行分析。\n">
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="Pulsar客户端简析 pulsar服务是经典的C/S架构，由客户端和服务端构成。服务端提供处理读写请求服务，客户端负责发起读写请求。pulsar将客户端按照读写分成了生产者和消费者，但是无论怎么分，它们本质上都是Pulsar客户端并有很多相同的地方，本篇就针对客户端进行分析。\n">
 <title>PulsarClient源码解析</title>
 
 <link rel='canonical' href='https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/'>
 
 <link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="PulsarClient源码解析">
-<meta property='og:description' content="一、Pulsar客户端简析 pulsar服务是经典的C/S架构，由客户端和服务端构成。服务端提供处理读写请求服务，客户端负责发起读写请求。pulsar将客户端按照读写分成了生产者和消费者，但是无论怎么分，它们本质上都是Pulsar客户端并有很多相同的地方，本篇就针对客户端进行分析。\n">
+<meta property='og:description' content="Pulsar客户端简析 pulsar服务是经典的C/S架构，由客户端和服务端构成。服务端提供处理读写请求服务，客户端负责发起读写请求。pulsar将客户端按照读写分成了生产者和消费者，但是无论怎么分，它们本质上都是Pulsar客户端并有很多相同的地方，本篇就针对客户端进行分析。\n">
 <meta property='og:url' content='https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/'>
 <meta property='og:site_name' content='夏洛克-林'>
 <meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-07-17T10:34:21&#43;08:00'/><meta property='article:modified_time' content='2024-07-17T10:34:21&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651.png' />
 <meta name="twitter:title" content="PulsarClient源码解析">
-<meta name="twitter:description" content="一、Pulsar客户端简析 pulsar服务是经典的C/S架构，由客户端和服务端构成。服务端提供处理读写请求服务，客户端负责发起读写请求。pulsar将客户端按照读写分成了生产者和消费者，但是无论怎么分，它们本质上都是Pulsar客户端并有很多相同的地方，本篇就针对客户端进行分析。\n"><meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="Pulsar客户端简析 pulsar服务是经典的C/S架构，由客户端和服务端构成。服务端提供处理读写请求服务，客户端负责发起读写请求。pulsar将客户端按照读写分成了生产者和消费者，但是无论怎么分，它们本质上都是Pulsar客户端并有很多相同的地方，本篇就针对客户端进行分析。\n"><meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content='https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651.png' />
     </head>
     <body class="
@@ -266,27 +266,27 @@
         <div class="widget--toc">
             <nav id="TableOfContents">
   <ol>
-    <li><a href="#一pulsar客户端简析">一、Pulsar客户端简析</a></li>
-    <li><a href="#二创建客户端对象">二、创建客户端对象</a>
+    <li><a href="#pulsar客户端简析">Pulsar客户端简析</a></li>
+    <li><a href="#创建客户端对象">创建客户端对象</a>
       <ol>
-        <li><a href="#1创建流程">1、创建流程</a></li>
+        <li><a href="#创建流程">创建流程</a></li>
       </ol>
     </li>
-    <li><a href="#三创建网络连接池">三、创建网络连接池</a>
+    <li><a href="#创建网络连接池">创建网络连接池</a>
       <ol>
-        <li><a href="#1-初始化">1. 初始化</a></li>
-        <li><a href="#2-工作流程">2. 工作流程</a></li>
-        <li><a href="#3-小结">3. 小结</a></li>
+        <li><a href="#初始化">初始化</a></li>
+        <li><a href="#工作流程">工作流程</a></li>
+        <li><a href="#小结">小结</a></li>
       </ol>
     </li>
-    <li><a href="#四其他功能">四、其他功能</a>
+    <li><a href="#其他功能">其他功能</a>
       <ol>
-        <li><a href="#1-lookupservice">1. LookupService</a></li>
-        <li><a href="#2-memorylimitcontroller">2. MemoryLimitController</a></li>
-        <li><a href="#3-线程池">3. 线程池</a></li>
+        <li><a href="#lookupservice">LookupService</a></li>
+        <li><a href="#memorylimitcontroller">MemoryLimitController</a></li>
+        <li><a href="#线程池">线程池</a></li>
       </ol>
     </li>
-    <li><a href="#五总结">五、总结</a></li>
+    <li><a href="#总结">总结</a></li>
   </ol>
 </nav>
         </div>
@@ -382,7 +382,7 @@
     <section class="article-content">
     
     
-    <h2 id="一pulsar客户端简析">一、Pulsar客户端简析
+    <h2 id="pulsar客户端简析">Pulsar客户端简析
 </h2><p>pulsar服务是经典的C/S架构，由客户端和服务端构成。服务端提供处理读写请求服务，客户端负责发起读写请求。pulsar将客户端按照读写分成了生产者和消费者，但是无论怎么分，它们本质上都是Pulsar客户端并有很多相同的地方，本篇就针对客户端进行分析。</p>
 <p>下图是客户端的组成部分</p>
 <p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651.png"
@@ -423,8 +423,8 @@
 </ol>
 </li>
 </ol>
-<h2 id="二创建客户端对象">二、创建客户端对象
-</h2><h3 id="1创建流程">1、创建流程
+<h2 id="创建客户端对象">创建客户端对象
+</h2><h3 id="创建流程">创建流程
 </h3><p>先看看下面一段代码</p>
 <p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715213854794.png"
 	width="2066"
@@ -486,8 +486,8 @@
 	
 ></p>
 <p>这个构造方法虽然逻辑不少，但实际上重要的就是201行的初始化</p>
-<h2 id="三创建网络连接池">三、创建网络连接池
-</h2><h3 id="1-初始化">1. 初始化
+<h2 id="创建网络连接池">创建网络连接池
+</h2><h3 id="初始化">初始化
 </h3><p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716144229847.png"
 	width="1275"
 	height="74"
@@ -518,7 +518,7 @@
 	
 ></p>
 <p>这里初始化了Netty客户端，在跟外部创建网络连接时直接通过Netty客户端进行即可。客户端初始化阶段，网络连接池基本上就做了这些事，那么它是怎么工作的呢，让我们来往下看</p>
-<h3 id="2-工作流程">2. 工作流程
+<h3 id="工作流程">工作流程
 </h3><p>在创建生产者对象时，会走到PulsarClientImpl#getConnection这个方法，从这里开始进行分析</p>
 <p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716150347627.png"
 	width="1301"
@@ -626,11 +626,11 @@
 	
 ></p>
 <p>这里应该就很熟悉了，就是通过Netty客户端创建跟目标Broker节点的TCP连接。</p>
-<h3 id="3-小结">3. 小结
+<h3 id="小结">小结
 </h3><p>连接池是一个ConcurrentHashMap，key是IP+端口，value是ClientCnx来缓存这些连接。ClientCnx除了管理连接还管理所有的业务命令，例如发送消息是Send命令，服务端会对应一个handleSend方法来处理这个命令。</p>
 <p>连接池是客户端最重要的内容，无论是生产者还是消费者在创建的时候，都会去连接池获取/创建跟Broker的网络连接，后续的数据读写本质上都是通过Netty的channel进行的，因此可见它是相当重要的。连接池的设计将网络连接跟其他读写功能剥离开来达到职责分离的效果，同时通过池化概念，在多个生产者/消费者情况下不仅节约了网络连接的创建，同时还提升网络连接创建的性能(复用思路)。</p>
-<h2 id="四其他功能">四、其他功能
-</h2><h3 id="1-lookupservice">1. LookupService
+<h2 id="其他功能">其他功能
+</h2><h3 id="lookupservice">LookupService
 </h3><p>Lookup机制工作逻辑在 <a class="link" href="https://mp.weixin.qq.com/s?__biz=MzU4OTk0ODc1NQ==&amp;mid=2247484022&amp;idx=1&amp;sn=1098acb29558e3f067baa0101b62554f&amp;chksm=fdc4f04acab3795c2d3451cd0fecba3eaddea50be7898f33ba199637d2394e2386ff7bdf2338&amp;token=2082773986&amp;lang=zh_CN#rd"  target="_blank" rel="noopener"
     >Apache Pulsar源码解析之Lookup机制</a> 这篇文章已经说明了，这里主要一起看看它的创建逻辑。在PulsarClientImpl构造函数中，我们能看到以下代码</p>
 <p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716175013649.png"
@@ -678,7 +678,7 @@
 	
 ></p>
 <p>跟踪进去看，其他都是赋值、安全检查的工作，核心在161行的httpClient创建。  这里可以看到是创建的AsyncHttpClient对象，这是一个封装Netty的async-http-client-2.12.1.jar的外部包，这是支持异步处理的高性能HTTP工具包</p>
-<h3 id="2-memorylimitcontroller">2. MemoryLimitController
+<h3 id="memorylimitcontroller">MemoryLimitController
 </h3><p>由于MemoryLimitController的内容不多，就看看它的创建以及工作流程</p>
 <p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716183103606.png"
 	width="1295"
@@ -755,7 +755,7 @@
 	
 ></p>
 <p>这里的限制逻辑相当于将所有消费者的接收队列的容量减半，避免队列中的数据占用过多内存。由此可见MemoryLimitController目前做的还是比较小范围的内存控制，并且整体逻辑并不复杂。</p>
-<h3 id="3-线程池">3. 线程池
+<h3 id="线程池">线程池
 </h3><p>客户端对象初始化时候，会创建三个线程池，现在就来分析下它们的用途</p>
 <p><img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240716185103767.png"
 	width="1294"
@@ -816,7 +816,7 @@
 		data-flex-basis="1536px"
 	
 ></p>
-<h2 id="五总结">五、总结
+<h2 id="总结">总结
 </h2><ol>
 <li>PulsarClient中的EventLoopGroup负责创建TCP连接，ConnectionPool对象负责管理连接，在创建ConnectionPool对象时会通过EventLoopGroup创建连接。</li>
 <li>PulsarClient使用Netty来创建TCP连接，并管理一个连接池和两个线程池，所有Producer和Consumer都会复用PulsarClient的连接池和线程池，这样可以避免客户端创建过多的连接和线程。因此通常一个进程中只创建一个PulsarClient，每个Topic可以自己单独创建Producer和Consumer。</li>
