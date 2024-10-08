@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="环境准备 组件版本 Pulsar(3.3.0)\nMysql(8.0.39 Homebrew方式安装)\nPulsar连接插件 pulsar-io-debezium-mysql-3.3.0.nar\n插件下载地址，选择自己Pulsar对应的版本下载使用即可\nMySQL开启binlog 如果是mysql5的需要开启，mysql8的话默认开启，由于本次使用的是mysql8，因此mysql无须做任何操作\n">
+<title>PulsarIO集成mysql</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/pulsario%E9%9B%86%E6%88%90mysql/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="PulsarIO集成mysql">
+<meta property='og:description' content="环境准备 组件版本 Pulsar(3.3.0)\nMysql(8.0.39 Homebrew方式安装)\nPulsar连接插件 pulsar-io-debezium-mysql-3.3.0.nar\n插件下载地址，选择自己Pulsar对应的版本下载使用即可\nMySQL开启binlog 如果是mysql5的需要开启，mysql8的话默认开启，由于本次使用的是mysql8，因此mysql无须做任何操作\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/pulsario%E9%9B%86%E6%88%90mysql/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-10-08T17:29:07&#43;08:00'/><meta property='article:modified_time' content='2024-10-08T17:29:07&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008163436302.png' />
+<meta name="twitter:title" content="PulsarIO集成mysql">
+<meta name="twitter:description" content="环境准备 组件版本 Pulsar(3.3.0)\nMysql(8.0.39 Homebrew方式安装)\nPulsar连接插件 pulsar-io-debezium-mysql-3.3.0.nar\n插件下载地址，选择自己Pulsar对应的版本下载使用即可\nMySQL开启binlog 如果是mysql5的需要开启，mysql8的话默认开启，由于本次使用的是mysql8，因此mysql无须做任何操作\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008163436302.png' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#环境准备">环境准备</a>
+      <ol>
+        <li><a href="#组件版本">组件版本</a></li>
+        <li><a href="#mysql开启binlog">MySQL开启binlog</a></li>
+        <li><a href="#配置debezium-mysql-source-configyaml文件名可自定义">配置debezium-mysql-source-config.yaml（文件名可自定义）</a></li>
+      </ol>
+    </li>
+    <li><a href="#启动">启动</a>
+      <ol>
+        <li><a href="#mysql启动">MySQL启动</a></li>
+        <li><a href="#pulsar启动">pulsar启动</a></li>
+        <li><a href="#pulsar-sourcemysql启动">pulsar-source(mysql)启动</a></li>
+      </ol>
+    </li>
+    <li><a href="#验证">验证</a>
+      <ol>
+        <li><a href="#启动pulsar-消费者">启动Pulsar 消费者</a></li>
+        <li><a href="#插入数据">插入数据</a></li>
+        <li><a href="#查看消费情况">查看消费情况</a></li>
+        <li><a href="#查看消费情况批量插入">查看消费情况(批量插入)</a></li>
+      </ol>
+    </li>
+    <li><a href="#问题分析">问题分析</a>
+      <ol>
+        <li><a href="#启动source报错">启动source报错</a></li>
+        <li><a href="#启动消费报错">启动消费报错</a></li>
+      </ol>
+    </li>
+    <li><a href="#总结">总结</a></li>
+    <li><a href="#参考文献">参考文献</a></li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/pulsario%E9%9B%86%E6%88%90mysql/">
+                <img src="/p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008163436302_hu17826552015696949206.png"
+                        srcset="/p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008163436302_hu17826552015696949206.png 800w, /p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008163436302_hu16045600803783893955.png 1600w"
+                        width="800" 
+                        height="218" 
+                        loading="lazy"
+                        alt="Featured image of post PulsarIO集成mysql" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/pulsar/" style="background-color: #2a9d8f; color: #fff;">
+                Pulsar
+            </a>
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/pulsario%E9%9B%86%E6%88%90mysql/">PulsarIO集成mysql</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2024-10-08</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 3 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="环境准备">环境准备
+</h2><h3 id="组件版本">组件版本
+</h3><ul>
+<li>
+<p>Pulsar(3.3.0)</p>
+</li>
+<li>
+<p>Mysql(8.0.39 Homebrew方式安装)</p>
+</li>
+<li>
+<p>Pulsar连接插件 pulsar-io-debezium-mysql-3.3.0.nar</p>
+<p><a class="link" href="https://dlcdn.apache.org/pulsar/pulsar-3.3.0/connectors/"  target="_blank" rel="noopener"
+    >插件下载地址</a>，选择自己Pulsar对应的版本下载使用即可</p>
+</li>
+</ul>
+<h3 id="mysql开启binlog">MySQL开启binlog
+</h3><p>如果是mysql5的需要开启，mysql8的话默认开启，由于本次使用的是mysql8，因此mysql无须做任何操作</p>
+<h3 id="配置debezium-mysql-source-configyaml文件名可自定义">配置debezium-mysql-source-config.yaml（文件名可自定义）
+</h3><p>在connectors目录下创建debezium-mysql-source-config.yaml文件，用于source的启动，配置详情如下(可直接使用)</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">tenant: <span class="s2">&#34;sherlock-warehouse&#34;</span>  <span class="c1"># pulsar租户，可自定义</span>
+</span></span><span class="line"><span class="cl">namespace: <span class="s2">&#34;sherlock-namespace-1&#34;</span>  <span class="c1"># pulsar命名空间，可自定义</span>
+</span></span><span class="line"><span class="cl">name: <span class="s2">&#34;debezium-mysql-source&#34;</span>  <span class="c1"># source名，可自定义</span>
+</span></span><span class="line"><span class="cl">topicName: <span class="s2">&#34;debezium-mysql-topic&#34;</span> <span class="c1"># topic名，可自定义</span>
+</span></span><span class="line"><span class="cl">archive: <span class="s2">&#34;connectors/pulsar-io-debezium-mysql-3.3.0.nar&#34;</span> <span class="c1"># nar文件的存放位置，一般放在Pulsar安装目录下的connectors</span>
+</span></span><span class="line"><span class="cl">parallelism: <span class="m">1</span>  <span class="c1">#并行度</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">configs:
+</span></span><span class="line"><span class="cl">    <span class="c1">## config for mysql, docker image: debezium/example-mysql:0.8</span>
+</span></span><span class="line"><span class="cl">    database.hostname: <span class="s2">&#34;localhost&#34;</span>  <span class="c1"># 数据库ip</span>
+</span></span><span class="line"><span class="cl">    database.port: <span class="s2">&#34;3306&#34;</span>	<span class="c1"># 数据库port</span>
+</span></span><span class="line"><span class="cl">    database.user: <span class="s2">&#34;root&#34;</span>	<span class="c1"># 数据库用户名</span>
+</span></span><span class="line"><span class="cl">    database.password: <span class="s2">&#34;12345678&#34;</span> <span class="c1"># 数据库密码</span>
+</span></span><span class="line"><span class="cl">    database.server.id: <span class="s2">&#34;1&#34;</span>	<span class="c1"># mysql实例的唯一标识，对应my.ini下的server-id值，mysql8的话直接填1即可</span>
+</span></span><span class="line"><span class="cl">    database.server.name: <span class="s2">&#34;dbserver1&#34;</span> <span class="c1"># 服务名，Pulsar会根据它拼接Topic</span>
+</span></span><span class="line"><span class="cl">    database.whitelist: <span class="s2">&#34;flink&#34;</span>	<span class="c1"># 需要访问的数据库</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">## database.exclude.list: &#34;demo_dap&#34; # 不需要访问的数据库，可以没有这一条</span>
+</span></span><span class="line"><span class="cl">  	<span class="c1">## table.include.list:&#34;demo_esb.ack_sample,demo_esb.aac_sample&#34; #需要访问的表，不填默认所有表</span>
+</span></span><span class="line"><span class="cl">  	<span class="c1">## table.exclude.list:&#34;demo_esb.ack sample_test&#34; # 不需要访问的数据表，选填</span>
+</span></span><span class="line"><span class="cl">  	<span class="c1">## column.include.list:&#34;demo_esb.ack_sample.s_ID,demo_esb.ack_sample.s_coDE&#34; # 需要访问的列，不填默认所有列</span>
+</span></span><span class="line"><span class="cl">  	<span class="c1">##column.exclude.list:&#34;demo_esb.ack_sample.s TEsri # 不需要访问的列，选填</span>
+</span></span><span class="line"><span class="cl">  	<span class="c1">## include.schema.changes:true&#34; # 包含schema的改变，可以没有这一条</span>
+</span></span><span class="line"><span class="cl">    snapshot.mode: <span class="s2">&#34;schema_only_recovery&#34;</span>
+</span></span><span class="line"><span class="cl">    database.history: <span class="s2">&#34;org.apache.pulsar.io.debezium.PulsarDatabaseHistory&#34;</span>
+</span></span><span class="line"><span class="cl">    database.history.pulsar.topic: <span class="s2">&#34;history-topic&#34;</span>
+</span></span><span class="line"><span class="cl">    database.history.pulsar.service.url: <span class="s2">&#34;pulsar://127.0.0.1:6650&#34;</span>	<span class="c1"># pulsar集群服务地址</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">## KEY_CONVERTER_CLASS_CONFIG, VALUE_CONVERTER_CLASS_CONFIG</span>
+</span></span><span class="line"><span class="cl">    key.converter: <span class="s2">&#34;org.apache.kafka.connect.json.JsonConverter&#34;</span>
+</span></span><span class="line"><span class="cl">    value.converter: <span class="s2">&#34;org.apache.kafka.connect.json.JsonConverter&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">## OFFSET_STORAGE_TOPIC_CONFIG</span>
+</span></span><span class="line"><span class="cl">    offset.storage.topic: <span class="s2">&#34;offset-topic&#34;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="启动">启动
+</h2><h3 id="mysql启动">MySQL启动
+</h3><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">sudo</span><span class="w"> </span><span class="n">mysql</span><span class="p">.</span><span class="na">server</span><span class="w"> </span><span class="n">start</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="pulsar启动">pulsar启动
+</h3><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">bin</span><span class="o">/</span><span class="n">pulsar</span><span class="o">-</span><span class="n">daemon</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="n">zookeeper</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">bin</span><span class="o">/</span><span class="n">pulsar</span><span class="o">-</span><span class="n">daemon</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="n">bookie</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">bin</span><span class="o">/</span><span class="n">pulsar</span><span class="o">-</span><span class="n">daemon</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="n">broker</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>也可以以单节点方式启动Broker <code>pulsar standalone</code></p>
+<h3 id="pulsar-sourcemysql启动">pulsar-source(mysql)启动
+</h3><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">bin</span><span class="o">/</span><span class="n">pulsar</span><span class="o">-</span><span class="n">admin</span><span class="w"> </span><span class="n">source</span><span class="w"> </span><span class="n">localrun</span><span class="w"> </span><span class="o">--</span><span class="n">source</span><span class="o">-</span><span class="n">config</span><span class="o">-</span><span class="n">file</span><span class="w"> </span><span class="n">connectors</span><span class="o">/</span><span class="n">debezium</span><span class="o">-</span><span class="n">mysql</span><span class="o">-</span><span class="n">source</span><span class="o">-</span><span class="n">config</span><span class="p">.</span><span class="na">yaml</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看pulsar对应的namespace下已创建对应的Topic，可以看到这里是三层管理如 <strong>dbserver1.flink.user</strong></p>
+<p>dbserver1是用来标记这个flink source实例，flink是监听的数据库，user是监听的表。也就是每张被监听的mysql表在pulsar都有唯一对应的Topic</p>
+<p><img src="/p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008163436302.png"
+	width="1903"
+	height="519"
+	srcset="/p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008163436302_hu11580320439732163752.png 480w, /p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008163436302_hu12954032378206150734.png 1024w"
+	loading="lazy"
+	
+		alt="Pulsar Console管理页面"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="366"
+		data-flex-basis="880px"
+	
+></p>
+<h2 id="验证">验证
+</h2><h3 id="启动pulsar-消费者">启动Pulsar 消费者
+</h3><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">bin</span><span class="o">/</span><span class="n">pulsar</span><span class="o">-</span><span class="n">client</span><span class="w"> </span><span class="n">consume</span><span class="w"> </span><span class="o">-</span><span class="n">s</span><span class="w"> </span><span class="s">&#34;first-subscription&#34;</span><span class="w"> </span><span class="n">persistent</span><span class="p">:</span><span class="c1">//sherlock-warehouse/sherlock-namespace-1/dbserver1.flink.user -n 0</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="插入数据">插入数据
+</h3><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">insert</span><span class="w">  </span><span class="n">into</span><span class="w"> </span><span class="err">`</span><span class="n">user</span><span class="err">`</span><span class="p">(</span><span class="err">`</span><span class="n">name</span><span class="err">`</span><span class="p">,</span><span class="err">`</span><span class="n">age</span><span class="err">`</span><span class="p">,</span><span class="err">`</span><span class="n">status</span><span class="err">`</span><span class="p">)</span><span class="w"> </span><span class="n">values</span><span class="w"> </span><span class="p">(</span><span class="err">&#39;</span><span class="n">hadoop123</span><span class="err">&#39;</span><span class="p">,</span><span class="n">17</span><span class="p">,</span><span class="n">0</span><span class="p">);</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><img src="/p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008162756127.png"
+	width="1710"
+	height="278"
+	srcset="/p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008162756127_hu11318308701426117385.png 480w, /p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008162756127_hu4717347186123278661.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241008162756127"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="615"
+		data-flex-basis="1476px"
+	
+></p>
+<h3 id="查看消费情况">查看消费情况
+</h3><p><img src="/p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008162817617.png"
+	width="2860"
+	height="170"
+	srcset="/p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008162817617_hu2054252044152965315.png 480w, /p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008162817617_hu5189661131849128825.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241008162817617"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1682"
+		data-flex-basis="4037px"
+	
+></p>
+<h3 id="查看消费情况批量插入">查看消费情况(批量插入)
+</h3><p>通过faker生成多条信息插入到mysql，可以实时看到pulsar也监听到最新的数据变动</p>
+<p><img src="/p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008165558814.png"
+	width="2876"
+	height="1578"
+	srcset="/p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008165558814_hu6350335426845893127.png 480w, /p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008165558814_hu12169273019060756949.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241008165558814"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="182"
+		data-flex-basis="437px"
+	
+></p>
+<h2 id="问题分析">问题分析
+</h2><h3 id="启动source报错">启动source报错
+</h3><p>分析后发现可能是在监听mysql历史变更binlog时出现异常导致的，由于本次只是测试验证，因此新建一个mysql 数据库以及表来进行验证，通过新库表验证不会报此问题</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">2024</span><span class="o">-</span><span class="n">09</span><span class="o">-</span><span class="n">29T17</span><span class="p">:</span><span class="n">55</span><span class="p">:</span><span class="n">42</span><span class="p">,</span><span class="n">424</span><span class="o">+</span><span class="n">0800</span><span class="w"> </span><span class="o">[</span><span class="n">blc</span><span class="o">-</span><span class="n">localhost</span><span class="p">:</span><span class="n">3306</span><span class="o">]</span><span class="w"> </span><span class="n">ERROR</span><span class="w"> </span><span class="n">io</span><span class="p">.</span><span class="na">debezium</span><span class="p">.</span><span class="na">connector</span><span class="p">.</span><span class="na">mysql</span><span class="p">.</span><span class="na">MySqlStreamingChangeEventSource</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">Error</span><span class="w"> </span><span class="n">during</span><span class="w"> </span><span class="n">binlog</span><span class="w"> </span><span class="n">processing</span><span class="p">.</span><span class="w"> </span><span class="n">Last</span><span class="w"> </span><span class="n">offset</span><span class="w"> </span><span class="n">stored</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="n">transaction_id</span><span class="o">=</span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="n">file</span><span class="o">=</span><span class="n">binlog</span><span class="p">.</span><span class="na">000004</span><span class="p">,</span><span class="w"> </span><span class="n">pos</span><span class="o">=</span><span class="n">4905</span><span class="p">,</span><span class="w"> </span><span class="n">server_id</span><span class="o">=</span><span class="n">1</span><span class="p">,</span><span class="w"> </span><span class="n">event</span><span class="o">=</span><span class="n">1</span><span class="p">},</span><span class="w"> </span><span class="n">binlog</span><span class="w"> </span><span class="n">reader</span><span class="w"> </span><span class="n">near</span><span class="w"> </span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">binlog</span><span class="p">.</span><span class="na">000004</span><span class="o">/</span><span class="n">4980</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">2024</span><span class="o">-</span><span class="n">09</span><span class="o">-</span><span class="n">29T17</span><span class="p">:</span><span class="n">55</span><span class="p">:</span><span class="n">42</span><span class="p">,</span><span class="n">424</span><span class="o">+</span><span class="n">0800</span><span class="w"> </span><span class="o">[</span><span class="n">blc</span><span class="o">-</span><span class="n">localhost</span><span class="p">:</span><span class="n">3306</span><span class="o">]</span><span class="w"> </span><span class="n">ERROR</span><span class="w"> </span><span class="n">io</span><span class="p">.</span><span class="na">debezium</span><span class="p">.</span><span class="na">pipeline</span><span class="p">.</span><span class="na">ErrorHandler</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">Producer</span><span class="w"> </span><span class="n">failure</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">io</span><span class="p">.</span><span class="na">debezium</span><span class="p">.</span><span class="na">DebeziumException</span><span class="p">:</span><span class="w"> </span><span class="n">Error</span><span class="w"> </span><span class="n">processing</span><span class="w"> </span><span class="n">binlog</span><span class="w"> </span><span class="n">event</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">at</span><span class="w"> </span><span class="n">io</span><span class="p">.</span><span class="na">debezium</span><span class="p">.</span><span class="na">connector</span><span class="p">.</span><span class="na">mysql</span><span class="p">.</span><span class="na">MySqlStreamingChangeEventSource</span><span class="p">.</span><span class="na">handleEvent</span><span class="p">(</span><span class="n">MySqlStreamingChangeEventSource</span><span class="p">.</span><span class="na">java</span><span class="p">:</span><span class="n">374</span><span class="p">)</span><span class="w"> </span><span class="o">~[</span><span class="n">debezium</span><span class="o">-</span><span class="n">connector</span><span class="o">-</span><span class="n">mysql</span><span class="o">-</span><span class="n">1</span><span class="p">.</span><span class="na">9</span><span class="p">.</span><span class="na">7</span><span class="p">.</span><span class="na">Final</span><span class="p">.</span><span class="na">jar</span><span class="p">:</span><span class="n">1</span><span class="p">.</span><span class="na">9</span><span class="p">.</span><span class="na">7</span><span class="p">.</span><span class="na">Final</span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">at</span><span class="w"> </span><span class="n">io</span><span class="p">.</span><span class="na">debezium</span><span class="p">.</span><span class="na">connector</span><span class="p">.</span><span class="na">mysql</span><span class="p">.</span><span class="na">MySqlStreamingChangeEventSource</span><span class="p">.</span><span class="na">lambda$execute$25</span><span class="p">(</span><span class="n">MySqlStreamingChangeEventSource</span><span class="p">.</span><span class="na">java</span><span class="p">:</span><span class="n">874</span><span class="p">)</span><span class="w"> </span><span class="o">~[</span><span class="n">debezium</span><span class="o">-</span><span class="n">connector</span><span class="o">-</span><span class="n">mysql</span><span class="o">-</span><span class="n">1</span><span class="p">.</span><span class="na">9</span><span class="p">.</span><span class="na">7</span><span class="p">.</span><span class="na">Final</span><span class="p">.</span><span class="na">jar</span><span class="p">:</span><span class="n">1</span><span class="p">.</span><span class="na">9</span><span class="p">.</span><span class="na">7</span><span class="p">.</span><span class="na">Final</span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">at</span><span class="w"> </span><span class="n">com</span><span class="p">.</span><span class="na">github</span><span class="p">.</span><span class="na">shyiko</span><span class="p">.</span><span class="na">mysql</span><span class="p">.</span><span class="na">binlog</span><span class="p">.</span><span class="na">BinaryLogClient</span><span class="p">.</span><span class="na">notifyEventListeners</span><span class="p">(</span><span class="n">BinaryLogClient</span><span class="p">.</span><span class="na">java</span><span class="p">:</span><span class="n">1246</span><span class="p">)</span><span class="w"> </span><span class="o">[</span><span class="n">mysql</span><span class="o">-</span><span class="n">binlog</span><span class="o">-</span><span class="n">connector</span><span class="o">-</span><span class="n">java</span><span class="o">-</span><span class="n">0</span><span class="p">.</span><span class="na">27</span><span class="p">.</span><span class="na">2</span><span class="p">.</span><span class="na">jar</span><span class="p">:</span><span class="n">0</span><span class="p">.</span><span class="na">27</span><span class="p">.</span><span class="na">2</span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">at</span><span class="w"> </span><span class="n">com</span><span class="p">.</span><span class="na">github</span><span class="p">.</span><span class="na">shyiko</span><span class="p">.</span><span class="na">mysql</span><span class="p">.</span><span class="na">binlog</span><span class="p">.</span><span class="na">BinaryLogClient</span><span class="p">.</span><span class="na">listenForEventPackets</span><span class="p">(</span><span class="n">BinaryLogClient</span><span class="p">.</span><span class="na">java</span><span class="p">:</span><span class="n">1072</span><span class="p">)</span><span class="w"> </span><span class="o">[</span><span class="n">mysql</span><span class="o">-</span><span class="n">binlog</span><span class="o">-</span><span class="n">connector</span><span class="o">-</span><span class="n">java</span><span class="o">-</span><span class="n">0</span><span class="p">.</span><span class="na">27</span><span class="p">.</span><span class="na">2</span><span class="p">.</span><span class="na">jar</span><span class="p">:</span><span class="n">0</span><span class="p">.</span><span class="na">27</span><span class="p">.</span><span class="na">2</span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">at</span><span class="w"> </span><span class="n">com</span><span class="p">.</span><span class="na">github</span><span class="p">.</span><span class="na">shyiko</span><span class="p">.</span><span class="na">mysql</span><span class="p">.</span><span class="na">binlog</span><span class="p">.</span><span class="na">BinaryLogClient</span><span class="p">.</span><span class="na">connect</span><span class="p">(</span><span class="n">BinaryLogClient</span><span class="p">.</span><span class="na">java</span><span class="p">:</span><span class="n">631</span><span class="p">)</span><span class="w"> </span><span class="o">[</span><span class="n">mysql</span><span class="o">-</span><span class="n">binlog</span><span class="o">-</span><span class="n">connector</span><span class="o">-</span><span class="n">java</span><span class="o">-</span><span class="n">0</span><span class="p">.</span><span class="na">27</span><span class="p">.</span><span class="na">2</span><span class="p">.</span><span class="na">jar</span><span class="p">:</span><span class="n">0</span><span class="p">.</span><span class="na">27</span><span class="p">.</span><span class="na">2</span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">at</span><span class="w"> </span><span class="n">com</span><span class="p">.</span><span class="na">github</span><span class="p">.</span><span class="na">shyiko</span><span class="p">.</span><span class="na">mysql</span><span class="p">.</span><span class="na">binlog</span><span class="p">.</span><span class="na">BinaryLogClient$7</span><span class="p">.</span><span class="na">run</span><span class="p">(</span><span class="n">BinaryLogClient</span><span class="p">.</span><span class="na">java</span><span class="p">:</span><span class="n">932</span><span class="p">)</span><span class="w"> </span><span class="o">[</span><span class="n">mysql</span><span class="o">-</span><span class="n">binlog</span><span class="o">-</span><span class="n">connector</span><span class="o">-</span><span class="n">java</span><span class="o">-</span><span class="n">0</span><span class="p">.</span><span class="na">27</span><span class="p">.</span><span class="na">2</span><span class="p">.</span><span class="na">jar</span><span class="p">:</span><span class="n">0</span><span class="p">.</span><span class="na">27</span><span class="p">.</span><span class="na">2</span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">at</span><span class="w"> </span><span class="n">java</span><span class="p">.</span><span class="na">base</span><span class="o">/</span><span class="n">java</span><span class="p">.</span><span class="na">lang</span><span class="p">.</span><span class="na">Thread</span><span class="p">.</span><span class="na">run</span><span class="p">(</span><span class="n">Thread</span><span class="p">.</span><span class="na">java</span><span class="p">:</span><span class="n">842</span><span class="p">)</span><span class="w"> </span><span class="o">[?</span><span class="p">:</span><span class="o">?]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Caused</span><span class="w"> </span><span class="n">by</span><span class="p">:</span><span class="w"> </span><span class="n">io</span><span class="p">.</span><span class="na">debezium</span><span class="p">.</span><span class="na">DebeziumException</span><span class="p">:</span><span class="w"> </span><span class="n">Encountered</span><span class="w"> </span><span class="n">change</span><span class="w"> </span><span class="n">event</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="n">test</span><span class="p">.</span><span class="na">test</span><span class="w"> </span><span class="n">whose</span><span class="w"> </span><span class="n">schema</span><span class="w"> </span><span class="n">isn</span><span class="err">&#39;</span><span class="n">t</span><span class="w"> </span><span class="n">known</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="k">this</span><span class="w"> </span><span class="n">connector</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">at</span><span class="w"> </span><span class="n">io</span><span class="p">.</span><span class="na">debezium</span><span class="p">.</span><span class="na">connector</span><span class="p">.</span><span class="na">mysql</span><span class="p">.</span><span class="na">MySqlStreamingChangeEventSource</span><span class="p">.</span><span class="na">informAboutUnknownTableIfRequired</span><span class="p">(</span><span class="n">MySqlStreamingChangeEventSource</span><span class="p">.</span><span class="na">java</span><span class="p">:</span><span class="n">650</span><span class="p">)</span><span class="w"> </span><span class="o">~[</span><span class="n">debezium</span><span class="o">-</span><span class="n">connector</span><span class="o">-</span><span class="n">mysql</span><span class="o">-</span><span class="n">1</span><span class="p">.</span><span class="na">9</span><span class="p">.</span><span class="na">7</span><span class="p">.</span><span class="na">Final</span><span class="p">.</span><span class="na">jar</span><span class="p">:</span><span class="n">1</span><span class="p">.</span><span class="na">9</span><span class="p">.</span><span class="na">7</span><span class="p">.</span><span class="na">Final</span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">at</span><span class="w"> </span><span class="n">io</span><span class="p">.</span><span class="na">debezium</span><span class="p">.</span><span class="na">connector</span><span class="p">.</span><span class="na">mysql</span><span class="p">.</span><span class="na">MySqlStreamingChangeEventSource</span><span class="p">.</span><span class="na">informAboutUnknownTableIfRequired</span><span class="p">(</span><span class="n">MySqlStreamingChangeEventSource</span><span class="p">.</span><span class="na">java</span><span class="p">:</span><span class="n">691</span><span class="p">)</span><span class="w"> </span><span class="o">~[</span><span class="n">debezium</span><span class="o">-</span><span class="n">connector</span><span class="o">-</span><span class="n">mysql</span><span class="o">-</span><span class="n">1</span><span class="p">.</span><span class="na">9</span><span class="p">.</span><span class="na">7</span><span class="p">.</span><span class="na">Final</span><span class="p">.</span><span class="na">jar</span><span class="p">:</span><span class="n">1</span><span class="p">.</span><span class="na">9</span><span class="p">.</span><span class="na">7</span><span class="p">.</span><span class="na">Final</span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">at</span><span class="w"> </span><span class="n">io</span><span class="p">.</span><span class="na">debezium</span><span class="p">.</span><span class="na">connector</span><span class="p">.</span><span class="na">mysql</span><span class="p">.</span><span class="na">MySqlStreamingChangeEventSource</span><span class="p">.</span><span class="na">handleUpdateTableMetadata</span><span class="p">(</span><span class="n">MySqlStreamingChangeEventSource</span><span class="p">.</span><span class="na">java</span><span class="p">:</span><span class="n">628</span><span class="p">)</span><span class="w"> </span><span class="o">~[</span><span class="n">debezium</span><span class="o">-</span><span class="n">connector</span><span class="o">-</span><span class="n">mysql</span><span class="o">-</span><span class="n">1</span><span class="p">.</span><span class="na">9</span><span class="p">.</span><span class="na">7</span><span class="p">.</span><span class="na">Final</span><span class="p">.</span><span class="na">jar</span><span class="p">:</span><span class="n">1</span><span class="p">.</span><span class="na">9</span><span class="p">.</span><span class="na">7</span><span class="p">.</span><span class="na">Final</span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">at</span><span class="w"> </span><span class="n">io</span><span class="p">.</span><span class="na">debezium</span><span class="p">.</span><span class="na">connector</span><span class="p">.</span><span class="na">mysql</span><span class="p">.</span><span class="na">MySqlStreamingChangeEventSource</span><span class="p">.</span><span class="na">lambda$execute$13</span><span class="p">(</span><span class="n">MySqlStreamingChangeEventSource</span><span class="p">.</span><span class="na">java</span><span class="p">:</span><span class="n">845</span><span class="p">)</span><span class="w"> </span><span class="o">~[</span><span class="n">debezium</span><span class="o">-</span><span class="n">connector</span><span class="o">-</span><span class="n">mysql</span><span class="o">-</span><span class="n">1</span><span class="p">.</span><span class="na">9</span><span class="p">.</span><span class="na">7</span><span class="p">.</span><span class="na">Final</span><span class="p">.</span><span class="na">jar</span><span class="p">:</span><span class="n">1</span><span class="p">.</span><span class="na">9</span><span class="p">.</span><span class="na">7</span><span class="p">.</span><span class="na">Final</span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">at</span><span class="w"> </span><span class="n">io</span><span class="p">.</span><span class="na">debezium</span><span class="p">.</span><span class="na">connector</span><span class="p">.</span><span class="na">mysql</span><span class="p">.</span><span class="na">MySqlStreamingChangeEventSource</span><span class="p">.</span><span class="na">handleEvent</span><span class="p">(</span><span class="n">MySqlStreamingChangeEventSource</span><span class="p">.</span><span class="na">java</span><span class="p">:</span><span class="n">354</span><span class="p">)</span><span class="w"> </span><span class="o">~[</span><span class="n">debezium</span><span class="o">-</span><span class="n">connector</span><span class="o">-</span><span class="n">mysql</span><span class="o">-</span><span class="n">1</span><span class="p">.</span><span class="na">9</span><span class="p">.</span><span class="na">7</span><span class="p">.</span><span class="na">Final</span><span class="p">.</span><span class="na">jar</span><span class="p">:</span><span class="n">1</span><span class="p">.</span><span class="na">9</span><span class="p">.</span><span class="na">7</span><span class="p">.</span><span class="na">Final</span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">...</span><span class="w"> </span><span class="n">6</span><span class="w"> </span><span class="n">more</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="启动消费报错">启动消费报错
+</h3><p>用java客户端消费报的错，</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">Exception</span><span class="w"> </span><span class="n">in</span><span class="w"> </span><span class="n">thread</span><span class="w"> </span><span class="s">&#34;main&#34;</span><span class="w"> </span><span class="n">org</span><span class="p">.</span><span class="na">apache</span><span class="p">.</span><span class="na">pulsar</span><span class="p">.</span><span class="na">client</span><span class="p">.</span><span class="na">api</span><span class="p">.</span><span class="na">PulsarClientException$IncompatibleSchemaException</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="s">&#34;errorMsg&#34;</span><span class="p">:</span><span class="s">&#34;Key schemas or Value schemas are different schema type, from key schema type is JSON and to key schema is BYTES, from value schema is JSON and to value schema is BYTES&#34;</span><span class="p">,</span><span class="s">&#34;reqId&#34;</span><span class="p">:</span><span class="n">2131068157376809305</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;remote&#34;</span><span class="p">:</span><span class="s">&#34;localhost/127.0.0.1:6650&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;local&#34;</span><span class="p">:</span><span class="s">&#34;/127.0.0.1:50274&#34;</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">at</span><span class="w"> </span><span class="n">org</span><span class="p">.</span><span class="na">apache</span><span class="p">.</span><span class="na">pulsar</span><span class="p">.</span><span class="na">client</span><span class="p">.</span><span class="na">api</span><span class="p">.</span><span class="na">PulsarClientException</span><span class="p">.</span><span class="na">unwrap</span><span class="p">(</span><span class="n">PulsarClientException</span><span class="p">.</span><span class="na">java</span><span class="p">:</span><span class="n">1069</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">at</span><span class="w"> </span><span class="n">org</span><span class="p">.</span><span class="na">apache</span><span class="p">.</span><span class="na">pulsar</span><span class="p">.</span><span class="na">client</span><span class="p">.</span><span class="na">impl</span><span class="p">.</span><span class="na">ConsumerBuilderImpl</span><span class="p">.</span><span class="na">subscribe</span><span class="p">(</span><span class="n">ConsumerBuilderImpl</span><span class="p">.</span><span class="na">java</span><span class="p">:</span><span class="n">103</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">at</span><span class="w"> </span><span class="n">com</span><span class="p">.</span><span class="na">sherlock</span><span class="p">.</span><span class="na">admin</span><span class="p">.</span><span class="na">ManagerConsumer</span><span class="p">.</span><span class="na">binLogConsumer</span><span class="p">(</span><span class="n">ManagerConsumer</span><span class="p">.</span><span class="na">java</span><span class="p">:</span><span class="n">130</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">at</span><span class="w"> </span><span class="n">com</span><span class="p">.</span><span class="na">sherlock</span><span class="p">.</span><span class="na">admin</span><span class="p">.</span><span class="na">ManagerConsumer</span><span class="p">.</span><span class="na">main</span><span class="p">(</span><span class="n">ManagerConsumer</span><span class="p">.</span><span class="na">java</span><span class="p">:</span><span class="n">42</span><span class="p">)</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="总结">总结
+</h2><p>可以看到集成还是比较简单的，这个工作思路本质上跟Flink CDC的是一样的，都是对开源的debezium进行二次封装，debezium是一个java开发的专门用于监听数据库变化的项目，因此如果想深入了解数据库数据变化感知细节的话可以对它进行研究。如果当前公司生态是采用的Pulsar，例如IoT行业的公司，有同步数据库的场景但是不想依赖其他大数据相关的组件如Flink等，可以优先考虑直接使用Pulsar IO进行数据集成。</p>
+<h2 id="参考文献">参考文献
+</h2><ol>
+<li><a class="link" href="https://blog.nowcoder.net/n/53781cb7811241609fcd6328655c150c"  target="_blank" rel="noopener"
+    >Pulsar IO之CDC Debezium Connector</a></li>
+<li><a class="link" href="https://blog.csdn.net/weixin_46048207/article/details/136802251"  target="_blank" rel="noopener"
+    >Pulsar集成Debezium监听MySQL日志</a></li>
+<li><a class="link" href="https://pulsar.apache.org/docs/3.3.x/io-debezium-source/#example-of-mysql"  target="_blank" rel="noopener"
+    >官方配置介绍</a></li>
+</ol>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240913141630196.cfdbfabbec9931a0e8aa797475dd75ef_hu14409126970437613443.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生"
+                        
+                        data-hash="md5-z9v6u&#43;yZMaDoqnl0dd117w==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/schema%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/">
+        
+        
+            <div class="article-image">
+                <img src="/p/schema%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/image-20240308104136110.ac62fe16bef7c35fa075c319ed270052_hu12371496663848303101.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Schema深度解析"
+                        
+                        data-hash="md5-rGL&#43;Fr73w1&#43;gdcMZ7ScAUg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Schema深度解析</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E7%AE%A1%E7%90%86%E6%B5%81%E5%88%9B%E5%BB%BAschema%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240801111546500.a4a283d1848dd7c78dd2f8154c075ded_hu9510561139179840573.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 管理流创建schema流程源码解析"
+                        
+                        data-hash="md5-pKKD0YSN18eN0vgVTAdd7Q==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">管理流创建schema流程源码解析</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">
+        
+        
+            <div class="article-image">
+                <img src="/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240715212010651.a3b365edff64e8f7e171ba3a9b5b8025_hu1088019663378991776.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post PulsarClient源码解析"
+                        
+                        data-hash="md5-o7Nl7f9k6Pfhcbo6m1uAJQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">PulsarClient源码解析</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2%E7%94%9F%E4%BA%A7%E8%80%85%E6%8B%A6%E6%88%AA%E5%99%A8%E7%9A%84%E4%BD%BF%E7%94%A8%E4%BB%A5%E5%8F%8A%E6%BA%90%E7%A0%81%E8%AE%BE%E8%AE%A1/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2%E7%94%9F%E4%BA%A7%E8%80%85%E6%8B%A6%E6%88%AA%E5%99%A8%E7%9A%84%E4%BD%BF%E7%94%A8%E4%BB%A5%E5%8F%8A%E6%BA%90%E7%A0%81%E8%AE%BE%E8%AE%A1/image-20240419110502648.3d31dddee53536dbcc4c1b80870fdf94_hu16245328447067671180.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 深入探索生产者拦截器的使用以及源码设计"
+                        
+                        data-hash="md5-PTHd3uU1NtvMTBuAhw/flA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">深入探索生产者拦截器的使用以及源码设计</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
