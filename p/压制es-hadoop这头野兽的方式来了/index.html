@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html lang="zh-cn" dir="ltr">
     <head><meta charset='utf-8'>
-<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="引言 缓存，这是一个经久不衰的话题，它通过“空间换时间”的战术不仅能够极大提升处理查询性能还能很好的保护底层资源。最近针对系统数据缓存的优化后，由于这是一个通用的场景并且有了一点心得因此在这里分享出来。\n">
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="背景 每天elasticsearch集群在上午某个时间段CPU几乎打满，此时访问elasticsearch的服务rt会跟着抖动，通过排查发现是由于这个时间段会有数据通过hive任务写到elasticsearch，这个hive任务使用的是ES-Hadoop插件做的数据导入，整个问题的罪魁祸首已经发现了，那么应该怎么去解决呢？\n">
 <title>压制es Hadoop这头野兽的方式来了</title>
 
 <link rel='canonical' href='https://sherlock-lin.github.io/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/'>
 
 <link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="压制es Hadoop这头野兽的方式来了">
-<meta property='og:description' content="引言 缓存，这是一个经久不衰的话题，它通过“空间换时间”的战术不仅能够极大提升处理查询性能还能很好的保护底层资源。最近针对系统数据缓存的优化后，由于这是一个通用的场景并且有了一点心得因此在这里分享出来。\n">
+<meta property='og:description' content="背景 每天elasticsearch集群在上午某个时间段CPU几乎打满，此时访问elasticsearch的服务rt会跟着抖动，通过排查发现是由于这个时间段会有数据通过hive任务写到elasticsearch，这个hive任务使用的是ES-Hadoop插件做的数据导入，整个问题的罪魁祸首已经发现了，那么应该怎么去解决呢？\n">
 <meta property='og:url' content='https://sherlock-lin.github.io/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/'>
 <meta property='og:site_name' content='夏洛克-林'>
-<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-10-14T00:15:06&#43;08:00'/><meta property='article:modified_time' content='2024-10-14T00:15:06&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240412140549821.png' />
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-10-14T00:15:06&#43;08:00'/><meta property='article:modified_time' content='2024-10-14T00:15:06&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221185820644.png' />
 <meta name="twitter:title" content="压制es Hadoop这头野兽的方式来了">
-<meta name="twitter:description" content="引言 缓存，这是一个经久不衰的话题，它通过“空间换时间”的战术不仅能够极大提升处理查询性能还能很好的保护底层资源。最近针对系统数据缓存的优化后，由于这是一个通用的场景并且有了一点心得因此在这里分享出来。\n"><meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240412140549821.png' />
+<meta name="twitter:description" content="背景 每天elasticsearch集群在上午某个时间段CPU几乎打满，此时访问elasticsearch的服务rt会跟着抖动，通过排查发现是由于这个时间段会有数据通过hive任务写到elasticsearch，这个hive任务使用的是ES-Hadoop插件做的数据导入，整个问题的罪魁祸首已经发现了，那么应该怎么去解决呢？\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221185820644.png' />
     </head>
     <body class="
     article-page
@@ -270,10 +270,11 @@
       <ol>
         <li>
           <ol>
-            <li><a href="#引言">引言</a></li>
-            <li><a href="#案例">案例</a></li>
-            <li><a href="#分析">分析</a></li>
-            <li><a href="#我的实现">我的实现</a></li>
+            <li><a href="#背景">背景</a></li>
+            <li><a href="#优化方案一">优化方案一</a></li>
+            <li><a href="#优化方案二">优化方案二</a></li>
+            <li><a href="#优化方案三">优化方案三</a></li>
+            <li><a href="#补充说明">补充说明</a></li>
             <li><a href="#总结">总结</a></li>
           </ol>
         </li>
@@ -294,10 +295,10 @@
     <header class="article-header">
         <div class="article-image">
             <a href="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/">
-                <img src="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240412140549821_hu7342079753961040024.png"
-                        srcset="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240412140549821_hu7342079753961040024.png 800w, /p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240412140549821_hu11154679090943671354.png 1600w"
+                <img src="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221185820644_hu14218262657176569968.png"
+                        srcset="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221185820644_hu14218262657176569968.png 800w, /p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221185820644_hu13985875294103554795.png 1600w"
                         width="800" 
-                        height="325" 
+                        height="1077" 
                         loading="lazy"
                         alt="Featured image of post 压制es Hadoop这头野兽的方式来了" />
                 
@@ -355,7 +356,7 @@
 
 
                 <time class="article-time--reading">
-                    阅读时长: 5 分钟
+                    阅读时长: 4 分钟
                 </time>
             </div>
         
@@ -370,95 +371,58 @@
     <section class="article-content">
     
     
-    <h4 id="引言">引言
-</h4><p>缓存，这是一个经久不衰的话题，它通过“空间换时间”的战术不仅能够极大提升处理查询性能还能很好的保护底层资源。最近针对系统数据缓存的优化后，由于这是一个通用的场景并且有了一点心得因此在这里分享出来。</p>
-<h4 id="案例">案例
-</h4><p>无论是传统Web后端应用还是大数据平台服务应用，本质上都是一个Java进程并且应用相关数据一般都是存在Mysql。从抽象的角度来看，所有请求基本都要经过以下几个流程：参数校验、鉴权、请求处理、请求响应。这几个流程特别是前几个往往需要依赖存在MySQL中的系统数据，例如判断请求中携带的的服务ID在系统中是否有对应的服务、获取服务对应的认证信息进行身份校验、请求处理时常常依赖的一些数据如某个变动非常低频的小表或者一些配置在MySQL中的系统配置等，此时如果是你，会怎么去设计的这个缓存？我先举两个负责过的项目之前是如何设计的</p>
-<h5 id="a项目">A项目
-</h5><p>服务启动的时候读取MySQL中的系统数据并以HashMap的格式存在Java进程中，不会自动更新，在有配置变动时循环调用所有服务器的ip接口触发重新加载数据。具体流程如下</p>
-<p><img src="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240412140549821.png"
-	width="1980"
-	height="804"
-	srcset="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240412140549821_hu2347754572670440084.png 480w, /p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240412140549821_hu346584329410725846.png 1024w"
+    <h4 id="背景">背景
+</h4><p>每天elasticsearch集群在上午某个时间段CPU几乎打满，此时访问elasticsearch的服务rt会跟着抖动，通过排查发现是由于这个时间段会有数据通过hive任务写到elasticsearch，这个hive任务使用的是ES-Hadoop插件做的数据导入，整个问题的罪魁祸首已经发现了，那么应该怎么去解决呢？</p>
+<h4 id="优化方案一">优化方案一
+</h4><p>ES-Hadoop组件已经发展多年，按道理说已经很成熟了，一般出现这种问题大概率都是使用不当的缘故，因此通过查看 <a class="link" href="https://www.elastic.co/guide/en/elasticsearch/hadoop/current/configuration.html#_advanced_settings"  target="_blank" rel="noopener"
+    >官网配置</a> 来查看是否使用不当，通过一番查看下来大致看到两个比较相关的配置</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">es</span><span class="p">.</span><span class="na">batch</span><span class="p">.</span><span class="na">size</span><span class="p">.</span><span class="na">entries</span><span class="p">:</span><span class="w"> </span><span class="n">控制每批写到Elasticsearch的消息条数</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">es</span><span class="p">.</span><span class="na">batch</span><span class="p">.</span><span class="na">write</span><span class="p">.</span><span class="na">retry</span><span class="p">.</span><span class="na">wait</span><span class="err">：</span><span class="n">控制重试批次之间时间间隔</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过反复针对这两个参数调优后发现，基本没太大的收益，此时elasticsearch集群CPU的突刺仿佛一把利刃插进心脏一样，不甘心，一定要将它消灭，此时又参考了网上不少优秀的文章例如 <a class="link" href="https://cloud.tencent.com/developer/article/1612108"  target="_blank" rel="noopener"
+    >https://cloud.tencent.com/developer/article/1612108</a> 这位大佬写的，但是并没有解决我的问题，继续摸索下一个方案</p>
+<h4 id="优化方案二">优化方案二
+</h4><p>ES-Hadoop配置方式行不通，那么换个思路，咱们是通过Hive来将数据写到elasticsearch集群的，那么如果咱们将Hive任务的并行度降低些行不行呢？想到这里不禁喜悦起来，感觉自己又行了</p>
+<p>通过下面几个配置来控制Hive写elasticsearch的并行度</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">set</span><span class="w"> </span><span class="n">hive</span><span class="p">.</span><span class="na">exec</span><span class="p">.</span><span class="na">reducers</span><span class="p">.</span><span class="na">max</span><span class="o">=</span><span class="n">20</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">set</span><span class="w"> </span><span class="n">tez</span><span class="p">.</span><span class="na">am</span><span class="p">.</span><span class="na">vertex</span><span class="p">.</span><span class="na">max</span><span class="o">-</span><span class="n">task</span><span class="o">-</span><span class="n">concurrency</span><span class="o">=</span><span class="n">20</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">set</span><span class="w"> </span><span class="n">hive</span><span class="p">.</span><span class="na">tez</span><span class="p">.</span><span class="na">auto</span><span class="p">.</span><span class="na">reducer</span><span class="p">.</span><span class="na">parallelism</span><span class="o">=</span><span class="kc">false</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>虽然已经大幅降低并行度了，但是elasticsearch的CPU还是高居不下，仿佛在说，你过来打我呀～</p>
+<p><img src="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221185820644.png"
+	width="367"
+	height="494"
+	srcset="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221185820644_hu17682893548536987927.png 480w, /p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221185820644_hu14485623158983516469.png 1024w"
 	loading="lazy"
 	
-		alt="image-20240412140549821"
+		alt="image-20240221185820644"
 	
 	
 		class="gallery-image" 
-		data-flex-grow="246"
-		data-flex-basis="591px"
+		data-flex-grow="74"
+		data-flex-basis="178px"
 	
 ></p>
-<p>这种设计的优点如下</p>
-<ol>
-<li>实现简单，不依赖外部组件</li>
-<li>有数据变更立马更新所有缓存数据，基本不会在缓存中读到旧数据的逻辑</li>
-</ol>
-<p>以上是这种设计的优点，可能也是设计者这么设计的原因。但是随着维护会出现以下问题</p>
-<ol>
-<li>所有服务器的ip是配置在apollo中的，因此每次扩容机器时都要将新的ip增加到apollo中，否则可能会出现缓存不更新现象</li>
-<li>在服务从ECS迁移到K8s后，服务的ip是动态分配的并且每次重启后都不一样，因此当有配置变动时只能手动重启服务或者执行curl调用接口来触发各个节点进行配置更新</li>
-</ol>
-<h5 id="b项目">B项目
-</h5><p>服务启动的时候读取MySQL中的系统数据并以HashMap的格式存在Java进程中，并记录当前更新时间，在查询缓存时会判断此时距离上次更新时间是否已经超过30秒(硬编码)，如果超过则重新触发查询MySQL更新缓存。具体流程如下</p>
-<p><img src="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20241014001627684.png"
-	width="2076"
-	height="830"
-	srcset="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20241014001627684_hu18407714627144767031.png 480w, /p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20241014001627684_hu15925562360436474925.png 1024w"
-	loading="lazy"
-	
-		alt="image-20241014001627684"
-	
-	
-		class="gallery-image" 
-		data-flex-grow="250"
-		data-flex-basis="600px"
-	
-></p>
-<p>这种设计的优点如下</p>
-<ol>
-<li>服务之间无需通信，相比A服务来说是会自己主动更新</li>
-</ol>
-<p>除了上面这一个优点貌似旧没有了，值得吐槽的点很多，大致列举一下它实现的问题</p>
-<ol>
-<li>针对每一个需要更新的缓存都新建一个自己独立的类来实现CommandLineRunner接口</li>
-<li>硬编码30s过期的逻辑以及查询时再去做更新动作(类似第一次惩罚)</li>
-<li>更新缓存时的逻辑是，先全量查询Mysql对应的表，然后循环对比缓存中的数据，有新增的就追加到缓存，再去跟缓存比较是否有删除的，有的话再去缓存中删除</li>
-</ol>
-<h4 id="分析">分析
-</h4><p>这两个服务在更新系统数据缓存上都存在不少问题，现在再回过头来思考🤔下，我们理想的系统数据缓存的实现应该是什么样子的？我大概整理了一下大致如下</p>
-<ol>
-<li>服务启动时要全量读取对应的数据以Map格式存在Java进程的内存中</li>
-<li>服务应该是定时自行去Mysql同步最新的数据，并且定时周期是允许可配置的</li>
-<li>一些重要配置变更时触发各个服务立马去Mysql同步数据(可选，需要参考具体业务场景)</li>
-</ol>
-<p>基于这个场景我对比了下当前比较热门的缓存工具Guava和Caffeine，最终发现它们都不适合咱们的这个场景。它们的设计更偏向于解决缓存热点数据的问题，简单来说就是咱们的场景是Java内存有10G，而存在Mysql中的数据有100M，我们需要将这100M的数据存在Java内存中进行请求加速，需要解决的是如何全量加载到内存的问题。而Guava和Caffeine的设计要解决的问题时，如何更有效的合理的利用内存，例如Java内存只有10G，而存在MySQL的数据有100G，因此需要将这100G中的热点数据存在Java内存中来提升性能和降低高频访问Mysql，它具体要考虑的问题大致有以下几点</p>
-<ol>
-<li>通过LRU算法或者变种来保留热点数据</li>
-<li>通过大小限制以及时间限制来剔除掉缓存数据从而保证Java内存不会被撑爆</li>
-<li>在有新数据写入或者数据更新时，同步更新缓存中的数据
-&hellip;.</li>
-</ol>
-<p>通过这些你会发现其实这个场景真不适合用Guava和Caffeine，这个过程中也翻阅了一些大佬的实现，但是发现都有点跑偏了，有种为了用Caffeine而强行用的味道。例如 <a class="link" href="https://www.vincentli.top/2020/09/01/jvm-local-cache-case-caffeine/"  target="_blank" rel="noopener"
-    >https://www.vincentli.top/2020/09/01/jvm-local-cache-case-caffeine/</a>，这里本质上还是跟B项目的实现一样，只不过用Caffeine替换了Java的HashMap罢了。在这里补充说下，Caffeine是非常优秀的缓存工具，现在很多优秀的开源组件例如 Pulsar 中也会用它来加速查询，但盲目的使用是不可取的，并且这肯定也不是Caffeine设计者想看到的。</p>
-<h4 id="我的实现">我的实现
-</h4><p>上面说了这么多，我分享下自己的实现供大家参考以及批判。在这里通过一个定时线程池实现即可，在启动时触发一次并在后续周期性的刷新配置即可，核心代码也就两三行。先看下流程</p>
-<p><img src="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20241014001657903.png"
-	width="2064"
-	height="902"
-	srcset="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20241014001657903_hu15240671740537834684.png 480w, /p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20241014001657903_hu9098288521651478889.png 1024w"
-	loading="lazy"
-	
-		alt="image-20241014001657903"
-	
-	
-		class="gallery-image" 
-		data-flex-grow="228"
-		data-flex-basis="549px"
-	
-></p>
-<p>代码实现如下</p>
+<h4 id="优化方案三">优化方案三
+</h4><p>通过上面两个失败的方式后，通过思考🤔发现最大的问题是elasticsearch集群的处理能力赶不上处理的能力，那么如果限制elasticsearch的写速率呢，通过跟elasticsearch dba沟通发现不支持这种方式。那只能从写的任务进行下手了</p>
+<p>通过查阅<a class="link" href="https://github.com/elastic/elasticsearch-hadoop"  target="_blank" rel="noopener"
+    >ES-Hadoop代码</a>发现，代码写得还挺好的，封装都不错～</p>
+<p>通过跟踪代码发现最关键的代码在 BulkProcessor类的add方法，如下</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -488,39 +452,203 @@
 </span><span class="lnt">25
 </span><span class="lnt">26
 </span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">CacheManager</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">CommandLineRunner</span><span class="w"> </span><span class="p">{</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">Long</span><span class="w"> </span><span class="n">DEFAULT_INTERVAL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">36000L</span><span class="p">;</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ScheduledExecutorService</span><span class="w"> </span><span class="n">apiSystemConfigExecutorService</span><span class="w"> </span><span class="o">=</span><span class="w">  </span><span class="n">Executors</span><span class="p">.</span><span class="na">newSingleThreadScheduledExecutor</span><span class="p">();</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="o">&gt;</span><span class="w"> </span><span class="n">apiSysConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">HashMap</span><span class="o">&lt;&gt;</span><span class="p">();</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nd">@Override</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="n">String</span><span class="p">...</span><span class="w"> </span><span class="n">args</span><span class="p">)</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">Exception</span><span class="w"> </span><span class="p">{</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">apiSystemConfigExecutorService</span><span class="p">.</span><span class="na">scheduleAtFixedRate</span><span class="p">(</span><span class="k">this</span><span class="p">::</span><span class="n">loadApiSysConfigDataFromDB</span><span class="p">,</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">0</span><span class="p">,</span><span class="w"> </span><span class="n">Optional</span><span class="p">.</span><span class="na">ofNullable</span><span class="p">(</span><span class="n">PropertyConfigurer</span><span class="p">.</span><span class="na">getLong</span><span class="p">(</span><span class="s">&#34;SYSTEM_CONFIG_UPDATE_PERIOD&#34;</span><span class="p">)).</span><span class="na">orElse</span><span class="p">(</span><span class="n">DEFAULT_INTERVAL</span><span class="p">),</span><span class="w"> </span><span class="n">TimeUnit</span><span class="p">.</span><span class="na">SECONDS</span><span class="p">);</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">loadApiSysConfigDataFromDB</span><span class="p">(){</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">ApisDao</span><span class="w"> </span><span class="n">apisDao</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SpringContextHolder</span><span class="p">.</span><span class="na">getBean</span><span class="p">(</span><span class="n">ApisDao</span><span class="p">.</span><span class="na">class</span><span class="p">);</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">List</span><span class="o">&lt;</span><span class="n">ApiSysConfigEntity</span><span class="o">&gt;</span><span class="w"> </span><span class="n">sysConfigEntityList</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">apisDao</span><span class="p">.</span><span class="na">selectSystemConfig</span><span class="p">();</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="kc">null</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">sysConfigEntityList</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">sysConfigEntityList</span><span class="p">.</span><span class="na">size</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">0</span><span class="p">){</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">return</span><span class="p">;</span><span class="w">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="cm">/**
+</span></span></span><span class="line"><span class="cl"><span class="cm"> * Adds an entry to the bulk request, potentially flushing if the request reaches capacity.
+</span></span></span><span class="line"><span class="cl"><span class="cm"> * @param payload the entire bulk entry in JSON format, including the header and payload.
+</span></span></span><span class="line"><span class="cl"><span class="cm"> */</span><span class="w">   
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="n">BytesRef</span><span class="w"> </span><span class="n">payload</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="c1">// check space first</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="c1">// ba is the backing array for data</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">payload</span><span class="p">.</span><span class="na">length</span><span class="p">()</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">ba</span><span class="p">.</span><span class="na">available</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">autoFlush</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">flush</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">EsHadoopIllegalStateException</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">String</span><span class="p">.</span><span class="na">format</span><span class="p">(</span><span class="s">&#34;Auto-flush disabled and bulk buffer full; disable manual flush or increase &#34;</span><span class="w"> </span><span class="o">+</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="s">&#34;capacity [current size %s]; bailing out&#34;</span><span class="p">,</span><span class="w"> </span><span class="n">ba</span><span class="p">.</span><span class="na">capacity</span><span class="p">()));</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">}</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">logger</span><span class="p">.</span><span class="na">info</span><span class="p">(</span><span class="s">&#34;load ApiSysConfigEntity from api_sys_config in mysql ,the size of api in cache  is &#34;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">sysConfigEntityList</span><span class="p">.</span><span class="na">size</span><span class="p">());</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">apiSysConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sysConfigEntityList</span><span class="p">.</span><span class="na">stream</span><span class="p">()</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">collect</span><span class="p">(</span><span class="n">Collectors</span><span class="p">.</span><span class="na">toMap</span><span class="p">(</span><span class="n">ApiSysConfigEntity</span><span class="p">::</span><span class="n">getName</span><span class="p">,</span><span class="w"> </span><span class="n">ApiSysConfigEntity</span><span class="p">::</span><span class="n">getValue</span><span class="p">));</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">data</span><span class="p">.</span><span class="na">copyFrom</span><span class="p">(</span><span class="n">payload</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">dataEntries</span><span class="o">++</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">bufferEntriesThreshold</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">dataEntries</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">bufferEntriesThreshold</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">autoFlush</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">flush</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="c1">// handle the corner case of manual flush that occurs only after the buffer is completely full (think size of 1)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">dataEntries</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">bufferEntriesThreshold</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">EsHadoopIllegalStateException</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                            </span><span class="n">String</span><span class="p">.</span><span class="na">format</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                    </span><span class="s">&#34;Auto-flush disabled and maximum number of entries surpassed; disable manual &#34;</span><span class="w"> </span><span class="o">+</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                            </span><span class="s">&#34;flush or increase capacity [current size %s]; bailing out&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                    </span><span class="n">bufferEntriesThreshold</span><span class="p">));</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="总结">总结
-</h4><p>在工作中只要我们观察和思考，就会发现其实是存在不少值得完善的地方，此时应该考虑对它们进行完善，否则如果长期维护一个“丑陋”的系统，你的思维、以及审美也会随之跟着降低，以至于久而久之就觉得这种设计也挺好的，甚至后续再有类似的场景时你还是会选择这种设计。工作的本质也是一场修行，在对系统进行改进完善的过程也是自我完善的过程，简称“借物得道”，同时如果读者针对这个场景有更合适的设计也欢迎在下方一起讨论。</p>
+</div><p>上面的逻辑也很清晰，就是要么数据写满本地容量或者数据写够配置的条数就触发一次发送。那么如果咱们能够控制两个批次之间间隔，是否就可以让elasticsearch集群“休息”一下，降低CPU从而正常的给其他业务提供服务呢？</p>
+<p>纸上得来终觉浅，绝知此事要躬行。说干就干，以下是我的代码改动，供大家参考</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">    </span><span class="cm">/**
+</span></span></span><span class="line"><span class="cl"><span class="cm">     * 控制写入批次的间隔
+</span></span></span><span class="line"><span class="cl"><span class="cm">     */</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">waitSomeTime</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">batchWaitTime</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">settings</span><span class="p">.</span><span class="na">getBatchWaitTime</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&#34;batchWaitTime is:&#34;</span><span class="w"> </span><span class="o">+</span><span class="n">batchWaitTime</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">batchWaitTime</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">0</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">try</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&#34;start sleep!&#34;</span><span class="o">+</span><span class="s">&#34;,time is :&#34;</span><span class="o">+</span><span class="k">new</span><span class="w"> </span><span class="n">Date</span><span class="p">()</span><span class="o">+</span><span class="s">&#34;, thread name is:&#34;</span><span class="o">+</span><span class="n">Thread</span><span class="p">.</span><span class="na">currentThread</span><span class="p">().</span><span class="na">getName</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">Thread</span><span class="p">.</span><span class="na">sleep</span><span class="p">(</span><span class="n">batchWaitTime</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&#34;end sleep!&#34;</span><span class="o">+</span><span class="s">&#34;,time is :&#34;</span><span class="o">+</span><span class="k">new</span><span class="w"> </span><span class="n">Date</span><span class="p">()</span><span class="o">+</span><span class="s">&#34;, thread name is:&#34;</span><span class="o">+</span><span class="n">Thread</span><span class="p">.</span><span class="na">currentThread</span><span class="p">().</span><span class="na">getName</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">Exception</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">e</span><span class="p">.</span><span class="na">printStackTrace</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>Settings类</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">getBatchWaitTime</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">Integer</span><span class="p">.</span><span class="na">valueOf</span><span class="p">(</span><span class="n">getProperty</span><span class="p">(</span><span class="n">ES_BATCH_WAIT_TIME</span><span class="p">,</span><span class="w"> </span><span class="n">ES_BATCH_WAIT_TIME_DEFAULT</span><span class="p">));</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>ConfigurationOptions接口</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">    </span><span class="cm">/** Elasticsearch batch size given in bytes */</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">ES_BATCH_WAIT_TIME</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&#34;es.batch.wait.time&#34;</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">ES_BATCH_WAIT_TIME_DEFAULT</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&#34;0&#34;</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>最后在每写完一批数据后触发休息一下</p>
+<p><img src="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221172128819.png"
+	width="1334"
+	height="918"
+	srcset="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221172128819_hu7461075049762469155.png 480w, /p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221172128819_hu3778435253090345709.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240221172128819"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="145"
+		data-flex-basis="348px"
+	
+></p>
+<p>改动完后，再结合以下配置执行任务</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">ES</span><span class="o">-</span><span class="n">Hadoop配置</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">&#39;</span><span class="n">es</span><span class="p">.</span><span class="na">batch</span><span class="p">.</span><span class="na">size</span><span class="p">.</span><span class="na">bytes</span><span class="sc">&#39;=&#39;</span><span class="n">5mb</span><span class="sc">&#39;
+</span></span></span><span class="line"><span class="cl"><span class="sc">&#39;</span><span class="n">es</span><span class="p">.</span><span class="na">batch</span><span class="p">.</span><span class="na">size</span><span class="p">.</span><span class="na">entries</span><span class="sc">&#39;=&#39;</span><span class="n">2000</span><span class="err">&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">&#39;</span><span class="n">es</span><span class="p">.</span><span class="na">batch</span><span class="p">.</span><span class="na">wait</span><span class="p">.</span><span class="na">time</span><span class="sc">&#39;=&#39;</span><span class="n">2000</span><span class="err">&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">//咱们自己新加的配置</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">&#39;</span><span class="n">es</span><span class="p">.</span><span class="na">batch</span><span class="p">.</span><span class="na">write</span><span class="p">.</span><span class="na">refresh</span><span class="sc">&#39;=&#39;</span><span class="kc">false</span><span class="err">&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Hive参数调优</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">set</span><span class="w"> </span><span class="n">hive</span><span class="p">.</span><span class="na">exec</span><span class="p">.</span><span class="na">reducers</span><span class="p">.</span><span class="na">max</span><span class="o">=</span><span class="n">20</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">set</span><span class="w"> </span><span class="n">tez</span><span class="p">.</span><span class="na">am</span><span class="p">.</span><span class="na">vertex</span><span class="p">.</span><span class="na">max</span><span class="o">-</span><span class="n">task</span><span class="o">-</span><span class="n">concurrency</span><span class="o">=</span><span class="n">20</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">set</span><span class="w"> </span><span class="n">hive</span><span class="p">.</span><span class="na">tez</span><span class="p">.</span><span class="na">auto</span><span class="p">.</span><span class="na">reducer</span><span class="p">.</span><span class="na">parallelism</span><span class="o">=</span><span class="kc">false</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过测试验证将CPU从几乎100%干到了20%～30%，算是圆满完成任务了，心中的石头也落了下来，终于可以睡个好觉了～</p>
+<p><img src="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221185926570.png"
+	width="498"
+	height="542"
+	srcset="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221185926570_hu3282948060989548732.png 480w, /p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221185926570_hu3045232341287095067.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240221185926570"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="91"
+		data-flex-basis="220px"
+	
+></p>
+<h4 id="补充说明">补充说明
+</h4><p>除了上述的几种方式，还有一些可供参考的方案列在这里</p>
+<ol>
+<li>使用elasticsearch-rest-client-xxx.jar，不过这是通过http写入的性能会差些</li>
+<li>扩容elasticsearch集群（经费充足的话可以考虑）</li>
+<li>对数据做列处理，就是在业务高峰期仅写必要的几列数据到elasticsearch集群（但可能CPU还是会高）</li>
+</ol>
+<p>在解决完这个问题后，本来想给ES-Hadoop社区提这个issue并进行fix的。但是发现了已经有大佬反馈过这个问题了 <a class="link" href="https://github.com/elastic/elasticsearch-hadoop/pull/1405"  target="_blank" rel="noopener"
+    >https://github.com/elastic/elasticsearch-hadoop/pull/1405</a>，但是由于社区的前辈们认为有其他更好的解决方式并没有merge相关的代码</p>
+<p><img src="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221175709579.png"
+	width="1613"
+	height="736"
+	srcset="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221175709579_hu4342666017996927042.png 480w, /p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221175709579_hu1535361827486516695.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240221175709579"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="219"
+		data-flex-basis="525px"
+	
+></p>
+<h4 id="总结">总结
+</h4><p>以上就是整个问题的解决过程，我也相信一定有更好，更优雅的解决方式，如果你恰好有好的想法也可以给ES-Hadoop社区提供；但无论黑猫还是白猫，能抓到老鼠的才是好猫，通过方案三快速的解决的问题并且稳定运行了一年，给公司节省下扩容集群的成本，这在我这个菜鸡看来已经够了。如果你也比较赶时间的话，可以考虑直接试下我的jar包，希望能对您有帮助。</p>
 
 </section>
 
