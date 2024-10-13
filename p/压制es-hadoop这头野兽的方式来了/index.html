@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="引言 缓存，这是一个经久不衰的话题，它通过“空间换时间”的战术不仅能够极大提升处理查询性能还能很好的保护底层资源。最近针对系统数据缓存的优化后，由于这是一个通用的场景并且有了一点心得因此在这里分享出来。\n">
+<title>压制es Hadoop这头野兽的方式来了</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="压制es Hadoop这头野兽的方式来了">
+<meta property='og:description' content="引言 缓存，这是一个经久不衰的话题，它通过“空间换时间”的战术不仅能够极大提升处理查询性能还能很好的保护底层资源。最近针对系统数据缓存的优化后，由于这是一个通用的场景并且有了一点心得因此在这里分享出来。\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-10-14T00:15:06&#43;08:00'/><meta property='article:modified_time' content='2024-10-14T00:15:06&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240412140549821.png' />
+<meta name="twitter:title" content="压制es Hadoop这头野兽的方式来了">
+<meta name="twitter:description" content="引言 缓存，这是一个经久不衰的话题，它通过“空间换时间”的战术不仅能够极大提升处理查询性能还能很好的保护底层资源。最近针对系统数据缓存的优化后，由于这是一个通用的场景并且有了一点心得因此在这里分享出来。\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240412140549821.png' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li>
+      <ol>
+        <li>
+          <ol>
+            <li><a href="#引言">引言</a></li>
+            <li><a href="#案例">案例</a></li>
+            <li><a href="#分析">分析</a></li>
+            <li><a href="#我的实现">我的实现</a></li>
+            <li><a href="#总结">总结</a></li>
+          </ol>
+        </li>
+      </ol>
+    </li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/">
+                <img src="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240412140549821_hu7342079753961040024.png"
+                        srcset="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240412140549821_hu7342079753961040024.png 800w, /p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240412140549821_hu11154679090943671354.png 1600w"
+                        width="800" 
+                        height="325" 
+                        loading="lazy"
+                        alt="Featured image of post 压制es Hadoop这头野兽的方式来了" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/">压制es Hadoop这头野兽的方式来了</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2024-10-14</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 5 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h4 id="引言">引言
+</h4><p>缓存，这是一个经久不衰的话题，它通过“空间换时间”的战术不仅能够极大提升处理查询性能还能很好的保护底层资源。最近针对系统数据缓存的优化后，由于这是一个通用的场景并且有了一点心得因此在这里分享出来。</p>
+<h4 id="案例">案例
+</h4><p>无论是传统Web后端应用还是大数据平台服务应用，本质上都是一个Java进程并且应用相关数据一般都是存在Mysql。从抽象的角度来看，所有请求基本都要经过以下几个流程：参数校验、鉴权、请求处理、请求响应。这几个流程特别是前几个往往需要依赖存在MySQL中的系统数据，例如判断请求中携带的的服务ID在系统中是否有对应的服务、获取服务对应的认证信息进行身份校验、请求处理时常常依赖的一些数据如某个变动非常低频的小表或者一些配置在MySQL中的系统配置等，此时如果是你，会怎么去设计的这个缓存？我先举两个负责过的项目之前是如何设计的</p>
+<h5 id="a项目">A项目
+</h5><p>服务启动的时候读取MySQL中的系统数据并以HashMap的格式存在Java进程中，不会自动更新，在有配置变动时循环调用所有服务器的ip接口触发重新加载数据。具体流程如下</p>
+<p><img src="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240412140549821.png"
+	width="1980"
+	height="804"
+	srcset="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240412140549821_hu2347754572670440084.png 480w, /p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240412140549821_hu346584329410725846.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240412140549821"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="246"
+		data-flex-basis="591px"
+	
+></p>
+<p>这种设计的优点如下</p>
+<ol>
+<li>实现简单，不依赖外部组件</li>
+<li>有数据变更立马更新所有缓存数据，基本不会在缓存中读到旧数据的逻辑</li>
+</ol>
+<p>以上是这种设计的优点，可能也是设计者这么设计的原因。但是随着维护会出现以下问题</p>
+<ol>
+<li>所有服务器的ip是配置在apollo中的，因此每次扩容机器时都要将新的ip增加到apollo中，否则可能会出现缓存不更新现象</li>
+<li>在服务从ECS迁移到K8s后，服务的ip是动态分配的并且每次重启后都不一样，因此当有配置变动时只能手动重启服务或者执行curl调用接口来触发各个节点进行配置更新</li>
+</ol>
+<h5 id="b项目">B项目
+</h5><p>服务启动的时候读取MySQL中的系统数据并以HashMap的格式存在Java进程中，并记录当前更新时间，在查询缓存时会判断此时距离上次更新时间是否已经超过30秒(硬编码)，如果超过则重新触发查询MySQL更新缓存。具体流程如下</p>
+<p><img src="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20241014001627684.png"
+	width="2076"
+	height="830"
+	srcset="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20241014001627684_hu18407714627144767031.png 480w, /p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20241014001627684_hu15925562360436474925.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241014001627684"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="250"
+		data-flex-basis="600px"
+	
+></p>
+<p>这种设计的优点如下</p>
+<ol>
+<li>服务之间无需通信，相比A服务来说是会自己主动更新</li>
+</ol>
+<p>除了上面这一个优点貌似旧没有了，值得吐槽的点很多，大致列举一下它实现的问题</p>
+<ol>
+<li>针对每一个需要更新的缓存都新建一个自己独立的类来实现CommandLineRunner接口</li>
+<li>硬编码30s过期的逻辑以及查询时再去做更新动作(类似第一次惩罚)</li>
+<li>更新缓存时的逻辑是，先全量查询Mysql对应的表，然后循环对比缓存中的数据，有新增的就追加到缓存，再去跟缓存比较是否有删除的，有的话再去缓存中删除</li>
+</ol>
+<h4 id="分析">分析
+</h4><p>这两个服务在更新系统数据缓存上都存在不少问题，现在再回过头来思考🤔下，我们理想的系统数据缓存的实现应该是什么样子的？我大概整理了一下大致如下</p>
+<ol>
+<li>服务启动时要全量读取对应的数据以Map格式存在Java进程的内存中</li>
+<li>服务应该是定时自行去Mysql同步最新的数据，并且定时周期是允许可配置的</li>
+<li>一些重要配置变更时触发各个服务立马去Mysql同步数据(可选，需要参考具体业务场景)</li>
+</ol>
+<p>基于这个场景我对比了下当前比较热门的缓存工具Guava和Caffeine，最终发现它们都不适合咱们的这个场景。它们的设计更偏向于解决缓存热点数据的问题，简单来说就是咱们的场景是Java内存有10G，而存在Mysql中的数据有100M，我们需要将这100M的数据存在Java内存中进行请求加速，需要解决的是如何全量加载到内存的问题。而Guava和Caffeine的设计要解决的问题时，如何更有效的合理的利用内存，例如Java内存只有10G，而存在MySQL的数据有100G，因此需要将这100G中的热点数据存在Java内存中来提升性能和降低高频访问Mysql，它具体要考虑的问题大致有以下几点</p>
+<ol>
+<li>通过LRU算法或者变种来保留热点数据</li>
+<li>通过大小限制以及时间限制来剔除掉缓存数据从而保证Java内存不会被撑爆</li>
+<li>在有新数据写入或者数据更新时，同步更新缓存中的数据
+&hellip;.</li>
+</ol>
+<p>通过这些你会发现其实这个场景真不适合用Guava和Caffeine，这个过程中也翻阅了一些大佬的实现，但是发现都有点跑偏了，有种为了用Caffeine而强行用的味道。例如 <a class="link" href="https://www.vincentli.top/2020/09/01/jvm-local-cache-case-caffeine/"  target="_blank" rel="noopener"
+    >https://www.vincentli.top/2020/09/01/jvm-local-cache-case-caffeine/</a>，这里本质上还是跟B项目的实现一样，只不过用Caffeine替换了Java的HashMap罢了。在这里补充说下，Caffeine是非常优秀的缓存工具，现在很多优秀的开源组件例如 Pulsar 中也会用它来加速查询，但盲目的使用是不可取的，并且这肯定也不是Caffeine设计者想看到的。</p>
+<h4 id="我的实现">我的实现
+</h4><p>上面说了这么多，我分享下自己的实现供大家参考以及批判。在这里通过一个定时线程池实现即可，在启动时触发一次并在后续周期性的刷新配置即可，核心代码也就两三行。先看下流程</p>
+<p><img src="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20241014001657903.png"
+	width="2064"
+	height="902"
+	srcset="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20241014001657903_hu15240671740537834684.png 480w, /p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20241014001657903_hu9098288521651478889.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241014001657903"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="228"
+		data-flex-basis="549px"
+	
+></p>
+<p>代码实现如下</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">CacheManager</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">CommandLineRunner</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">Long</span><span class="w"> </span><span class="n">DEFAULT_INTERVAL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">36000L</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ScheduledExecutorService</span><span class="w"> </span><span class="n">apiSystemConfigExecutorService</span><span class="w"> </span><span class="o">=</span><span class="w">  </span><span class="n">Executors</span><span class="p">.</span><span class="na">newSingleThreadScheduledExecutor</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="o">&gt;</span><span class="w"> </span><span class="n">apiSysConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">HashMap</span><span class="o">&lt;&gt;</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nd">@Override</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="n">String</span><span class="p">...</span><span class="w"> </span><span class="n">args</span><span class="p">)</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">Exception</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">apiSystemConfigExecutorService</span><span class="p">.</span><span class="na">scheduleAtFixedRate</span><span class="p">(</span><span class="k">this</span><span class="p">::</span><span class="n">loadApiSysConfigDataFromDB</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">0</span><span class="p">,</span><span class="w"> </span><span class="n">Optional</span><span class="p">.</span><span class="na">ofNullable</span><span class="p">(</span><span class="n">PropertyConfigurer</span><span class="p">.</span><span class="na">getLong</span><span class="p">(</span><span class="s">&#34;SYSTEM_CONFIG_UPDATE_PERIOD&#34;</span><span class="p">)).</span><span class="na">orElse</span><span class="p">(</span><span class="n">DEFAULT_INTERVAL</span><span class="p">),</span><span class="w"> </span><span class="n">TimeUnit</span><span class="p">.</span><span class="na">SECONDS</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">loadApiSysConfigDataFromDB</span><span class="p">(){</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">ApisDao</span><span class="w"> </span><span class="n">apisDao</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SpringContextHolder</span><span class="p">.</span><span class="na">getBean</span><span class="p">(</span><span class="n">ApisDao</span><span class="p">.</span><span class="na">class</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">List</span><span class="o">&lt;</span><span class="n">ApiSysConfigEntity</span><span class="o">&gt;</span><span class="w"> </span><span class="n">sysConfigEntityList</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">apisDao</span><span class="p">.</span><span class="na">selectSystemConfig</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="kc">null</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">sysConfigEntityList</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">sysConfigEntityList</span><span class="p">.</span><span class="na">size</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">0</span><span class="p">){</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">return</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">logger</span><span class="p">.</span><span class="na">info</span><span class="p">(</span><span class="s">&#34;load ApiSysConfigEntity from api_sys_config in mysql ,the size of api in cache  is &#34;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">sysConfigEntityList</span><span class="p">.</span><span class="na">size</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">apiSysConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sysConfigEntityList</span><span class="p">.</span><span class="na">stream</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">.</span><span class="na">collect</span><span class="p">(</span><span class="n">Collectors</span><span class="p">.</span><span class="na">toMap</span><span class="p">(</span><span class="n">ApiSysConfigEntity</span><span class="p">::</span><span class="n">getName</span><span class="p">,</span><span class="w"> </span><span class="n">ApiSysConfigEntity</span><span class="p">::</span><span class="n">getValue</span><span class="p">));</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="总结">总结
+</h4><p>在工作中只要我们观察和思考，就会发现其实是存在不少值得完善的地方，此时应该考虑对它们进行完善，否则如果长期维护一个“丑陋”的系统，你的思维、以及审美也会随之跟着降低，以至于久而久之就觉得这种设计也挺好的，甚至后续再有类似的场景时你还是会选择这种设计。工作的本质也是一场修行，在对系统进行改进完善的过程也是自我完善的过程，简称“借物得道”，同时如果读者针对这个场景有更合适的设计也欢迎在下方一起讨论。</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%85%B3%E4%BA%8E%E7%B3%BB%E7%BB%9F%E6%95%B0%E6%8D%AE%E7%BC%93%E5%AD%98%E7%9A%84%E6%80%9D%E8%80%83%E4%BB%A5%E5%8F%8A%E8%AE%BE%E8%AE%A1/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%85%B3%E4%BA%8E%E7%B3%BB%E7%BB%9F%E6%95%B0%E6%8D%AE%E7%BC%93%E5%AD%98%E7%9A%84%E6%80%9D%E8%80%83%E4%BB%A5%E5%8F%8A%E8%AE%BE%E8%AE%A1/image-20240412140549821.f692697449bb1f393e629ebe0a3ed627_hu9300424985039412446.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 关于系统数据缓存的思考以及设计"
+                        
+                        data-hash="md5-9pJpdEm7Hzk&#43;Yp6&#43;Cj7WJw==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">关于系统数据缓存的思考以及设计</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/flinkcdc%E8%AF%BB%E5%8F%96binlog%E6%A0%B7%E4%BE%8B/">
+        
+        
+            <div class="article-image">
+                <img src="/p/flinkcdc%E8%AF%BB%E5%8F%96binlog%E6%A0%B7%E4%BE%8B/the-creative-exchange-d2zvqp3fpro-unsplash.60116b1ccfc8632e9a65f7d51df3efc2_hu2042364712198079406.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post FlinkCDC读取binlog样例"
+                        
+                        data-hash="md5-YBFrHM/IYy6aZffVHfPvwg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">FlinkCDC读取binlog样例</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/flink%E9%9B%86%E6%88%90pulsar%E8%BF%9B%E8%A1%8C%E8%AF%BB%E5%86%99/">
+        
+        
+            <div class="article-image">
+                <img src="/p/flink%E9%9B%86%E6%88%90pulsar%E8%BF%9B%E8%A1%8C%E8%AF%BB%E5%86%99/image-20241010212758255.3b8d865776299f9bc8d1681c57a67652_hu7262335394239924420.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Flink集成Pulsar进行读写"
+                        
+                        data-hash="md5-O42GV3Ypn5vI0WgcV6Z2Ug==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Flink集成Pulsar进行读写</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/pulsario%E9%9B%86%E6%88%90mysql/">
+        
+        
+            <div class="article-image">
+                <img src="/p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008163436302.a76781ee601fc70c412d1a52fa1ecff8_hu16634190987435192676.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post PulsarIO集成mysql"
+                        
+                        data-hash="md5-p2eB7mAfxwxBLRpS&#43;h7P&#43;A==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">PulsarIO集成mysql</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240913141630196.cfdbfabbec9931a0e8aa797475dd75ef_hu14409126970437613443.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生"
+                        
+                        data-hash="md5-z9v6u&#43;yZMaDoqnl0dd117w==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
