@@ -1,0 +1,1689 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="基础 数据定义语言是SQL语言中对数据库内部的对象结构进行创建、修改、删除等操作的语句，但不会涉及到表内部数据的变更\n完整建表语法树如下\n注意事项\n">
+<title>HiveDDL学习笔记</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="HiveDDL学习笔记">
+<meta property='og:description' content="基础 数据定义语言是SQL语言中对数据库内部的对象结构进行创建、修改、删除等操作的语句，但不会涉及到表内部数据的变更\n完整建表语法树如下\n注意事项\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-10-21T15:57:06&#43;08:00'/><meta property='article:modified_time' content='2024-10-21T15:57:06&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020161557027.png' />
+<meta name="twitter:title" content="HiveDDL学习笔记">
+<meta name="twitter:description" content="基础 数据定义语言是SQL语言中对数据库内部的对象结构进行创建、修改、删除等操作的语句，但不会涉及到表内部数据的变更\n完整建表语法树如下\n注意事项\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020161557027.png' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#基础">基础</a></li>
+    <li><a href="#建表练习">建表练习</a>
+      <ol>
+        <li><a href="#普通类型">普通类型</a></li>
+        <li><a href="#复杂类型">复杂类型</a></li>
+        <li><a href="#使用默认分隔符">使用默认分隔符</a></li>
+        <li><a href="#指定数据存储路径">指定数据存储路径</a></li>
+      </ol>
+    </li>
+    <li><a href="#内外部表">内/外部表</a>
+      <ol>
+        <li><a href="#理论">理论</a></li>
+        <li><a href="#演示">演示</a></li>
+      </ol>
+    </li>
+    <li><a href="#分区表">分区表</a>
+      <ol>
+        <li><a href="#理论-1">理论</a>
+          <ol>
+            <li><a href="#静态分区">静态分区</a></li>
+            <li><a href="#动态分区">动态分区</a></li>
+            <li><a href="#分桶表">分桶表</a></li>
+          </ol>
+        </li>
+        <li><a href="#演示非分区场景">演示非分区场景</a></li>
+        <li><a href="#演示分区表">演示分区表</a></li>
+        <li><a href="#演示多重分区表">演示多重分区表</a></li>
+        <li><a href="#演示动态分区表">演示动态分区表</a></li>
+      </ol>
+    </li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">
+                <img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020161557027_hu144296812121088982.png"
+                        srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020161557027_hu144296812121088982.png 800w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020161557027_hu13533261359930112733.png 1600w"
+                        width="800" 
+                        height="298" 
+                        loading="lazy"
+                        alt="Featured image of post HiveDDL学习笔记" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/hadoop/" style="background-color: #2a9d8f; color: #fff;">
+                Hadoop
+            </a>
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">HiveDDL学习笔记</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2024-10-21</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 9 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="基础">基础
+</h2><p>数据定义语言是SQL语言中对数据库内部的对象结构进行创建、修改、删除等操作的语句，但不会涉及到表内部数据的变更</p>
+<p>完整建表语法树如下</p>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020161557027.png"
+	width="1658"
+	height="618"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020161557027_hu16404599143664433691.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020161557027_hu5690013757235801856.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020161557027"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="268"
+		data-flex-basis="643px"
+	
+></p>
+<p>注意事项</p>
+<ul>
+<li>
+<p><strong>蓝色</strong>字体是建表语法的关键字，用于指定某些功能。</p>
+</li>
+<li>
+<p>**[]**中括号的语法表示可选。</p>
+</li>
+<li>
+<p>**|**表示使用的时候，左右语法二选一。</p>
+</li>
+<li>
+<p>建表语句中的语法顺序要和上述语法规则保持一致。</p>
+</li>
+</ul>
+<h2 id="建表练习">建表练习
+</h2><h3 id="普通类型">普通类型
+</h3><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="o">--</span><span class="n">创建数据库并切换使用</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">create</span><span class="w"> </span><span class="n">database</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">not</span><span class="w"> </span><span class="n">exists</span><span class="w"> </span><span class="n">sherlock</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">use</span><span class="w"> </span><span class="n">sherlockdb</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">--</span><span class="n">ddl</span><span class="w"> </span><span class="n">create</span><span class="w"> </span><span class="n">table</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">create</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="nf">t_archer</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                         </span><span class="n">id</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">comment</span><span class="w"> </span><span class="s">&#34;ID&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                         </span><span class="n">name</span><span class="w"> </span><span class="n">string</span><span class="w"> </span><span class="n">comment</span><span class="w"> </span><span class="s">&#34;英雄名称&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                         </span><span class="n">hp_max</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">comment</span><span class="w"> </span><span class="s">&#34;最大生命&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                         </span><span class="n">mp_max</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">comment</span><span class="w"> </span><span class="s">&#34;最大法力&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                         </span><span class="n">attack_max</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">comment</span><span class="w"> </span><span class="s">&#34;最高物攻&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                         </span><span class="n">defense_max</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">comment</span><span class="w"> </span><span class="s">&#34;最大物防&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                         </span><span class="n">attack_range</span><span class="w"> </span><span class="n">string</span><span class="w"> </span><span class="n">comment</span><span class="w"> </span><span class="s">&#34;攻击范围&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                         </span><span class="n">role_main</span><span class="w"> </span><span class="n">string</span><span class="w"> </span><span class="n">comment</span><span class="w"> </span><span class="s">&#34;主要定位&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                         </span><span class="n">role_assist</span><span class="w"> </span><span class="n">string</span><span class="w"> </span><span class="n">comment</span><span class="w"> </span><span class="s">&#34;次要定位&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="n">comment</span><span class="w"> </span><span class="s">&#34;王者荣耀射手信息&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">row</span><span class="w"> </span><span class="n">format</span><span class="w"> </span><span class="n">delimited</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">fields</span><span class="w"> </span><span class="n">terminated</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="s">&#34;\t&#34;</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">select</span><span class="w"> </span><span class="o">*</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">from</span><span class="w"> </span><span class="n">t_archer</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">desc</span><span class="w"> </span><span class="n">formatted</span><span class="w"> </span><span class="n">t_archer</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>
+<p>执行完建表语句，可以在HDFS上看到 /user/hive/warehouse/sherlockdb.db下创建了t_archer目录</p>
+</li>
+<li>
+<p>在本地创建archer.txt文件，内容如下</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">1</span><span class="w">	</span><span class="n">后羿</span><span class="w">	</span><span class="n">5986</span><span class="w">	</span><span class="n">1784</span><span class="w">	</span><span class="n">396</span><span class="w">	</span><span class="n">336</span><span class="w">	</span><span class="n">remotely</span><span class="w">	</span><span class="n">archer</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">2</span><span class="w">	</span><span class="n">马可波罗</span><span class="w">	</span><span class="n">5584</span><span class="w">	</span><span class="n">200</span><span class="w">	</span><span class="n">362</span><span class="w">	</span><span class="n">344</span><span class="w">	</span><span class="n">remotely</span><span class="w">	</span><span class="n">archer</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">3</span><span class="w">	</span><span class="n">鲁班七号</span><span class="w">	</span><span class="n">5989</span><span class="w">	</span><span class="n">1756</span><span class="w">	</span><span class="n">400</span><span class="w">	</span><span class="n">323</span><span class="w">	</span><span class="n">remotely</span><span class="w">	</span><span class="n">archer</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">4</span><span class="w">	</span><span class="n">李元芳</span><span class="w">	</span><span class="n">5725</span><span class="w">	</span><span class="n">1770</span><span class="w">	</span><span class="n">396</span><span class="w">	</span><span class="n">340</span><span class="w">	</span><span class="n">remotely</span><span class="w">	</span><span class="n">archer</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">5</span><span class="w">	</span><span class="n">孙尚香</span><span class="w">	</span><span class="n">6014</span><span class="w">	</span><span class="n">1756</span><span class="w">	</span><span class="n">411</span><span class="w">	</span><span class="n">346</span><span class="w">	</span><span class="n">remotely</span><span class="w">	</span><span class="n">archer</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">6</span><span class="w">	</span><span class="n">黄忠</span><span class="w">	</span><span class="n">5898</span><span class="w">	</span><span class="n">1784</span><span class="w">	</span><span class="n">403</span><span class="w">	</span><span class="n">319</span><span class="w">	</span><span class="n">remotely</span><span class="w">	</span><span class="n">archer</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">7</span><span class="w">	</span><span class="n">狄仁杰</span><span class="w">	</span><span class="n">5710</span><span class="w">	</span><span class="n">1770</span><span class="w">	</span><span class="n">376</span><span class="w">	</span><span class="n">338</span><span class="w">	</span><span class="n">remotely</span><span class="w">	</span><span class="n">archer</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">8</span><span class="w">	</span><span class="n">虞姬</span><span class="w">	</span><span class="n">5669</span><span class="w">	</span><span class="n">1770</span><span class="w">	</span><span class="n">407</span><span class="w">	</span><span class="n">329</span><span class="w">	</span><span class="n">remotely</span><span class="w">	</span><span class="n">archer</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">9</span><span class="w">	</span><span class="n">成吉思汗</span><span class="w">	</span><span class="n">5799</span><span class="w">	</span><span class="n">1742</span><span class="w">	</span><span class="n">394</span><span class="w">	</span><span class="n">329</span><span class="w">	</span><span class="n">remotely</span><span class="w">	</span><span class="n">archer</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">10</span><span class="w">	</span><span class="n">百里守约</span><span class="w">	</span><span class="n">5611</span><span class="w">	</span><span class="n">1784</span><span class="w">	</span><span class="n">410</span><span class="w">	</span><span class="n">329</span><span class="w">	</span><span class="n">remotely</span><span class="w">	</span><span class="n">archer</span><span class="w">	</span><span class="n">assassin</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>将archer.txt文件上传到HDFS /user/hive/warehouse/sherlockdb.db/t_archer这个目录下</p>
+</li>
+<li>
+<p>执行表查询，可以看到数据都已正常导入</p>
+</li>
+</ol>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020193332550.png"
+	width="2048"
+	height="894"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020193332550_hu239450296499597007.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020193332550_hu2939399290321587315.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020193332550"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="229"
+		data-flex-basis="549px"
+	
+></p>
+<p>可以看到Hive这种数据映射导入方式比MySQL的insert效率高很多</p>
+<h3 id="复杂类型">复杂类型
+</h3><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">create</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="nf">t_hot_hero_skin_price</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                      </span><span class="n">id</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                      </span><span class="n">name</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                      </span><span class="n">win_rate</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                      </span><span class="n">skin_price</span><span class="w"> </span><span class="n">map</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span><span class="kt">int</span><span class="o">&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">row</span><span class="w"> </span><span class="n">format</span><span class="w"> </span><span class="n">delimited</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">fields</span><span class="w"> </span><span class="n">terminated</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="sc">&#39;,&#39;</span><span class="w"> </span><span class="o">--</span><span class="n">字段之间分隔符</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">collection</span><span class="w"> </span><span class="n">items</span><span class="w"> </span><span class="n">terminated</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="sc">&#39;-&#39;</span><span class="w">  </span><span class="o">--</span><span class="n">集合元素之间分隔符</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">map</span><span class="w"> </span><span class="n">keys</span><span class="w"> </span><span class="n">terminated</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="sc">&#39;:&#39;</span><span class="p">;</span><span class="w"> </span><span class="o">--</span><span class="n">集合元素kv之间分隔符</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>跟上面步骤一样</p>
+<ol>
+<li>
+<p>执行建表语句</p>
+</li>
+<li>
+<p>本地创建 hot_hero_skin_price.txt 文件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">1</span><span class="p">,</span><span class="n">孙悟空</span><span class="p">,</span><span class="n">53</span><span class="p">,</span><span class="n">西部大镖客</span><span class="p">:</span><span class="n">288</span><span class="o">-</span><span class="n">大圣娶亲</span><span class="p">:</span><span class="n">888</span><span class="o">-</span><span class="n">全息碎片</span><span class="p">:</span><span class="n">0</span><span class="o">-</span><span class="n">至尊宝</span><span class="p">:</span><span class="n">888</span><span class="o">-</span><span class="n">地狱火</span><span class="p">:</span><span class="n">1688</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">2</span><span class="p">,</span><span class="n">鲁班七号</span><span class="p">,</span><span class="n">54</span><span class="p">,</span><span class="n">木偶奇遇记</span><span class="p">:</span><span class="n">288</span><span class="o">-</span><span class="n">福禄兄弟</span><span class="p">:</span><span class="n">288</span><span class="o">-</span><span class="n">黑桃队长</span><span class="p">:</span><span class="n">60</span><span class="o">-</span><span class="n">电玩小子</span><span class="p">:</span><span class="n">2288</span><span class="o">-</span><span class="n">星空梦想</span><span class="p">:</span><span class="n">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">3</span><span class="p">,</span><span class="n">后裔</span><span class="p">,</span><span class="n">53</span><span class="p">,</span><span class="n">精灵王</span><span class="p">:</span><span class="n">288</span><span class="o">-</span><span class="n">阿尔法小队</span><span class="p">:</span><span class="n">588</span><span class="o">-</span><span class="n">辉光之辰</span><span class="p">:</span><span class="n">888</span><span class="o">-</span><span class="n">黄金射手座</span><span class="p">:</span><span class="n">1688</span><span class="o">-</span><span class="n">如梦令</span><span class="p">:</span><span class="n">1314</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">4</span><span class="p">,</span><span class="n">铠</span><span class="p">,</span><span class="n">52</span><span class="p">,</span><span class="n">龙域领主</span><span class="p">:</span><span class="n">288</span><span class="o">-</span><span class="n">曙光守护者</span><span class="p">:</span><span class="n">1776</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">5</span><span class="p">,</span><span class="n">韩信</span><span class="p">,</span><span class="n">52</span><span class="p">,</span><span class="n">飞衡</span><span class="p">:</span><span class="n">1788</span><span class="o">-</span><span class="n">逐梦之影</span><span class="p">:</span><span class="n">888</span><span class="o">-</span><span class="n">白龙吟</span><span class="p">:</span><span class="n">1188</span><span class="o">-</span><span class="n">教廷特使</span><span class="p">:</span><span class="n">0</span><span class="o">-</span><span class="n">街头霸王</span><span class="p">:</span><span class="n">888</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>将 hot_hero_skin_price.txt 文件上传到HDFS /user/hive/warehouse/sherlockdb.db/t_hot_hero_skin_price这个目录下</p>
+</li>
+<li>
+<p>执行表查询，可以看到数据都已正常导入</p>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020194426608.png"
+	width="1992"
+	height="706"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020194426608_hu12468624017804104773.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020194426608_hu7051433326737523132.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020194426608"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="282"
+		data-flex-basis="677px"
+	
+></p>
+</li>
+</ol>
+<h3 id="使用默认分隔符">使用默认分隔符
+</h3><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">create</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="nf">t_team_ace_player</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                  </span><span class="n">id</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                  </span><span class="n">team_name</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                  </span><span class="n">ace_player_name</span><span class="w"> </span><span class="n">string</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">);</span><span class="w"> </span><span class="o">--</span><span class="n">没有指定row</span><span class="w"> </span><span class="n">format语句</span><span class="w"> </span><span class="n">此时采用的是默认的</span><span class="err">\</span><span class="n">001作为字段的分隔符</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">t_team_ace_player</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>创建数据文件，通过\001作为分隔符，同时将文件上传到HDFS，再通过Hive查询可看到已正常查到数据</p>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020210816542.png"
+	width="2044"
+	height="914"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020210816542_hu953876623176479308.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020210816542_hu6808938065293737893.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020210816542"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="223"
+		data-flex-basis="536px"
+	
+></p>
+<p>在大数据场景下，优先将\001作为分隔符，这样在建表时可以省去不少工作，同时也能保持一个统一的规范</p>
+<h3 id="指定数据存储路径">指定数据存储路径
+</h3><ol>
+<li>
+<p>将数据文件上传到任意HDFS路径下，例如这里上传到/test1020 下</p>
+</li>
+<li>
+<p>执行建表语句</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">create</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="nf">t_team_ace_player_location</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                           </span><span class="n">id</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                           </span><span class="n">team_name</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                           </span><span class="n">ace_player_name</span><span class="w"> </span><span class="n">string</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">location</span><span class="w"> </span><span class="err">&#39;</span><span class="o">/</span><span class="n">test1020</span><span class="err">&#39;</span><span class="p">;</span><span class="w"> </span><span class="o">--</span><span class="n">使用location关键字指定本张表数据在hdfs上的存储路径</span><span class="p">,</span><span class="w"> </span><span class="n">可以是文件夹也可以是文件</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>执行表查询，可以看到数据都已正常导入</p>
+</li>
+</ol>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020212005451.png"
+	width="1970"
+	height="928"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020212005451_hu14456573578032283594.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020212005451_hu14818055366092821499.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020212005451"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="212"
+		data-flex-basis="509px"
+	
+></p>
+<h2 id="内外部表">内/外部表
+</h2><h3 id="理论">理论
+</h3><p>内部表（Internal table）也称为被Hive拥有和管理的托管表（Managed table）。默认情况下创建的表就是内部表，Hive完全管理表（元数据和数据/结构和文件）的生命周期；当删除内部表时，它会删除数据以及表的元数据。</p>
+<p>外部表（External table）中的数据不是Hive拥有或管理的，只管理表元数据的生命周期。要创建一个外部表，需要使用EXTERNAL语法关键字。删除外部表只会删除元数据，而不会删除实际数据。在Hive外部仍然可以访问实际数据。
+而且外部表更为方便的是可以搭配location语法指定数据的路径。</p>
+<p>两者差异是，无论内部表还是外部表，Hive都在Hive Metastore中管理表定义及其分区信息。删除内部表会从Metastore中删除表元数据，还会从HDFS中删除其所有数据/文件。删除外部表，只会从Metastore中删除表的元数据，并保持HDFS位置中的实际数据不变。</p>
+<p>当需要通过Hive完全管理控制表的整个生命周期时，请使用内部表。</p>
+<p>当数据来之不易，防止误删，又或者文件已经存在位于远程位置时，请使用外部表，因为即使删除表，文件也会被保留。</p>
+<h3 id="演示">演示
+</h3><ol>
+<li>
+<p>执行语句创建内部表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="o">--</span><span class="n">默认情况下</span><span class="w"> </span><span class="n">创建的表就是内部表</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">create</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="nf">student</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">num</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">name</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">sex</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">age</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                        </span><span class="n">dept</span><span class="w"> </span><span class="n">string</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">row</span><span class="w"> </span><span class="n">format</span><span class="w"> </span><span class="n">delimited</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">fields</span><span class="w"> </span><span class="n">terminated</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="sc">&#39;,&#39;</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>查看建表元数据</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="o">--</span><span class="n">可以使用DESCRIBE</span><span class="w"> </span><span class="n">FORMATTED</span><span class="w"> </span><span class="n">itheima</span><span class="p">.</span><span class="na">student</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">--</span><span class="w"> </span><span class="n">来获取表的描述信息</span><span class="err">，</span><span class="n">从中可以看出表的类型</span><span class="err">。</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">describe</span><span class="w"> </span><span class="n">formatted</span><span class="w"> </span><span class="n">sherlockdb</span><span class="p">.</span><span class="na">student</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过显示能看到表的类型为MANAGED_TABLE，意味着这张表被Hive管理起来，也就是内部表</p>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020213311738.png"
+	width="1838"
+	height="634"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020213311738_hu1479181791711946698.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020213311738_hu17581231545551987223.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020213311738"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="289"
+		data-flex-basis="695px"
+	
+></p>
+</li>
+<li>
+<p>执行语句创建外部表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="o">--</span><span class="n">创建外部表</span><span class="w"> </span><span class="n">需要关键字</span><span class="w"> </span><span class="n">external</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">--</span><span class="n">外部表数据存储路径不指定</span><span class="w"> </span><span class="n">默认规则和内部表一致</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">--</span><span class="n">也可以使用location关键字指定HDFS任意路径</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">create</span><span class="w"> </span><span class="n">external</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="nf">student_ext</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                     </span><span class="n">num</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                     </span><span class="n">name</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                     </span><span class="n">sex</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                     </span><span class="n">age</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                     </span><span class="n">dept</span><span class="w"> </span><span class="n">string</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">row</span><span class="w"> </span><span class="n">format</span><span class="w"> </span><span class="n">delimited</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">fields</span><span class="w"> </span><span class="n">terminated</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="sc">&#39;,&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">location</span><span class="w"> </span><span class="err">&#39;</span><span class="o">/</span><span class="n">stu</span><span class="err">&#39;</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>查看建表元数据能看到表的类型为MANAGED_TABLE</p>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020222026717.png"
+	width="1864"
+	height="684"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020222026717_hu15446950159039615143.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020222026717_hu12749058060267761918.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020222026717"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="272"
+		data-flex-basis="654px"
+	
+></p>
+</li>
+<li>
+<p>将数据上传到HDFS这两个表的地址上，通过查询可分别看到表内有数据</p>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020222519954.png"
+	width="1828"
+	height="924"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020222519954_hu15845527565200999417.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020222519954_hu13682157401181085601.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020222519954"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="197"
+		data-flex-basis="474px"
+	
+></p>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020222605340.png"
+	width="1904"
+	height="932"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020222605340_hu15174166227775687808.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020222605340_hu1657836938541535306.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020222605340"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="204"
+		data-flex-basis="490px"
+	
+></p>
+</li>
+<li>
+<p>查看HDFS地址，可以看到内部表和外部表下都有对应的数据文件</p>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020222806492.png"
+	width="2442"
+	height="656"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020222806492_hu13636548481423505764.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020222806492_hu10426410565308219435.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020222806492"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="372"
+		data-flex-basis="893px"
+	
+></p>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020222902289.png"
+	width="2404"
+	height="656"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020222902289_hu4492900726646263671.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020222902289_hu14085425326375126013.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020222902289"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="366"
+		data-flex-basis="879px"
+	
+></p>
+</li>
+<li>
+<p>执行drop table操作</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">drop</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="n">student</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">drop</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="n">student_ext</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">show</span><span class="w"> </span><span class="n">tables</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>再去查看内部表对应的HDFS上的文件，发现表对应的目录已经被删除；在看外部表可以看到</p>
+</li>
+</ol>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020223040960.png"
+	width="2362"
+	height="818"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020223040960_hu6085223747304438149.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020223040960_hu12147538153656804001.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020223040960"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="288"
+		data-flex-basis="693px"
+	
+></p>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020223147367.png"
+	width="2346"
+	height="654"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020223147367_hu15121837098388264298.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020223147367_hu10234592432299880821.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020223147367"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="358"
+		data-flex-basis="860px"
+	
+></p>
+<h2 id="分区表">分区表
+</h2><h3 id="理论-1">理论
+</h3><h4 id="静态分区">静态分区
+</h4><p>当Hive表对应的数据量大、文件多时，为了避免查询时全表扫描数据，Hive支持根据用户指定的字段进行分区，分区的字段可以是日期、地域、种类等具有标识意义的字段。比如把一整年的数据根据月份划分12个月（12个分区），后续就可以查询指定月份分区的数据，尽可能避免了全表扫描查询。</p>
+<ul>
+<li>不同分区对应不同的文件夹，同一分区的数据存储在同一个文件夹下</li>
+<li>指定分区查询的方式叫做分区裁剪</li>
+<li>多重分区下，分区之间是一种递进关系，可以理解为在前一个分区的基础上继续分区，前后分区关系为树的父子节点</li>
+<li>分区表不是建表的必要规则，而是一种优化手段</li>
+<li>分区字段不能是表中已有字段，不能重复</li>
+<li>分区字段是虚拟字段，其数据并不存储在底层文件中</li>
+<li>Hive支持多重分区，也就是在分区的基础上继续分区，划分得更细粒度</li>
+</ul>
+<p>建立分区表的语法</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">CREATE</span><span class="w"> </span><span class="n">TABLE</span><span class="w"> </span><span class="nf">table_name</span><span class="w"> </span><span class="p">(</span><span class="n">column1</span><span class="w"> </span><span class="n">data_type</span><span class="p">,</span><span class="w"> </span><span class="n">column2</span><span class="w"> </span><span class="n">data_type</span><span class="p">)</span><span class="w"> </span><span class="n">PARTITIONED</span><span class="w"> </span><span class="nf">BY</span><span class="w"> </span><span class="p">(</span><span class="n">partition1</span><span class="w"> </span><span class="n">data_type</span><span class="p">,</span><span class="w"> </span><span class="n">partition2</span><span class="w"> </span><span class="n">data_type</span><span class="p">,</span><span class="err">…</span><span class="p">.);</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="动态分区">动态分区
+</h4><p>所谓<strong>静态分区</strong>指的是分区的字段值是由用户在加载数据的时候手动指定的。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">load</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="o">[</span><span class="n">local</span><span class="o">]</span><span class="w"> </span><span class="n">inpath</span><span class="w"> </span><span class="sc">&#39; &#39;</span><span class="w"> </span><span class="n">into</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="n">tablename</span><span class="w"> </span><span class="nf">partition</span><span class="p">(</span><span class="n">分区字段</span><span class="o">=</span><span class="err">&#39;</span><span class="n">分区值</span><span class="err">&#39;</span><span class="p">...);</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>所谓<strong>动态分区</strong>指的是分区的字段值是基于查询结果自动推断出来的。核心语法就是insert+select。在创建动态分区表时，要先把数据存放在一张表当中，这张表可以是一张临时表，也可以是其他查询表。</p>
+<p>启用hive动态分区，需要在hive会话中设置两个参数：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">set</span><span class="w"> </span><span class="n">hive</span><span class="p">.</span><span class="na">exec</span><span class="p">.</span><span class="na">dynamic</span><span class="p">.</span><span class="na">partition</span><span class="o">=</span><span class="kc">true</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">set</span><span class="w"> </span><span class="n">hive</span><span class="p">.</span><span class="na">exec</span><span class="p">.</span><span class="na">dynamic</span><span class="p">.</span><span class="na">partition</span><span class="p">.</span><span class="na">mode</span><span class="o">=</span><span class="n">nonstrict</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>第一个参数表示开启动态分区功能，第二个参数指定动态分区的模式。分为nonstick非严格模式和strict严格模式。strict严格模式要求至少有一个分区为静态分区。</p>
+<p>分区表的使用重点在于：</p>
+<p>一、建表时根据业务场景设置合适的分区字段。比如日期、地域、类别等；</p>
+<p>二、查询的时候尽量先使用where进行分区过滤，查询指定分区的数据，避免全表扫描。</p>
+<h4 id="分桶表">分桶表
+</h4><ul>
+<li>分桶表也叫做桶表，源自建表语法中bucket单词。是一种用于优化查询而设计的表类型</li>
+<li>分桶表对应的数据文件在底层会被分解为若干个部分，也就是被拆分成若干个独立的小文件</li>
+<li>在分桶时，我们要指定根据哪个字段将数据分为几桶（几个部分），分桶的字段一定要是表中存在的字段</li>
+<li>分区相当于将数据按多个文件夹划分，分桶是将原来的文件拆分成多个小文件存储</li>
+</ul>
+<p>默认规则是：Bucket number = hash_function(bucketing_column) mod num_buckets。</p>
+<p>可以发现桶编号相同的数据会被分到同一个桶当中。hash_function取决于分桶字段bucketing_column的类型：</p>
+<p>如果是int类型，hash_function(int) == int;如果是其他类型，比如bigint,string或者复杂数据类型，hash_function比较棘手，将是从该类型派生的某个数字，比如hashcode值。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="o">--</span><span class="n">分桶表建表语句</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">CREATE</span><span class="w"> </span><span class="o">[</span><span class="n">EXTERNAL</span><span class="o">]</span><span class="w"> </span><span class="n">TABLE</span><span class="w"> </span><span class="o">[</span><span class="n">db_name</span><span class="p">.</span><span class="o">]</span><span class="n">table_name</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">[</span><span class="p">(</span><span class="n">col_name</span><span class="w"> </span><span class="n">data_type</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">CLUSTERED</span><span class="w"> </span><span class="nf">BY</span><span class="w"> </span><span class="p">(</span><span class="n">col_name</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">INTO</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="n">BUCKETS</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>分桶的好处</p>
+<ul>
+<li>针对分桶字段进行查询时，减少全表扫描</li>
+<li>JOIN时可以提高MR程序效率，减少笛卡尔积数量</li>
+<li>分桶表数据可以进行高效的抽样</li>
+</ul>
+<h3 id="演示非分区场景">演示非分区场景
+</h3><ol>
+<li>
+<p>创建非分区表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">create</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="nf">t_all_hero</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                           </span><span class="n">id</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                           </span><span class="n">name</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                           </span><span class="n">hp_max</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                           </span><span class="n">mp_max</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                           </span><span class="n">attack_max</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                           </span><span class="n">defense_max</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                           </span><span class="n">attack_range</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                           </span><span class="n">role_main</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                           </span><span class="n">role_assist</span><span class="w"> </span><span class="n">string</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">row</span><span class="w"> </span><span class="n">format</span><span class="w"> </span><span class="n">delimited</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">fields</span><span class="w"> </span><span class="n">terminated</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="s">&#34;\t&#34;</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>将六个数据文件上传到表t_all_hero对应的HDFS目录下</p>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020230232611.png"
+	width="2388"
+	height="1024"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020230232611_hu14848678068497186819.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020230232611_hu7955601915857371157.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020230232611"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="233"
+		data-flex-basis="559px"
+	
+></p>
+</li>
+<li>
+<p>查询表</p>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020230333276.png"
+	width="1988"
+	height="916"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020230333276_hu4439780541661422892.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020230333276_hu12773792019160812350.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020230333276"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="217"
+		data-flex-basis="520px"
+	
+></p>
+</li>
+<li>
+<p>执行查询语句</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="o">--</span><span class="n">查询role_main主要定位是射手并且hp_max最大生命大于6000的有几个</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">select</span><span class="w"> </span><span class="nf">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">t_all_hero</span><span class="w"> </span><span class="n">where</span><span class="w"> </span><span class="n">role_main</span><span class="o">=</span><span class="s">&#34;archer&#34;</span><span class="w"> </span><span class="n">and</span><span class="w"> </span><span class="n">hp_max</span><span class="w"> </span><span class="o">&gt;</span><span class="n">6000</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>可以看到查询结果非常缓慢（有报错，待处理）</p>
+</li>
+</ol>
+<h3 id="演示分区表">演示分区表
+</h3><ol>
+<li>
+<p>创建分区表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="o">--</span><span class="n">注意分区表创建语法规则</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">--</span><span class="n">分区表建表</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">create</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="nf">t_all_hero_part</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="n">id</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="n">name</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="n">hp_max</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="n">mp_max</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="n">attack_max</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="n">defense_max</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="n">attack_range</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="n">role_main</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                </span><span class="n">role_assist</span><span class="w"> </span><span class="n">string</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="n">partitioned</span><span class="w"> </span><span class="nf">by</span><span class="w"> </span><span class="p">(</span><span class="n">role</span><span class="w"> </span><span class="n">string</span><span class="p">)</span><span class="o">--</span><span class="n">注意哦</span><span class="w"> </span><span class="n">这里是分区字段</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">row</span><span class="w"> </span><span class="n">format</span><span class="w"> </span><span class="n">delimited</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">fields</span><span class="w"> </span><span class="n">terminated</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="s">&#34;\t&#34;</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>将六个数据文件上传到HDFS的/tmp目录下</p>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020231233949.png"
+	width="2426"
+	height="1108"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020231233949_hu13065434688249731898.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020231233949_hu5110195095355392610.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020231233949"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="218"
+		data-flex-basis="525px"
+	
+></p>
+</li>
+<li>
+<p>通过静态加载语句分别将六个文件加载成分区表的六个分区</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="o">--</span><span class="n">从HDFS静态加载分区表数据</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">load</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="n">inpath</span><span class="w"> </span><span class="err">&#39;</span><span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">archer</span><span class="p">.</span><span class="na">txt</span><span class="err">&#39;</span><span class="w"> </span><span class="n">into</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="n">t_all_hero_part</span><span class="w"> </span><span class="nf">partition</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="err">&#39;</span><span class="n">sheshou</span><span class="err">&#39;</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">load</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="n">inpath</span><span class="w"> </span><span class="err">&#39;</span><span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">assassin</span><span class="p">.</span><span class="na">txt</span><span class="err">&#39;</span><span class="w"> </span><span class="n">into</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="n">t_all_hero_part</span><span class="w"> </span><span class="nf">partition</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="err">&#39;</span><span class="n">cike</span><span class="err">&#39;</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">load</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="n">inpath</span><span class="w"> </span><span class="err">&#39;</span><span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">mage</span><span class="p">.</span><span class="na">txt</span><span class="err">&#39;</span><span class="w"> </span><span class="n">into</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="n">t_all_hero_part</span><span class="w"> </span><span class="nf">partition</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="err">&#39;</span><span class="n">fashi</span><span class="err">&#39;</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">load</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="n">inpath</span><span class="w"> </span><span class="err">&#39;</span><span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">support</span><span class="p">.</span><span class="na">txt</span><span class="err">&#39;</span><span class="w"> </span><span class="n">into</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="n">t_all_hero_part</span><span class="w"> </span><span class="nf">partition</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="err">&#39;</span><span class="n">fuzhu</span><span class="err">&#39;</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">load</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="n">inpath</span><span class="w"> </span><span class="err">&#39;</span><span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">tank</span><span class="p">.</span><span class="na">txt</span><span class="err">&#39;</span><span class="w"> </span><span class="n">into</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="n">t_all_hero_part</span><span class="w"> </span><span class="nf">partition</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="err">&#39;</span><span class="n">tanke</span><span class="err">&#39;</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">load</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="n">inpath</span><span class="w"> </span><span class="err">&#39;</span><span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">warrior</span><span class="p">.</span><span class="na">txt</span><span class="err">&#39;</span><span class="w"> </span><span class="n">into</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="n">t_all_hero_part</span><span class="w"> </span><span class="nf">partition</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="err">&#39;</span><span class="n">zhanshi</span><span class="err">&#39;</span><span class="p">);</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>查询表可得</p>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020231438250.png"
+	width="2020"
+	height="672"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020231438250_hu18311697275694619527.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020231438250_hu16205316602606756132.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020231438250"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="300"
+		data-flex-basis="721px"
+	
+></p>
+</li>
+<li>
+<p>执行查询语句</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="o">--</span><span class="n">非分区表</span><span class="w"> </span><span class="n">全表扫描过滤查询</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">select</span><span class="w"> </span><span class="nf">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">t_all_hero</span><span class="w"> </span><span class="n">where</span><span class="w"> </span><span class="n">role_main</span><span class="o">=</span><span class="s">&#34;archer&#34;</span><span class="w"> </span><span class="n">and</span><span class="w"> </span><span class="n">hp_max</span><span class="w"> </span><span class="o">&gt;</span><span class="n">6000</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">--</span><span class="n">分区表</span><span class="w"> </span><span class="n">先基于分区过滤</span><span class="w"> </span><span class="n">再查询</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">select</span><span class="w"> </span><span class="nf">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">t_all_hero_part</span><span class="w"> </span><span class="n">where</span><span class="w"> </span><span class="n">role</span><span class="o">=</span><span class="s">&#34;sheshou&#34;</span><span class="w"> </span><span class="n">and</span><span class="w"> </span><span class="n">hp_max</span><span class="w"> </span><span class="o">&gt;</span><span class="n">6000</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ol>
+<h3 id="演示多重分区表">演示多重分区表
+</h3><ol>
+<li>
+<p>通过指令创建多重分区表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="o">-----</span><span class="n">多重分区表</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">--</span><span class="n">单分区表</span><span class="err">，</span><span class="n">按省份分区</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">create</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="nf">t_user_province</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="n">age</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="n">partitioned</span><span class="w"> </span><span class="nf">by</span><span class="w"> </span><span class="p">(</span><span class="n">province</span><span class="w"> </span><span class="n">string</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">--</span><span class="n">双分区表</span><span class="err">，</span><span class="n">按省份和市分区</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">--</span><span class="n">分区字段之间是一种递进的关系</span><span class="w"> </span><span class="n">因此要注意分区字段的顺序</span><span class="w"> </span><span class="n">谁在前在后</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">create</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="nf">t_user_province_city</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="n">age</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="n">partitioned</span><span class="w"> </span><span class="nf">by</span><span class="w"> </span><span class="p">(</span><span class="n">province</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w"> </span><span class="n">city</span><span class="w"> </span><span class="n">string</span><span class="p">);</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>上传文件到HDFS</p>
+</li>
+<li>
+<p>静态加载多分区</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="o">--</span><span class="n">双分区表的数据加载</span><span class="w"> </span><span class="n">静态分区加载数据</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">load</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="n">inpath</span><span class="w"> </span><span class="err">&#39;</span><span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">user</span><span class="p">.</span><span class="na">txt</span><span class="err">&#39;</span><span class="w"> </span><span class="n">into</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="n">t_user_province_city</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nf">partition</span><span class="p">(</span><span class="n">province</span><span class="o">=</span><span class="err">&#39;</span><span class="n">zhejiang</span><span class="err">&#39;</span><span class="p">,</span><span class="n">city</span><span class="o">=</span><span class="err">&#39;</span><span class="n">hangzhou</span><span class="err">&#39;</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">load</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="n">inpath</span><span class="w"> </span><span class="err">&#39;</span><span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">user</span><span class="p">.</span><span class="na">txt</span><span class="err">&#39;</span><span class="w"> </span><span class="n">into</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="n">t_user_province_city</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nf">partition</span><span class="p">(</span><span class="n">province</span><span class="o">=</span><span class="err">&#39;</span><span class="n">zhejiang</span><span class="err">&#39;</span><span class="p">,</span><span class="n">city</span><span class="o">=</span><span class="err">&#39;</span><span class="n">ningbo</span><span class="err">&#39;</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">load</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="n">inpath</span><span class="w"> </span><span class="err">&#39;</span><span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">user</span><span class="p">.</span><span class="na">txt</span><span class="err">&#39;</span><span class="w"> </span><span class="n">into</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="n">t_user_province_city</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nf">partition</span><span class="p">(</span><span class="n">province</span><span class="o">=</span><span class="err">&#39;</span><span class="n">shanghai</span><span class="err">&#39;</span><span class="p">,</span><span class="n">city</span><span class="o">=</span><span class="err">&#39;</span><span class="n">pudong</span><span class="err">&#39;</span><span class="p">);</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>查看HDFS目录层级，可以看到两层分区就是树层级管理</p>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020233055969.png"
+	width="2368"
+	height="728"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020233055969_hu9914376826482823095.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020233055969_hu11824458186817725654.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020233055969"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="325"
+		data-flex-basis="780px"
+	
+></p>
+<p><img src="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020233110500.png"
+	width="2356"
+	height="644"
+	srcset="/p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020233110500_hu12337034091103257676.png 480w, /p/hiveddl%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/image-20241020233110500_hu6689642737561327828.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241020233110500"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="365"
+		data-flex-basis="878px"
+	
+></p>
+</li>
+<li>
+<p>查询分区数据</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="o">--</span><span class="n">双分区表的使用</span><span class="w">  </span><span class="n">使用分区进行过滤</span><span class="w"> </span><span class="n">减少全表扫描</span><span class="w"> </span><span class="n">提高查询效率</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">t_user_province_city</span><span class="w"> </span><span class="n">where</span><span class="w">  </span><span class="n">province</span><span class="o">=</span><span class="w"> </span><span class="s">&#34;zhejiang&#34;</span><span class="w"> </span><span class="n">and</span><span class="w"> </span><span class="n">city</span><span class="w"> </span><span class="o">=</span><span class="s">&#34;hangzhou&#34;</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ol>
+<h3 id="演示动态分区表">演示动态分区表
+</h3><ol>
+<li>
+<p>开启动态分区参数</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="o">--</span><span class="n">动态分区</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">set</span><span class="w"> </span><span class="n">hive</span><span class="p">.</span><span class="na">exec</span><span class="p">.</span><span class="na">dynamic</span><span class="p">.</span><span class="na">partition</span><span class="o">=</span><span class="kc">true</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">set</span><span class="w"> </span><span class="n">hive</span><span class="p">.</span><span class="na">exec</span><span class="p">.</span><span class="na">dynamic</span><span class="p">.</span><span class="na">partition</span><span class="p">.</span><span class="na">mode</span><span class="o">=</span><span class="n">nonstrict</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>创建分区表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="o">--</span><span class="n">创建一张新的分区表</span><span class="w"> </span><span class="n">t_all_hero_part_dynamic</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">create</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="nf">t_all_hero_part_dynamic</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                        </span><span class="n">id</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                        </span><span class="n">name</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                        </span><span class="n">hp_max</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                        </span><span class="n">mp_max</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                        </span><span class="n">attack_max</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                        </span><span class="n">defense_max</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                        </span><span class="n">attack_range</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                        </span><span class="n">role_main</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                                        </span><span class="n">role_assist</span><span class="w"> </span><span class="n">string</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="n">partitioned</span><span class="w"> </span><span class="nf">by</span><span class="w"> </span><span class="p">(</span><span class="n">role</span><span class="w"> </span><span class="n">string</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">row</span><span class="w"> </span><span class="n">format</span><span class="w"> </span><span class="n">delimited</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">fields</span><span class="w"> </span><span class="n">terminated</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="s">&#34;\t&#34;</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">t_all_hero</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>执行分区动态插入</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="o">--</span><span class="n">执行动态分区插入</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">insert</span><span class="w"> </span><span class="n">into</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="n">t_all_hero_part_dynamic</span><span class="w"> </span><span class="nf">partition</span><span class="p">(</span><span class="n">role</span><span class="p">)</span><span class="w"> </span><span class="o">--</span><span class="n">注意这里</span><span class="w"> </span><span class="n">分区值并没有手动写死指定</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">select</span><span class="w"> </span><span class="n">tmp</span><span class="p">.</span><span class="o">*</span><span class="p">,</span><span class="n">tmp</span><span class="p">.</span><span class="na">role_main</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">t_all_hero</span><span class="w"> </span><span class="n">tmp</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>查询表数据</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">t_all_hero_part_dynamic</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ol>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/%E4%B8%8B%E7%BA%BFhdfs%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E4%B8%8B%E7%BA%BFhdfs%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/image-20241021114920502.2302535052b15be53b958bce6cfb606b_hu329227269839636028.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 下线HDFS最佳实践"
+                        
+                        data-hash="md5-IwJTUFKxW&#43;U7lYvObPtgaw==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">下线HDFS最佳实践</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E4%B8%80%E6%96%87%E5%BC%84%E6%98%8E%E7%99%BDkeyedprocessfunction%E5%87%BD%E6%95%B0/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E4%B8%80%E6%96%87%E5%BC%84%E6%98%8E%E7%99%BDkeyedprocessfunction%E5%87%BD%E6%95%B0/grebe-7972183_1280.6dd8a2d7b8cf99148cf7a877d9459ae8_hu10399000877992530385.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 一文弄明白KeyedProcessFunction函数"
+                        
+                        data-hash="md5-bdii17jPmRSM96h32UWa6A==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">一文弄明白KeyedProcessFunction函数</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%8E%8B%E5%88%B6es-hadoop%E8%BF%99%E5%A4%B4%E9%87%8E%E5%85%BD%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9D%A5%E4%BA%86/image-20240221185820644.4b63b45ce463a252fe671e9383731222_hu728424531658004632.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 压制es Hadoop这头野兽的方式来了"
+                        
+                        data-hash="md5-S2O0XORjolL&#43;Zx6Tg3MSIg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">压制es Hadoop这头野兽的方式来了</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%85%B3%E4%BA%8E%E7%B3%BB%E7%BB%9F%E6%95%B0%E6%8D%AE%E7%BC%93%E5%AD%98%E7%9A%84%E6%80%9D%E8%80%83%E4%BB%A5%E5%8F%8A%E8%AE%BE%E8%AE%A1/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%85%B3%E4%BA%8E%E7%B3%BB%E7%BB%9F%E6%95%B0%E6%8D%AE%E7%BC%93%E5%AD%98%E7%9A%84%E6%80%9D%E8%80%83%E4%BB%A5%E5%8F%8A%E8%AE%BE%E8%AE%A1/image-20240412140549821.f692697449bb1f393e629ebe0a3ed627_hu9300424985039412446.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 关于系统数据缓存的思考以及设计"
+                        
+                        data-hash="md5-9pJpdEm7Hzk&#43;Yp6&#43;Cj7WJw==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">关于系统数据缓存的思考以及设计</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/flinkcdc%E8%AF%BB%E5%8F%96binlog%E6%A0%B7%E4%BE%8B/">
+        
+        
+            <div class="article-image">
+                <img src="/p/flinkcdc%E8%AF%BB%E5%8F%96binlog%E6%A0%B7%E4%BE%8B/the-creative-exchange-d2zvqp3fpro-unsplash.60116b1ccfc8632e9a65f7d51df3efc2_hu2042364712198079406.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post FlinkCDC读取binlog样例"
+                        
+                        data-hash="md5-YBFrHM/IYy6aZffVHfPvwg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">FlinkCDC读取binlog样例</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
