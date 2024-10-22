@@ -7,7 +7,382 @@
         <generator>Hugo -- gohugo.io</generator>
         <language>zh-cn</language>
         <copyright>sherlock-lin</copyright>
-        <lastBuildDate>Tue, 22 Oct 2024 14:35:00 +0800</lastBuildDate><atom:link href="https://sherlock-lin.github.io/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/index.xml" rel="self" type="application/rss+xml" /><item>
+        <lastBuildDate>Tue, 22 Oct 2024 19:18:00 +0800</lastBuildDate><atom:link href="https://sherlock-lin.github.io/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>消费者工作流程源码解析</title>
+        <link>https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/</link>
+        <pubDate>Tue, 22 Oct 2024 19:18:00 +0800</pubDate>
+        
+        <guid>https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/</guid>
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022181620949.png" alt="Featured image of post 消费者工作流程源码解析" /&gt;&lt;h2 id=&#34;简析&#34;&gt;简析
+&lt;/h2&gt;&lt;p&gt;Pulsar客户端消费数据流程如下&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022181620949.png&#34;
+	width=&#34;1510&#34;
+	height=&#34;820&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022181620949_hu12438050223717274237.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022181620949_hu16757760695972207943.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;Pulsar客户端消费数据流程图&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;184&#34;
+		data-flex-basis=&#34;441px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;用户程序循环调用Pulsar客户端对象Consumer的receive获取数据，进行业务处理&lt;/li&gt;
+&lt;li&gt;Consumer对象从队列中读取数据&lt;/li&gt;
+&lt;li&gt;在符合条件时，调用Netty客户端对象ClientCnt向Broker发送拉取数据请求&lt;/li&gt;
+&lt;li&gt;Consumer对象将从队列中读取到的数据返回给用户&lt;/li&gt;
+&lt;li&gt;拉取请求异步到达Broker&lt;/li&gt;
+&lt;li&gt;Pulsar服务端将数据通过TCP传输给Netty客户端对象ClientCnt&lt;/li&gt;
+&lt;li&gt;ClientCnt调用Consumer对象处理数据&lt;/li&gt;
+&lt;li&gt;Consumer对象将数据放到队列中&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;可以看到Pulsar通过队列将消费者工作流程拆成了两个阶段，这两个阶段并行工作&lt;/p&gt;
+&lt;p&gt;消费数据阶段(1~5)：循环读取队列中的数据&lt;/p&gt;
+&lt;p&gt;拉取数据阶段(6~8)：1. 在消费数据时根据条件触发拉取数据 2. 拉取数据时根据条件再次触发下次拉取数据&lt;/p&gt;
+&lt;p&gt;从全局视角可以看到这是一个流水线pipeline阶段，用户在消费上一批数据时，下一批数据也在源源不断的写到内部队列中，避免了消费阶段等待拉取阶段的耗时，从而达到高效消费数据的效果。&lt;/p&gt;
+&lt;h2 id=&#34;消费者工作流程&#34;&gt;消费者工作流程
+&lt;/h2&gt;&lt;h3 id=&#34;消费数据&#34;&gt;消费数据
+&lt;/h3&gt;&lt;p&gt;对于用户来说，只要启动消费者程序，在34行就会源源不断有数据过来，因此从这里作为入口来探索Pulsar背后做了哪些事情&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240717212212394.png&#34;
+	width=&#34;2248&#34;
+	height=&#34;884&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240717212212394_hu17226286417358106270.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240717212212394_hu10365999880268072703.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;消费数据case&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;254&#34;
+		data-flex-basis=&#34;610px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;做些简单的检查，核心逻辑在internalReceive方法，继续往下跟&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022171657765.png&#34;
+	width=&#34;1270&#34;
+	height=&#34;243&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022171657765_hu741375361749217935.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022171657765_hu11016344150313313455.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ConsumerBase#receive&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;522&#34;
+		data-flex-basis=&#34;1254px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;incomingMessages是一个队列，消费者会循环从这个队列中获取数据返回给用户。这里的核心思路在messageProcessed方法&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022164957631.png&#34;
+	width=&#34;1145&#34;
+	height=&#34;320&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022164957631_hu8866515566280778039.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022164957631_hu11164813306435411828.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ConsumerImpl#internalReceive&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;357&#34;
+		data-flex-basis=&#34;858px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;messageProcessed方法中最重要的就是1797行，其他的逻辑基本都是一些相关指标的变化&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022170212858.png&#34;
+	width=&#34;1273&#34;
+	height=&#34;651&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022170212858_hu5420240302350894573.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022170212858_hu7625168651045073196.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ConsumerImpl#messageProcessed&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;195&#34;
+		data-flex-basis=&#34;469px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;继续往下跟踪&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022170259823.png&#34;
+	width=&#34;1275&#34;
+	height=&#34;84&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022170259823_hu18401337215516455370.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022170259823_hu17777209850749509362.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ConsumerImpl#increaseAvailablePermits&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;1517&#34;
+		data-flex-basis=&#34;3642px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;delta是用来做循环重试请求次数，继续往下看&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022170548680.png&#34;
+	width=&#34;1279&#34;
+	height=&#34;379&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022170548680_hu11710383404905130630.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022170548680_hu14402993307957401553.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ConsumerImpl#increaseAvailablePermits&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;337&#34;
+		data-flex-basis=&#34;809px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;sendFlowPermitsToBroker就是核心方法了，它通过TCP向Broker请求获取更多的数据&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022170626207.png&#34;
+	width=&#34;1273&#34;
+	height=&#34;430&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022170626207_hu13253826135267338054.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022170626207_hu17110963823182048971.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ConsumerImpl#sendFlowPermitsToBroker&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;296&#34;
+		data-flex-basis=&#34;710px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h3 id=&#34;接收服务端数据&#34;&gt;接收服务端数据
+&lt;/h3&gt;&lt;p&gt;ClientCnx是Netty客户端，在Broker往消费者写数据时，就是通过与ClientCnx完成的&lt;/p&gt;
+&lt;p&gt;注：消费者在启动时就已经创建好ClientCnx对象，也就是跟服务端建立好了TCP连接，因此这里只需要接收数据就好了&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022172516069.png&#34;
+	width=&#34;1250&#34;
+	height=&#34;298&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022172516069_hu14636544105672879516.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022172516069_hu17867116998418182921.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ClientCnx#handleMessage&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;419&#34;
+		data-flex-basis=&#34;1006px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;这个方法很长，但是大部分都是数据解析、相关指标的变化，核心方法就是1486行&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022174836810.png&#34;
+	width=&#34;1374&#34;
+	height=&#34;1511&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022174836810_hu8160012788769947521.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022174836810_hu10400839515569707567.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ConsumerImpl#messageReceived&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;90&#34;
+		data-flex-basis=&#34;218px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;循环接收到的数据集合，并挨个调用executeNotifyCallback进行处理&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022175323710.png&#34;
+	width=&#34;1280&#34;
+	height=&#34;1160&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022175323710_hu6878524503623431449.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022175323710_hu8916330962767715169.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ConsumerImpl#receiveIndividualMessagesFromBatch&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;110&#34;
+		data-flex-basis=&#34;264px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;数据被放到线程池里进行异步处理，将接收和处理进行分离，提升接收数据的性能&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022175353662.png&#34;
+	width=&#34;1279&#34;
+	height=&#34;540&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022175353662_hu16253591795624095015.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022175353662_hu17654391623938963684.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ConsumerImpl#executeNotifyCallback&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;236&#34;
+		data-flex-basis=&#34;568px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;可以看到将服务端写来的数据放到incomingMessages队列中，到此消费者工作流程完成闭环&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022175427886.png&#34;
+	width=&#34;1279&#34;
+	height=&#34;492&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022175427886_hu12093186362523349219.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022175427886_hu15351789570724449605.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ConsumerImpl#enqueueMessageAndCheckBatchReceive&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;259&#34;
+		data-flex-basis=&#34;623px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h2 id=&#34;消费者创建流程&#34;&gt;消费者创建流程
+&lt;/h2&gt;&lt;p&gt;看完了重要的部分，再回过头来简单看看消费者创建的流程，继续从消费数据case出发，消费者的创建是在28行&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240717205820034.png&#34;
+	width=&#34;2242&#34;
+	height=&#34;882&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240717205820034_hu10523554097195587575.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240717205820034_hu7961744430950389597.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;消费数据case&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;254&#34;
+		data-flex-basis=&#34;610px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;客户端的创建用的是构造器模式，后续几个链式赋值就不用需看了，直接看最后的subscribe方法&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022185702600.png&#34;
+	width=&#34;1248&#34;
+	height=&#34;108&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022185702600_hu2422272354002247970.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022185702600_hu5688321758084654275.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;PulsarClientImpl#newConsumer&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;1155&#34;
+		data-flex-basis=&#34;2773px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;这个方法最终也会调用异步订阅并阻塞等待&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190022877.png&#34;
+	width=&#34;1235&#34;
+	height=&#34;161&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190022877_hu11392351493977116716.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190022877_hu3196162682235247486.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ConsumerBuilderImpl#subscribe&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;767&#34;
+		data-flex-basis=&#34;1840px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;构造对象的subscribeAsync方法最终还是会调用Pulsar客户端对象的订阅逻辑&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190128948.png&#34;
+	width=&#34;1253&#34;
+	height=&#34;544&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190128948_hu1107985798030711774.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190128948_hu16108252046674460238.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ConsumerBuilderImpl#subscribeAsync&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;230&#34;
+		data-flex-basis=&#34;552px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;如果是指定一个Topic的话，则走554逻辑，否则走563逻辑&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190309976.png&#34;
+	width=&#34;1340&#34;
+	height=&#34;621&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190309976_hu3160466656271048608.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190309976_hu12325560588922495426.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;PulsarClientImpl#subscribeAsync&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;215&#34;
+		data-flex-basis=&#34;517px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;继续往下跟踪&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190416894.png&#34;
+	width=&#34;1255&#34;
+	height=&#34;167&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190416894_hu10505429689183758667.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190416894_hu13477993467694687308.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;PulsarClientImpl#singleTopicSubscribeAsync&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;751&#34;
+		data-flex-basis=&#34;1803px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;这里的getPartitionedTopicMetadata方法会通过HTTP向Broker获取这个Topic的分区情况，并根据结果来决定创建哪个消费者对象&lt;/p&gt;
+&lt;p&gt;注：即便是多分区的情况，使用MultiTopicsConsumerImpl来处理，MultiTopicsConsumerImpl内部其实也是维护Consumer集合，也就是将一个Topic的多个分区当作多个Topic来进行消费处理&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190550245.png&#34;
+	width=&#34;1413&#34;
+	height=&#34;729&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190550245_hu10803062815329134458.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190550245_hu17089616669500504955.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;PulsarClientImpl#doSingleTopicSubscribeAsync&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;193&#34;
+		data-flex-basis=&#34;465px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;继续往下跟踪&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190703563.png&#34;
+	width=&#34;1403&#34;
+	height=&#34;377&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190703563_hu4809730952670484778.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190703563_hu4536271408788130083.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ConsumerImpl#newConsumerImpl&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;372&#34;
+		data-flex-basis=&#34;893px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;继续往下&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190730118.png&#34;
+	width=&#34;1311&#34;
+	height=&#34;703&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190730118_hu12488708283343255491.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190730118_hu6581097173933147897.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ConsumerImpl#newConsumerImpl&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;186&#34;
+		data-flex-basis=&#34;447px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;ConsumerImpl的构造方法内容太多，里面需要关心的就是 grabCnx 这个方法，这个方法一直往下跟踪，可以看到以下方法，就是跟Broker创建TCP连接，这里如果感兴趣的话可以看另外一篇文章 &lt;a class=&#34;link&#34; href=&#34;https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;PulsarClient源码解析&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190943426.png&#34;
+	width=&#34;1286&#34;
+	height=&#34;781&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190943426_hu15361413503789937084.png 480w, https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022190943426_hu16816847141380836292.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ConnectionHandler#grabCnx&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;164&#34;
+		data-flex-basis=&#34;395px&#34;
+	
+&gt;&lt;/p&gt;
+</description>
+        </item>
+        <item>
         <title>基础算子学习笔记</title>
         <link>https://sherlock-lin.github.io/p/%E5%9F%BA%E7%A1%80%E7%AE%97%E5%AD%90%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</link>
         <pubDate>Tue, 22 Oct 2024 14:35:00 +0800</pubDate>
