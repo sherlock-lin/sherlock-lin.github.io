@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="概述 基于 PulsarClient源码解析 可知，无论是生产者还是消费者在启动时，都会跟服务端建立好TCP网络连接，现在就从服务端视角看来这之后跟消费者发生的数据消费流程，如下\n">
+<title>服务端处理消费请求流程源码解析</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="服务端处理消费请求流程源码解析">
+<meta property='og:description' content="概述 基于 PulsarClient源码解析 可知，无论是生产者还是消费者在启动时，都会跟服务端建立好TCP网络连接，现在就从服务端视角看来这之后跟消费者发生的数据消费流程，如下\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-10-23T16:35:50&#43;08:00'/><meta property='article:modified_time' content='2024-10-23T16:35:50&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023153153940.png' />
+<meta name="twitter:title" content="服务端处理消费请求流程源码解析">
+<meta name="twitter:description" content="概述 基于 PulsarClient源码解析 可知，无论是生产者还是消费者在启动时，都会跟服务端建立好TCP网络连接，现在就从服务端视角看来这之后跟消费者发生的数据消费流程，如下\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023153153940.png' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#概述">概述</a></li>
+    <li><a href="#添加订阅">添加订阅</a></li>
+    <li><a href="#处理消费请求流程">处理消费请求流程</a></li>
+    <li><a href="#总结">总结</a></li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">
+                <img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023153153940_hu8510635077860269263.png"
+                        srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023153153940_hu8510635077860269263.png 800w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023153153940_hu9102118046544948250.png 1600w"
+                        width="800" 
+                        height="387" 
+                        loading="lazy"
+                        alt="Featured image of post 服务端处理消费请求流程源码解析" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/pulsar/" style="background-color: #2a9d8f; color: #fff;">
+                Pulsar
+            </a>
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">服务端处理消费请求流程源码解析</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2024-10-23</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 3 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="概述">概述
+</h2><p>基于 <a class="link" href="https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"  target="_blank" rel="noopener"
+    >PulsarClient源码解析</a> 可知，无论是生产者还是消费者在启动时，都会跟服务端建立好TCP网络连接，现在就从服务端视角看来这之后跟消费者发生的数据消费流程，如下</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023153153940.png"
+	width="1684"
+	height="814"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023153153940_hu14380874982635571885.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023153153940_hu16119933693102874522.png 1024w"
+	loading="lazy"
+	
+		alt="服务端处理消费者请求流程图"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="206"
+		data-flex-basis="496px"
+	
+></p>
+<ol>
+<li>消费者客户端在启动时，会通过之间建立好的TCP连接向服务端发送订阅请求</li>
+<li>服务端Broker接收到请求后，如果发现当前订阅的Topic没创建则创建，如果已创建则为当前消费者客户端创建对应的Consumer对象，这个Consumer对象是客户端在Broker端的“代理人”，同时会给这个Consumer对象分配唯一ID</li>
+<li>客户端向服务端发起拉取数据请求，发起流程可看 <a class="link" href="https://sherlock-lin.github.io/p/%e6%b6%88%e8%b4%b9%e8%80%85%e5%b7%a5%e4%bd%9c%e6%b5%81%e7%a8%8b%e6%ba%90%e7%a0%81%e8%a7%a3%e6%9e%90/"  target="_blank" rel="noopener"
+    >消费者工作流程源码解析</a></li>
+<li>Consumer调用Dispatcher进行数据拉取</li>
+<li>Dispatcher尝试从Broker缓存中命中数据，命中直接返回，否则继续往下</li>
+<li>通过BK客户端请求Bookeeper进行数据的查询</li>
+<li>将数据通过TCP连接写到客户端</li>
+</ol>
+<p>以上就是服务端处理消费者请求的流程，接下来就从源码角度看看实现</p>
+<h2 id="添加订阅">添加订阅
+</h2><p>在消费者启动时会通过Netty客户端向服务端Broker发送订阅类型的TCP请求，服务端解析后会调用handleSubscribe方法进行处理</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822160451569.png"
+	width="1254"
+	height="297"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822160451569_hu16176772669932916402.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822160451569_hu264174893549878694.png 1024w"
+	loading="lazy"
+	
+		alt="PulsarDecoder#channelRead"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="422"
+		data-flex-basis="1013px"
+	
+></p>
+<p>在1248行会获取当前Topic对应的Topic对象(如果之前还没创建则会进行创建)，然后会在1289行调用此Topic对象订阅这个消费者对象</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163756058.png"
+	width="1270"
+	height="3316"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163756058_hu1712720695289944191.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163756058_hu16929497871219880454.png 1024w"
+	loading="lazy"
+	
+		alt="ServerCnx#handleSubscribe"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="38"
+		data-flex-basis="91px"
+	
+></p>
+<p>继续往下跟踪</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822165504874.png"
+	width="1253"
+	height="267"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822165504874_hu6497674177936592284.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822165504874_hu13128030255781232735.png 1024w"
+	loading="lazy"
+	
+		alt="PersistentTopic#subscribe"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="469"
+		data-flex-basis="1126px"
+	
+></p>
+<p>在962行根据消费者提供的信息，在服务端创建相对应的Consumer对象(作为客户端消费者的代理)，并将此消费者添加到订阅列表中</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163825343.png"
+	width="1224"
+	height="1699"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163825343_hu14742412634787348831.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163825343_hu16772659403420429303.png 1024w"
+	loading="lazy"
+	
+		alt="PersistentTopic#internalSubscribe"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="72"
+		data-flex-basis="172px"
+	
+></p>
+<p>将Consumer对象添加到Subscription列表中</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822170016941.png"
+	width="1276"
+	height="348"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822170016941_hu6792752539356412802.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822170016941_hu12398153371614076903.png 1024w"
+	loading="lazy"
+	
+		alt="AbstractTopic#addConsumerToSubscription"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="366"
+		data-flex-basis="880px"
+	
+></p>
+<p>根据订阅类型在服务端创建相对应的Dispatcher对象，这个对象负责派发Topic的数据给其对应的消费者</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163854383.png"
+	width="1246"
+	height="1775"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163854383_hu15950702519372824645.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163854383_hu8044700904078910554.png 1024w"
+	loading="lazy"
+	
+		alt="PersistentSubscription#addConsumer"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="70"
+		data-flex-basis="168px"
+	
+></p>
+<p>初始化Dispatcher对象</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163916599.png"
+	width="1276"
+	height="565"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163916599_hu13777290754851414857.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163916599_hu11980298412629173720.png 1024w"
+	loading="lazy"
+	
+		alt="PersistentDispatcherMultipleConsumers#构造函数"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="225"
+		data-flex-basis="542px"
+	
+></p>
+<h2 id="处理消费请求流程">处理消费请求流程
+</h2><p>在消费者启动时会通过Netty客户端向服务端Broker发送拉取数据的TCP请求，服务端解析后会调用handleFlow方法进行处理</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164453172.png"
+	width="1926"
+	height="274"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164453172_hu307093935259610151.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164453172_hu17699634332624479017.png 1024w"
+	loading="lazy"
+	
+		alt="PulsarDecoder#channelRead"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="702"
+		data-flex-basis="1687px"
+	
+></p>
+<p>根据Consumer ID获取对应的消费者对象，通过这个Consumer处理数据拉取的逻辑</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164439059.png"
+	width="2490"
+	height="970"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164439059_hu11007385102001537500.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164439059_hu5913510095261735539.png 1024w"
+	loading="lazy"
+	
+		alt="ServerCnx#handleFlow"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="256"
+		data-flex-basis="616px"
+	
+></p>
+<p>做些参数判断，核心在于调用Subscription处理</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164422636.png"
+	width="2510"
+	height="1024"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164422636_hu14940015004898898460.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164422636_hu11981382811785179443.png 1024w"
+	loading="lazy"
+	
+		alt="Consumer#flowPermits"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="245"
+		data-flex-basis="588px"
+	
+></p>
+<p>Subscription内部是调用Dispatcher进行处理，这个Dispatcher对象就是消费者订阅阶段创建的那个</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164402270.png"
+	width="1872"
+	height="320"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164402270_hu6478596684434808843.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164402270_hu12757048420259209044.png 1024w"
+	loading="lazy"
+	
+		alt="PersistentSubscription#consumerFlow"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="585"
+		data-flex-basis="1404px"
+	
+></p>
+<p>进行异步处理，提升服务端处理请求的并发能力</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164344920.png"
+	width="1878"
+	height="326"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164344920_hu3850107236726171314.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164344920_hu7510604839412474281.png 1024w"
+	loading="lazy"
+	
+		alt="PersistentDispatcherMultipleConsumers#consumerFlow"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="576"
+		data-flex-basis="1382px"
+	
+></p>
+<p>加锁进行数据的读取</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164326331.png"
+	width="2384"
+	height="492"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164326331_hu12284480777659723475.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164326331_hu15331722778331729627.png 1024w"
+	loading="lazy"
+	
+		alt="PersistentDispatcherMultipleConsumers#internalConsumerFlow"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="484"
+		data-flex-basis="1162px"
+	
+></p>
+<p>这个方法虽然内容较多，但是关键在于365行通过游标对象读取数据，同时这里封装了第一层回调逻辑</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164249866.png"
+	width="2520"
+	height="4536"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164249866_hu4265810906435759253.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164249866_hu7323554426692107857.png 1024w"
+	loading="lazy"
+	
+		alt="PersistentDispatcherMultipleConsumers#readMoreEntries"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="55"
+		data-flex-basis="133px"
+	
+></p>
+<p>继续往下跟踪</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164227375.png"
+	width="2502"
+	height="288"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164227375_hu3422202201129647805.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164227375_hu18380150993565464034.png 1024w"
+	loading="lazy"
+	
+		alt="ManagedCursorImpl#asyncReadEntriesOrWait"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="868"
+		data-flex-basis="2085px"
+	
+></p>
+<p>进行数据的异步读取</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164202509.png"
+	width="2492"
+	height="2162"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164202509_hu587457764710494226.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164202509_hu3705409329909831021.png 1024w"
+	loading="lazy"
+	
+		alt="ManagedCursorImpl#asyncReadEntriesWithSkipOrWait"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="115"
+		data-flex-basis="276px"
+	
+></p>
+<p>封装第二层回调逻辑，并从这里继续进入读取数据</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164143851.png"
+	width="2584"
+	height="1124"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164143851_hu17982859060122730497.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164143851_hu2862475661556861316.png 1024w"
+	loading="lazy"
+	
+		alt="ManagedCursorImpl#asyncReadEntriesWithSkip"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="229"
+		data-flex-basis="551px"
+	
+></p>
+<p>继续往下跟踪</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164129844.png"
+	width="2584"
+	height="2166"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164129844_hu13837584982699022607.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164129844_hu15048229722009744082.png 1024w"
+	loading="lazy"
+	
+		alt="ManagedLedgerImpl#asyncReadEntries"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="119"
+		data-flex-basis="286px"
+	
+></p>
+<p>继续往下跟踪</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023145642462.png"
+	width="2180"
+	height="5082"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023145642462_hu7608370237533627172.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023145642462_hu4842686011994330260.png 1024w"
+	loading="lazy"
+	
+		alt="ManagedLedgerImpl#internalReadFromLedger"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="42"
+		data-flex-basis="102px"
+	
+></p>
+<p>先尝试从缓存中读取数据，同时这里封装第三层回调</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023145536902.png"
+	width="2510"
+	height="976"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023145536902_hu16605666214879208010.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023145536902_hu16793250231538190929.png 1024w"
+	loading="lazy"
+	
+		alt="ManagedLedgerImpl#asyncReadEntry"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="257"
+		data-flex-basis="617px"
+	
+></p>
+<p>一路跟下去直到RangeEntryCacheImpl的asyncReadEntry方法，这里是尝试从堆外跳表中来命中缓存</p>
+<p><img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163036805-9672839.png"
+	width="1225"
+	height="326"
+	srcset="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163036805-9672839_hu10190612310671830725.png 480w, /p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163036805-9672839_hu1857167922103885549.png 1024w"
+	loading="lazy"
+	
+		alt="RangeEntryCacheImpl#asyncReadEntry"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="375"
+		data-flex-basis="901px"
+	
+></p>
+<h2 id="总结">总结
+</h2><p>以上就是服务端处理消费请求的全部了，可以看到这里面用了大量的异步回调，优点是在很多步骤避免了阻塞等待，大幅提升并发处理能力，而缺点就是阅读成本也上升了，如果不梳理清楚很容易看得云里雾里。</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022181620949.ce062edf9af6a8cc90a7b710f177e179_hu11981607952995458618.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 消费者工作流程源码解析"
+                        
+                        data-hash="md5-zgYu35r2qMyQp7cQ8XfheQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">消费者工作流程源码解析</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/flink%E9%9B%86%E6%88%90pulsar%E8%BF%9B%E8%A1%8C%E8%AF%BB%E5%86%99/">
+        
+        
+            <div class="article-image">
+                <img src="/p/flink%E9%9B%86%E6%88%90pulsar%E8%BF%9B%E8%A1%8C%E8%AF%BB%E5%86%99/image-20241010212758255.3b8d865776299f9bc8d1681c57a67652_hu7262335394239924420.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Flink集成Pulsar进行读写"
+                        
+                        data-hash="md5-O42GV3Ypn5vI0WgcV6Z2Ug==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Flink集成Pulsar进行读写</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/pulsario%E9%9B%86%E6%88%90mysql/">
+        
+        
+            <div class="article-image">
+                <img src="/p/pulsario%E9%9B%86%E6%88%90mysql/image-20241008163436302.a76781ee601fc70c412d1a52fa1ecff8_hu16634190987435192676.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post PulsarIO集成mysql"
+                        
+                        data-hash="md5-p2eB7mAfxwxBLRpS&#43;h7P&#43;A==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">PulsarIO集成mysql</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%90%AF%E7%A8%8Bpulsar%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E9%AB%98%E9%80%9F%E5%90%AF%E5%8A%A8%E5%BC%95%E6%93%8E%E6%8F%AD%E7%A7%98%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%B7%A8%E5%85%BD%E7%9A%84%E8%AF%9E%E7%94%9F/image-20240913141630196.cfdbfabbec9931a0e8aa797475dd75ef_hu14409126970437613443.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生"
+                        
+                        data-hash="md5-z9v6u&#43;yZMaDoqnl0dd117w==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">启程Pulsar：深入剖析高速启动引擎，揭秘消息中间件巨兽的诞生</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/schema%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/">
+        
+        
+            <div class="article-image">
+                <img src="/p/schema%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/image-20240308104136110.ac62fe16bef7c35fa075c319ed270052_hu12371496663848303101.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Schema深度解析"
+                        
+                        data-hash="md5-rGL&#43;Fr73w1&#43;gdcMZ7ScAUg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Schema深度解析</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>

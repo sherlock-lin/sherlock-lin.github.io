@@ -7,7 +7,362 @@
         <generator>Hugo -- gohugo.io</generator>
         <language>zh-cn</language>
         <copyright>sherlock-lin</copyright>
-        <lastBuildDate>Tue, 22 Oct 2024 19:18:00 +0800</lastBuildDate><atom:link href="https://sherlock-lin.github.io/categories/pulsar/index.xml" rel="self" type="application/rss+xml" /><item>
+        <lastBuildDate>Wed, 23 Oct 2024 16:35:50 +0800</lastBuildDate><atom:link href="https://sherlock-lin.github.io/categories/pulsar/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>服务端处理消费请求流程源码解析</title>
+        <link>https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/</link>
+        <pubDate>Wed, 23 Oct 2024 16:35:50 +0800</pubDate>
+        
+        <guid>https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/</guid>
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023153153940.png" alt="Featured image of post 服务端处理消费请求流程源码解析" /&gt;&lt;h2 id=&#34;概述&#34;&gt;概述
+&lt;/h2&gt;&lt;p&gt;基于 &lt;a class=&#34;link&#34; href=&#34;https://sherlock-lin.github.io/p/pulsarclient%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;PulsarClient源码解析&lt;/a&gt; 可知，无论是生产者还是消费者在启动时，都会跟服务端建立好TCP网络连接，现在就从服务端视角看来这之后跟消费者发生的数据消费流程，如下&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023153153940.png&#34;
+	width=&#34;1684&#34;
+	height=&#34;814&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023153153940_hu14380874982635571885.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023153153940_hu16119933693102874522.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;服务端处理消费者请求流程图&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;206&#34;
+		data-flex-basis=&#34;496px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;消费者客户端在启动时，会通过之间建立好的TCP连接向服务端发送订阅请求&lt;/li&gt;
+&lt;li&gt;服务端Broker接收到请求后，如果发现当前订阅的Topic没创建则创建，如果已创建则为当前消费者客户端创建对应的Consumer对象，这个Consumer对象是客户端在Broker端的“代理人”，同时会给这个Consumer对象分配唯一ID&lt;/li&gt;
+&lt;li&gt;客户端向服务端发起拉取数据请求，发起流程可看 &lt;a class=&#34;link&#34; href=&#34;https://sherlock-lin.github.io/p/%e6%b6%88%e8%b4%b9%e8%80%85%e5%b7%a5%e4%bd%9c%e6%b5%81%e7%a8%8b%e6%ba%90%e7%a0%81%e8%a7%a3%e6%9e%90/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;消费者工作流程源码解析&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Consumer调用Dispatcher进行数据拉取&lt;/li&gt;
+&lt;li&gt;Dispatcher尝试从Broker缓存中命中数据，命中直接返回，否则继续往下&lt;/li&gt;
+&lt;li&gt;通过BK客户端请求Bookeeper进行数据的查询&lt;/li&gt;
+&lt;li&gt;将数据通过TCP连接写到客户端&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;以上就是服务端处理消费者请求的流程，接下来就从源码角度看看实现&lt;/p&gt;
+&lt;h2 id=&#34;添加订阅&#34;&gt;添加订阅
+&lt;/h2&gt;&lt;p&gt;在消费者启动时会通过Netty客户端向服务端Broker发送订阅类型的TCP请求，服务端解析后会调用handleSubscribe方法进行处理&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822160451569.png&#34;
+	width=&#34;1254&#34;
+	height=&#34;297&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822160451569_hu16176772669932916402.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822160451569_hu264174893549878694.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;PulsarDecoder#channelRead&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;422&#34;
+		data-flex-basis=&#34;1013px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;在1248行会获取当前Topic对应的Topic对象(如果之前还没创建则会进行创建)，然后会在1289行调用此Topic对象订阅这个消费者对象&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163756058.png&#34;
+	width=&#34;1270&#34;
+	height=&#34;3316&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163756058_hu1712720695289944191.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163756058_hu16929497871219880454.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ServerCnx#handleSubscribe&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;38&#34;
+		data-flex-basis=&#34;91px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;继续往下跟踪&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822165504874.png&#34;
+	width=&#34;1253&#34;
+	height=&#34;267&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822165504874_hu6497674177936592284.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822165504874_hu13128030255781232735.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;PersistentTopic#subscribe&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;469&#34;
+		data-flex-basis=&#34;1126px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;在962行根据消费者提供的信息，在服务端创建相对应的Consumer对象(作为客户端消费者的代理)，并将此消费者添加到订阅列表中&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163825343.png&#34;
+	width=&#34;1224&#34;
+	height=&#34;1699&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163825343_hu14742412634787348831.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163825343_hu16772659403420429303.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;PersistentTopic#internalSubscribe&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;72&#34;
+		data-flex-basis=&#34;172px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;将Consumer对象添加到Subscription列表中&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822170016941.png&#34;
+	width=&#34;1276&#34;
+	height=&#34;348&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822170016941_hu6792752539356412802.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20240822170016941_hu12398153371614076903.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;AbstractTopic#addConsumerToSubscription&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;366&#34;
+		data-flex-basis=&#34;880px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;根据订阅类型在服务端创建相对应的Dispatcher对象，这个对象负责派发Topic的数据给其对应的消费者&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163854383.png&#34;
+	width=&#34;1246&#34;
+	height=&#34;1775&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163854383_hu15950702519372824645.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163854383_hu8044700904078910554.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;PersistentSubscription#addConsumer&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;70&#34;
+		data-flex-basis=&#34;168px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;初始化Dispatcher对象&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163916599.png&#34;
+	width=&#34;1276&#34;
+	height=&#34;565&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163916599_hu13777290754851414857.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163916599_hu11980298412629173720.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;PersistentDispatcherMultipleConsumers#构造函数&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;225&#34;
+		data-flex-basis=&#34;542px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h2 id=&#34;处理消费请求流程&#34;&gt;处理消费请求流程
+&lt;/h2&gt;&lt;p&gt;在消费者启动时会通过Netty客户端向服务端Broker发送拉取数据的TCP请求，服务端解析后会调用handleFlow方法进行处理&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164453172.png&#34;
+	width=&#34;1926&#34;
+	height=&#34;274&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164453172_hu307093935259610151.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164453172_hu17699634332624479017.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;PulsarDecoder#channelRead&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;702&#34;
+		data-flex-basis=&#34;1687px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;根据Consumer ID获取对应的消费者对象，通过这个Consumer处理数据拉取的逻辑&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164439059.png&#34;
+	width=&#34;2490&#34;
+	height=&#34;970&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164439059_hu11007385102001537500.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164439059_hu5913510095261735539.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ServerCnx#handleFlow&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;256&#34;
+		data-flex-basis=&#34;616px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;做些参数判断，核心在于调用Subscription处理&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164422636.png&#34;
+	width=&#34;2510&#34;
+	height=&#34;1024&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164422636_hu14940015004898898460.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164422636_hu11981382811785179443.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;Consumer#flowPermits&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;245&#34;
+		data-flex-basis=&#34;588px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;Subscription内部是调用Dispatcher进行处理，这个Dispatcher对象就是消费者订阅阶段创建的那个&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164402270.png&#34;
+	width=&#34;1872&#34;
+	height=&#34;320&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164402270_hu6478596684434808843.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164402270_hu12757048420259209044.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;PersistentSubscription#consumerFlow&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;585&#34;
+		data-flex-basis=&#34;1404px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;进行异步处理，提升服务端处理请求的并发能力&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164344920.png&#34;
+	width=&#34;1878&#34;
+	height=&#34;326&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164344920_hu3850107236726171314.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164344920_hu7510604839412474281.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;PersistentDispatcherMultipleConsumers#consumerFlow&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;576&#34;
+		data-flex-basis=&#34;1382px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;加锁进行数据的读取&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164326331.png&#34;
+	width=&#34;2384&#34;
+	height=&#34;492&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164326331_hu12284480777659723475.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164326331_hu15331722778331729627.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;PersistentDispatcherMultipleConsumers#internalConsumerFlow&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;484&#34;
+		data-flex-basis=&#34;1162px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;这个方法虽然内容较多，但是关键在于365行通过游标对象读取数据，同时这里封装了第一层回调逻辑&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164249866.png&#34;
+	width=&#34;2520&#34;
+	height=&#34;4536&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164249866_hu4265810906435759253.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164249866_hu7323554426692107857.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;PersistentDispatcherMultipleConsumers#readMoreEntries&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;55&#34;
+		data-flex-basis=&#34;133px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;继续往下跟踪&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164227375.png&#34;
+	width=&#34;2502&#34;
+	height=&#34;288&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164227375_hu3422202201129647805.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164227375_hu18380150993565464034.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ManagedCursorImpl#asyncReadEntriesOrWait&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;868&#34;
+		data-flex-basis=&#34;2085px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;进行数据的异步读取&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164202509.png&#34;
+	width=&#34;2492&#34;
+	height=&#34;2162&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164202509_hu587457764710494226.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164202509_hu3705409329909831021.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ManagedCursorImpl#asyncReadEntriesWithSkipOrWait&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;115&#34;
+		data-flex-basis=&#34;276px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;封装第二层回调逻辑，并从这里继续进入读取数据&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164143851.png&#34;
+	width=&#34;2584&#34;
+	height=&#34;1124&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164143851_hu17982859060122730497.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164143851_hu2862475661556861316.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ManagedCursorImpl#asyncReadEntriesWithSkip&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;229&#34;
+		data-flex-basis=&#34;551px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;继续往下跟踪&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164129844.png&#34;
+	width=&#34;2584&#34;
+	height=&#34;2166&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164129844_hu13837584982699022607.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023164129844_hu15048229722009744082.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ManagedLedgerImpl#asyncReadEntries&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;119&#34;
+		data-flex-basis=&#34;286px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;继续往下跟踪&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023145642462.png&#34;
+	width=&#34;2180&#34;
+	height=&#34;5082&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023145642462_hu7608370237533627172.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023145642462_hu4842686011994330260.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ManagedLedgerImpl#internalReadFromLedger&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;42&#34;
+		data-flex-basis=&#34;102px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;先尝试从缓存中读取数据，同时这里封装第三层回调&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023145536902.png&#34;
+	width=&#34;2510&#34;
+	height=&#34;976&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023145536902_hu16605666214879208010.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023145536902_hu16793250231538190929.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;ManagedLedgerImpl#asyncReadEntry&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;257&#34;
+		data-flex-basis=&#34;617px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;一路跟下去直到RangeEntryCacheImpl的asyncReadEntry方法，这里是尝试从堆外跳表中来命中缓存&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163036805-9672839.png&#34;
+	width=&#34;1225&#34;
+	height=&#34;326&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163036805-9672839_hu10190612310671830725.png 480w, https://sherlock-lin.github.io/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023163036805-9672839_hu1857167922103885549.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;RangeEntryCacheImpl#asyncReadEntry&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;375&#34;
+		data-flex-basis=&#34;901px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;p&gt;以上就是服务端处理消费请求的全部了，可以看到这里面用了大量的异步回调，优点是在很多步骤避免了阻塞等待，大幅提升并发处理能力，而缺点就是阅读成本也上升了，如果不梳理清楚很容易看得云里雾里。&lt;/p&gt;
+</description>
+        </item>
+        <item>
         <title>消费者工作流程源码解析</title>
         <link>https://sherlock-lin.github.io/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/</link>
         <pubDate>Tue, 22 Oct 2024 19:18:00 +0800</pubDate>
