@@ -7,7 +7,15 @@
         <generator>Hugo -- gohugo.io</generator>
         <language>zh-cn</language>
         <copyright>sherlock-lin</copyright>
-        <lastBuildDate>Wed, 23 Oct 2024 16:35:50 +0800</lastBuildDate><atom:link href="https://sherlock-lin.github.io/categories/index.xml" rel="self" type="application/rss+xml" /><item>
+        <lastBuildDate>Wed, 30 Oct 2024 11:22:35 +0800</lastBuildDate><atom:link href="https://sherlock-lin.github.io/categories/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>架构</title>
+        <link>https://sherlock-lin.github.io/categories/%E6%9E%B6%E6%9E%84/</link>
+        <pubDate>Wed, 30 Oct 2024 11:22:35 +0800</pubDate>
+        
+        <guid>https://sherlock-lin.github.io/categories/%E6%9E%B6%E6%9E%84/</guid>
+        <description>&lt;img src="https://sherlock-lin.github.io/categories/%E6%9E%B6%E6%9E%84/architecture.jpg" alt="Featured image of post 架构" /&gt;</description>
+        </item>
+        <item>
         <title>Pulsar</title>
         <link>https://sherlock-lin.github.io/categories/pulsar/</link>
         <pubDate>Wed, 23 Oct 2024 16:35:50 +0800</pubDate>
