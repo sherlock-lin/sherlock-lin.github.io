@@ -465,7 +465,7 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">future</span><span class="p">.</span><span class="na">channel</span><span class="p">().</span><span class="na">closeFuture</span><span class="p">().</span><span class="na">sync</span><span class="p">();</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">Exception</span><span class="w"> </span><span class="n">e</span><span class="p">){</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="k">finally</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="n">finally</span><span class="w"> </span><span class="p">{</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">bossGroup</span><span class="p">.</span><span class="na">shutdownGracefully</span><span class="p">();</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">workerGroup</span><span class="p">.</span><span class="na">shutdownGracefully</span><span class="p">();</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
