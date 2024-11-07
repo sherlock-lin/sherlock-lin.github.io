@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="背景 在mac机器上启动Yarn集群，然后通过flink、spark提交on yarn计算任务失败\n排查 在yarn web页面上看到无存活的NM节点，同时也无分配的cpu和内存 在首页看到报错信息：The number of requested virtual cores for application master 1 exceeds the maximum number of virtual cores 0 available in the Yarn Cluster. 上面两个问题指向了一种可能，那就是NodeManager没有正常启动，查看其日志看到以下报错\n">
+<title>一次Yarn排障记录</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E4%B8%80%E6%AC%A1yarn%E6%8E%92%E9%9A%9C%E8%AE%B0%E5%BD%95/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="一次Yarn排障记录">
+<meta property='og:description' content="背景 在mac机器上启动Yarn集群，然后通过flink、spark提交on yarn计算任务失败\n排查 在yarn web页面上看到无存活的NM节点，同时也无分配的cpu和内存 在首页看到报错信息：The number of requested virtual cores for application master 1 exceeds the maximum number of virtual cores 0 available in the Yarn Cluster. 上面两个问题指向了一种可能，那就是NodeManager没有正常启动，查看其日志看到以下报错\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E4%B8%80%E6%AC%A1yarn%E6%8E%92%E9%9A%9C%E8%AE%B0%E5%BD%95/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-11-07T23:48:18&#43;08:00'/><meta property='article:modified_time' content='2024-11-07T23:48:18&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E4%B8%80%E6%AC%A1yarn%E6%8E%92%E9%9A%9C%E8%AE%B0%E5%BD%95/dolphin-8949505_1280.jpg' />
+<meta name="twitter:title" content="一次Yarn排障记录">
+<meta name="twitter:description" content="背景 在mac机器上启动Yarn集群，然后通过flink、spark提交on yarn计算任务失败\n排查 在yarn web页面上看到无存活的NM节点，同时也无分配的cpu和内存 在首页看到报错信息：The number of requested virtual cores for application master 1 exceeds the maximum number of virtual cores 0 available in the Yarn Cluster. 上面两个问题指向了一种可能，那就是NodeManager没有正常启动，查看其日志看到以下报错\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E4%B8%80%E6%AC%A1yarn%E6%8E%92%E9%9A%9C%E8%AE%B0%E5%BD%95/dolphin-8949505_1280.jpg' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#背景">背景</a></li>
+    <li><a href="#排查">排查</a></li>
+    <li><a href="#解决方案一清理磁盘">解决方案一：清理磁盘</a></li>
+    <li><a href="#解决方案二yarn修改参数推荐方案">解决方案二：yarn修改参数【推荐方案】</a></li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/%E4%B8%80%E6%AC%A1yarn%E6%8E%92%E9%9A%9C%E8%AE%B0%E5%BD%95/">
+                <img src="/p/%E4%B8%80%E6%AC%A1yarn%E6%8E%92%E9%9A%9C%E8%AE%B0%E5%BD%95/dolphin-8949505_1280_hu12894558835196541998.jpg"
+                        srcset="/p/%E4%B8%80%E6%AC%A1yarn%E6%8E%92%E9%9A%9C%E8%AE%B0%E5%BD%95/dolphin-8949505_1280_hu12894558835196541998.jpg 800w, /p/%E4%B8%80%E6%AC%A1yarn%E6%8E%92%E9%9A%9C%E8%AE%B0%E5%BD%95/dolphin-8949505_1280_hu53765993347886950.jpg 1600w"
+                        width="800" 
+                        height="533" 
+                        loading="lazy"
+                        alt="Featured image of post 一次Yarn排障记录" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/%E4%B8%80%E6%AC%A1yarn%E6%8E%92%E9%9A%9C%E8%AE%B0%E5%BD%95/">一次Yarn排障记录</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2024-11-07</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 2 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="背景">背景
+</h2><p>在mac机器上启动Yarn集群，然后通过flink、spark提交on yarn计算任务失败</p>
+<h2 id="排查">排查
+</h2><ol>
+<li>在yarn web页面上看到无存活的NM节点，同时也无分配的cpu和内存</li>
+<li>在首页看到报错信息：The number of requested virtual cores for application master 1 exceeds the maximum number of virtual cores 0 available in the Yarn Cluster.</li>
+</ol>
+<p>上面两个问题指向了一种可能，那就是NodeManager没有正常启动，查看其日志看到以下报错</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">2024</span><span class="o">-</span><span class="n">09</span><span class="o">-</span><span class="n">27</span><span class="w"> </span><span class="n">11</span><span class="p">:</span><span class="n">09</span><span class="p">:</span><span class="n">13</span><span class="p">,</span><span class="n">458</span><span class="w"> </span><span class="n">ERROR</span><span class="w"> </span><span class="n">org</span><span class="p">.</span><span class="na">apache</span><span class="p">.</span><span class="na">hadoop</span><span class="p">.</span><span class="na">yarn</span><span class="p">.</span><span class="na">server</span><span class="p">.</span><span class="na">nodemanager</span><span class="p">.</span><span class="na">LocalDirsHandlerService</span><span class="p">:</span><span class="w"> </span><span class="n">Most</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">disks</span><span class="w"> </span><span class="n">failed</span><span class="p">.</span><span class="w"> </span><span class="n">1</span><span class="o">/</span><span class="n">1</span><span class="w"> </span><span class="n">local</span><span class="o">-</span><span class="n">dirs</span><span class="w"> </span><span class="n">usable</span><span class="w"> </span><span class="n">space</span><span class="w"> </span><span class="n">is</span><span class="w"> </span><span class="n">below</span><span class="w"> </span><span class="n">configured</span><span class="w"> </span><span class="n">utilization</span><span class="w"> </span><span class="n">percentage</span><span class="o">/</span><span class="n">no</span><span class="w"> </span><span class="n">more</span><span class="w"> </span><span class="n">usable</span><span class="w"> </span><span class="n">space</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">lin</span><span class="o">/</span><span class="n">dev</span><span class="o">/</span><span class="n">bigdata</span><span class="o">/</span><span class="n">hadoop</span><span class="o">-</span><span class="n">3</span><span class="p">.</span><span class="na">3</span><span class="p">.</span><span class="na">6</span><span class="o">/</span><span class="n">hdfs</span><span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">nm</span><span class="o">-</span><span class="n">local</span><span class="o">-</span><span class="n">dir</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">used</span><span class="w"> </span><span class="n">space</span><span class="w"> </span><span class="n">above</span><span class="w"> </span><span class="n">threshold</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">90</span><span class="p">.</span><span class="na">0</span><span class="o">%</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="p">;</span><span class="w"> </span><span class="n">1</span><span class="o">/</span><span class="n">1</span><span class="w"> </span><span class="n">log</span><span class="o">-</span><span class="n">dirs</span><span class="w"> </span><span class="n">usable</span><span class="w"> </span><span class="n">space</span><span class="w"> </span><span class="n">is</span><span class="w"> </span><span class="n">below</span><span class="w"> </span><span class="n">configured</span><span class="w"> </span><span class="n">utilization</span><span class="w"> </span><span class="n">percentage</span><span class="o">/</span><span class="n">no</span><span class="w"> </span><span class="n">more</span><span class="w"> </span><span class="n">usable</span><span class="w"> </span><span class="n">space</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">lin</span><span class="o">/</span><span class="n">dev</span><span class="o">/</span><span class="n">bigdata</span><span class="o">/</span><span class="n">hadoop</span><span class="o">-</span><span class="n">3</span><span class="p">.</span><span class="na">3</span><span class="p">.</span><span class="na">6</span><span class="o">/</span><span class="n">logs</span><span class="o">/</span><span class="n">userlogs</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">used</span><span class="w"> </span><span class="n">space</span><span class="w"> </span><span class="n">above</span><span class="w"> </span><span class="n">threshold</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">90</span><span class="p">.</span><span class="na">0</span><span class="o">%</span><span class="w"> </span><span class="o">]</span><span class="w"> 
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>报错信息很明确，就是NM存放数据所在的磁盘使用率超过90%，而在NM启动时如果判断超过90%则会启动失败</p>
+<h2 id="解决方案一清理磁盘">解决方案一：清理磁盘
+</h2><p>第一种思路就是磁盘不够就清理数据</p>
+<ol>
+<li>查询NM报错目录所对应的磁盘使用信息</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">df</span><span class="w"> </span><span class="o">-</span><span class="n">h</span><span class="w"> </span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="n">lin</span><span class="o">/</span><span class="n">dev</span><span class="o">/</span><span class="n">bigdata</span><span class="o">/</span><span class="n">hadoop</span><span class="o">-</span><span class="n">3</span><span class="p">.</span><span class="na">3</span><span class="p">.</span><span class="na">6</span><span class="o">/</span><span class="n">hdfs</span><span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">nm</span><span class="o">-</span><span class="n">local</span><span class="o">-</span><span class="n">dir</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//通过输出信息可以看到这块磁盘使用率到达91%，第一列是磁盘信息，最后一列是所挂在的文件目录</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Filesystem</span><span class="w">   </span><span class="n">Size</span><span class="w">  </span><span class="n">Used</span><span class="w">  </span><span class="n">Avail</span><span class="w"> </span><span class="n">Capacity</span><span class="w"> </span><span class="n">iused</span><span class="w"> </span><span class="n">ifree</span><span class="w"> </span><span class="o">%</span><span class="n">iused</span><span class="w"> </span><span class="n">Mounted</span><span class="w"> </span><span class="n">on</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">/</span><span class="n">dev</span><span class="o">/</span><span class="n">disk1s2</span><span class="w">  </span><span class="n">466Gi</span><span class="w">  </span><span class="n">397Gi</span><span class="w">  </span><span class="n">43Gi</span><span class="w">  </span><span class="n">91</span><span class="o">%</span><span class="w">  </span><span class="n">3</span><span class="p">.</span><span class="na">3M</span><span class="w"> </span><span class="n">448M</span><span class="w">  </span><span class="n">1</span><span class="o">%</span><span class="w">  </span><span class="o">/</span><span class="n">System</span><span class="o">/</span><span class="n">Volumes</span><span class="o">/</span><span class="n">Data</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//也可以通过</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">df</span><span class="w"> </span><span class="o">-</span><span class="n">h</span><span class="w"> </span><span class="n">查看所有磁盘和目录的映射关系</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol start="2">
+<li>查看 /System/Volumes/Data 目录下前十个最占空间的文件夹</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">du</span><span class="w"> </span><span class="o">-</span><span class="n">h</span><span class="w"> </span><span class="o">-</span><span class="n">d</span><span class="w"> </span><span class="n">1</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">sort</span><span class="w"> </span><span class="o">-</span><span class="n">rh</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">head</span><span class="w"> </span><span class="o">-</span><span class="n">n</span><span class="w"> </span><span class="n">10</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol start="3">
+<li>查找当前磁盘上最占空间的不重要文件进行删除，释放磁盘空间，当这块磁盘使用率降到90%以下时，重新启动NM即可</li>
+</ol>
+<h2 id="解决方案二yarn修改参数推荐方案">解决方案二：yarn修改参数【推荐方案】
+</h2><p>在yarn-site.xml文件中增加以下配置(必选)</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">      </span><span class="o">&lt;</span><span class="n">property</span><span class="o">&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="o">&lt;</span><span class="n">name</span><span class="o">&gt;</span><span class="n">yarn</span><span class="p">.</span><span class="na">nodemanager</span><span class="p">.</span><span class="na">disk</span><span class="o">-</span><span class="n">health</span><span class="o">-</span><span class="n">checker</span><span class="p">.</span><span class="na">max</span><span class="o">-</span><span class="n">disk</span><span class="o">-</span><span class="n">utilization</span><span class="o">-</span><span class="n">per</span><span class="o">-</span><span class="n">disk</span><span class="o">-</span><span class="n">percentage</span><span class="o">&lt;/</span><span class="n">name</span><span class="o">&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="o">&lt;</span><span class="n">value</span><span class="o">&gt;</span><span class="n">99</span><span class="p">.</span><span class="na">0</span><span class="o">&lt;/</span><span class="n">value</span><span class="o">&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="o">&lt;</span><span class="n">description</span><span class="o">&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        		</span><span class="n">磁盘的最大使用率</span><span class="err">。</span><span class="n">当一块磁盘的使用率超过该值时</span><span class="err">，</span><span class="n">就会标记该磁盘处于不健康状态</span><span class="err">，</span><span class="n">不再使用该磁盘</span><span class="err">。</span><span class="n">默认为</span><span class="w"> </span><span class="n">90</span><span class="err">，</span><span class="n">即可以使用磁盘</span><span class="w"> </span><span class="n">90</span><span class="o">%</span><span class="w"> </span><span class="n">的空间</span><span class="err">。</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="o">&lt;/</span><span class="n">description</span><span class="o">&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="o">&lt;/</span><span class="n">property</span><span class="o">&gt;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>除此之外也可以额外增加以下配置(可选)</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">      </span><span class="o">&lt;</span><span class="n">property</span><span class="o">&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="o">&lt;</span><span class="n">name</span><span class="o">&gt;</span><span class="n">yarn</span><span class="p">.</span><span class="na">nodemanager</span><span class="p">.</span><span class="na">disk</span><span class="o">-</span><span class="n">health</span><span class="o">-</span><span class="n">checker</span><span class="p">.</span><span class="na">min</span><span class="o">-</span><span class="n">healthy</span><span class="o">-</span><span class="n">disks</span><span class="o">&lt;/</span><span class="n">name</span><span class="o">&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="o">&lt;</span><span class="n">value</span><span class="o">&gt;</span><span class="n">0</span><span class="p">.</span><span class="na">0</span><span class="o">&lt;/</span><span class="n">value</span><span class="o">&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="o">&lt;</span><span class="n">description</span><span class="o">&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        		</span><span class="n">默认值是0</span><span class="p">.</span><span class="na">25</span><span class="err">，</span><span class="n">表示25</span><span class="o">%</span><span class="err">。</span><span class="n">NodeManager上最少保证健康磁盘比例</span><span class="err">，</span><span class="n">当健康磁盘比例低于该值时</span><span class="err">，</span><span class="n">NodeManager不会再接收和启动新的Container</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="o">&lt;/</span><span class="n">description</span><span class="o">&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="o">&lt;/</span><span class="n">property</span><span class="o">&gt;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>更改完配置后重启NM即可正常使用</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/iceberg%E6%95%B0%E6%8D%AE%E8%AF%BB%E5%8F%96%E6%B5%81%E7%A8%8B/">
+        
+        
+            <div class="article-image">
+                <img src="/p/iceberg%E6%95%B0%E6%8D%AE%E8%AF%BB%E5%8F%96%E6%B5%81%E7%A8%8B/image-20241101160153405.762070f2b32b173f699a285e440d5f88_hu9740190788481667606.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Iceberg数据读取流程"
+                        
+                        data-hash="md5-diBw8rMrFz9pmiheRA1fiA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Iceberg数据读取流程</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/iceberg%E6%95%B0%E6%8D%AE%E5%86%99%E5%85%A5%E6%B5%81%E7%A8%8B/">
+        
+        
+            <div class="article-image">
+                <img src="/p/iceberg%E6%95%B0%E6%8D%AE%E5%86%99%E5%85%A5%E6%B5%81%E7%A8%8B/image-20241105212013545.aeac48b9a144d67f88bc928b3a387067_hu3881838688107310584.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Iceberg数据写入流程"
+                        
+                        data-hash="md5-rqxIuaFE1n&#43;IvJKLOjhwZw==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Iceberg数据写入流程</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%A4%84%E7%90%86%E6%B6%88%E8%B4%B9%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241023153153940.16fc37139524fc5d55f8c11baeb03192_hu1076306487450389504.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 服务端处理消费请求流程源码解析"
+                        
+                        data-hash="md5-Fvw3E5Uk/F1V&#43;MEbrrAxkg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">服务端处理消费请求流程源码解析</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E6%B6%88%E8%B4%B9%E8%80%85%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/image-20241022181620949.ce062edf9af6a8cc90a7b710f177e179_hu11981607952995458618.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 消费者工作流程源码解析"
+                        
+                        data-hash="md5-zgYu35r2qMyQp7cQ8XfheQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">消费者工作流程源码解析</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%9F%BA%E7%A1%80%E7%AE%97%E5%AD%90%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%9F%BA%E7%A1%80%E7%AE%97%E5%AD%90%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/gull-8151932_1280.2050c59bb0284804503603eb8e507404_hu6399228128241274359.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 基础算子学习笔记"
+                        
+                        data-hash="md5-IFDFm7AoSARQNgPrjlB0BA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">基础算子学习笔记</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
