@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html lang="zh-cn" dir="ltr">
     <head><meta charset='utf-8'>
-<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="简析 距离初次写笔记/博客已经差不多十年了，这其中换了不少平台，每次换平台都少不了一顿折腾，导致有段时间都不怎么喜欢写博客了，更喜欢以笔记的方式记录下，现在在基于github搭建完博客后，终于有种安心的感觉了，不禁思考起，承载博客的最终形式应该是什么样子的，首先先简单回顾这些年用过的博客网站吧。\n">
-<title>Blog归处</title>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="前言 由于不同场景下需要用的JDK版本不同，常常需要在多个JDK版本之间进行切换，因此将这个操作步骤工具化是很有必要的\n痛点 在多个JDK版本之间切换，传统方式是在~/.bash_profile文件中配置以下内容\n">
+<title>JDK多版本切换工具</title>
 
-<link rel='canonical' href='https://sherlock-lin.github.io/p/blog%E5%BD%92%E5%A4%84/'>
+<link rel='canonical' href='https://sherlock-lin.github.io/p/jdk%E5%A4%9A%E7%89%88%E6%9C%AC%E5%88%87%E6%8D%A2%E5%B7%A5%E5%85%B7/'>
 
-<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="Blog归处">
-<meta property='og:description' content="简析 距离初次写笔记/博客已经差不多十年了，这其中换了不少平台，每次换平台都少不了一顿折腾，导致有段时间都不怎么喜欢写博客了，更喜欢以笔记的方式记录下，现在在基于github搭建完博客后，终于有种安心的感觉了，不禁思考起，承载博客的最终形式应该是什么样子的，首先先简单回顾这些年用过的博客网站吧。\n">
-<meta property='og:url' content='https://sherlock-lin.github.io/p/blog%E5%BD%92%E5%A4%84/'>
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="JDK多版本切换工具">
+<meta property='og:description' content="前言 由于不同场景下需要用的JDK版本不同，常常需要在多个JDK版本之间进行切换，因此将这个操作步骤工具化是很有必要的\n痛点 在多个JDK版本之间切换，传统方式是在~/.bash_profile文件中配置以下内容\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/jdk%E5%A4%9A%E7%89%88%E6%9C%AC%E5%88%87%E6%8D%A2%E5%B7%A5%E5%85%B7/'>
 <meta property='og:site_name' content='夏洛克-林'>
-<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-09-21T10:53:25&#43;08:00'/><meta property='article:modified_time' content='2024-09-21T10:53:25&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/blog%E5%BD%92%E5%A4%84/image-20240921101717625.png' />
-<meta name="twitter:title" content="Blog归处">
-<meta name="twitter:description" content="简析 距离初次写笔记/博客已经差不多十年了，这其中换了不少平台，每次换平台都少不了一顿折腾，导致有段时间都不怎么喜欢写博客了，更喜欢以笔记的方式记录下，现在在基于github搭建完博客后，终于有种安心的感觉了，不禁思考起，承载博客的最终形式应该是什么样子的，首先先简单回顾这些年用过的博客网站吧。\n"><meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/blog%E5%BD%92%E5%A4%84/image-20240921101717625.png' />
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-11-27T11:48:45&#43;08:00'/><meta property='article:modified_time' content='2024-11-27T11:48:45&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/jdk%E5%A4%9A%E7%89%88%E6%9C%AC%E5%88%87%E6%8D%A2%E5%B7%A5%E5%85%B7/gannet-9003524_1280.jpg' />
+<meta name="twitter:title" content="JDK多版本切换工具">
+<meta name="twitter:description" content="前言 由于不同场景下需要用的JDK版本不同，常常需要在多个JDK版本之间进行切换，因此将这个操作步骤工具化是很有必要的\n痛点 在多个JDK版本之间切换，传统方式是在~/.bash_profile文件中配置以下内容\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/jdk%E5%A4%9A%E7%89%88%E6%9C%AC%E5%88%87%E6%8D%A2%E5%B7%A5%E5%85%B7/gannet-9003524_1280.jpg' />
     </head>
     <body class="
     article-page
@@ -266,17 +266,9 @@
         <div class="widget--toc">
             <nav id="TableOfContents">
   <ol>
-    <li><a href="#简析">简析</a>
-      <ol>
-        <li><a href="#v1csdn">V1(CSDN)</a></li>
-        <li><a href="#v2segmentfault简书github">V2(segmentfault/简书/github)</a></li>
-        <li><a href="#v3博客园知乎">V3(博客园/知乎)</a></li>
-        <li><a href="#v4hexo自建网站">V4(hexo自建网站)</a></li>
-        <li><a href="#v5csdn公众号">V5(CSDN/公众号)</a></li>
-        <li><a href="#v6hugo自建网站">V6(hugo自建网站)</a></li>
-      </ol>
-    </li>
-    <li><a href="#总结">总结</a></li>
+    <li><a href="#前言">前言</a></li>
+    <li><a href="#痛点">痛点</a></li>
+    <li><a href="#工具化">工具化</a></li>
   </ol>
 </nav>
         </div>
@@ -291,13 +283,13 @@
     <article class="has-image main-article">
     <header class="article-header">
         <div class="article-image">
-            <a href="/p/blog%E5%BD%92%E5%A4%84/">
-                <img src="/p/blog%E5%BD%92%E5%A4%84/image-20240921101717625_hu14913457834020256507.png"
-                        srcset="/p/blog%E5%BD%92%E5%A4%84/image-20240921101717625_hu14913457834020256507.png 800w, /p/blog%E5%BD%92%E5%A4%84/image-20240921101717625_hu319335958283027836.png 1600w"
+            <a href="/p/jdk%E5%A4%9A%E7%89%88%E6%9C%AC%E5%88%87%E6%8D%A2%E5%B7%A5%E5%85%B7/">
+                <img src="/p/jdk%E5%A4%9A%E7%89%88%E6%9C%AC%E5%88%87%E6%8D%A2%E5%B7%A5%E5%85%B7/gannet-9003524_1280_hu2533167316015730957.jpg"
+                        srcset="/p/jdk%E5%A4%9A%E7%89%88%E6%9C%AC%E5%88%87%E6%8D%A2%E5%B7%A5%E5%85%B7/gannet-9003524_1280_hu2533167316015730957.jpg 800w, /p/jdk%E5%A4%9A%E7%89%88%E6%9C%AC%E5%88%87%E6%8D%A2%E5%B7%A5%E5%85%B7/gannet-9003524_1280_hu7415990742289172679.jpg 1600w"
                         width="800" 
-                        height="375" 
+                        height="533" 
                         loading="lazy"
-                        alt="Featured image of post Blog归处" />
+                        alt="Featured image of post JDK多版本切换工具" />
                 
             </a>
         </div>
@@ -316,7 +308,7 @@
 
     <div class="article-title-wrapper">
         <h2 class="article-title">
-            <a href="/p/blog%E5%BD%92%E5%A4%84/">Blog归处</a>
+            <a href="/p/jdk%E5%A4%9A%E7%89%88%E6%9C%AC%E5%88%87%E6%8D%A2%E5%B7%A5%E5%85%B7/">JDK多版本切换工具</a>
         </h2>
     
         
@@ -338,7 +330,7 @@
   <path d="M3 11h16" />
   <path d="M18 16.496v1.504l1 1" />
 </svg>
-                <time class="article-time--published">2024-09-21</time>
+                <time class="article-time--published">2024-11-27</time>
             </div>
         
 
@@ -353,7 +345,7 @@
 
 
                 <time class="article-time--reading">
-                    阅读时长: 7 分钟
+                    阅读时长: 1 分钟
                 </time>
             </div>
         
@@ -368,92 +360,96 @@
     <section class="article-content">
     
     
-    <h2 id="简析">简析
-</h2><p>距离初次写笔记/博客已经差不多十年了，这其中换了不少平台，每次换平台都少不了一顿折腾，导致有段时间都不怎么喜欢写博客了，更喜欢以笔记的方式记录下，现在在基于github搭建完博客后，终于有种安心的感觉了，不禁思考起，承载博客的最终形式应该是什么样子的，首先先简单回顾这些年用过的博客网站吧。</p>
-<h3 id="v1csdn">V1(CSDN)
-</h3><p>时间：15～18年</p>
-<p>15年时候开始想输出技术文章，在平时查阅资料以及周围同学交流时，觉得CSDN很火，于是就在CSDN上注册了号并且持续输出文章，当时接触了很多新技术，但是写的大部分内容实际上都是一些常识类的东西，很少有自己深入挖掘。当时选择CSDN还有一些其他因素，总结来说就是入门门槛低、引流好，对中文友好，相比之下Github、自建网站等来说对小白来说不是很友好，因此就这样用了几年的CSDN。</p>
-<h3 id="v2segmentfault简书github">V2(segmentfault/简书/github)
-</h3><p>时间：18～19</p>
-<p>在查看技术时，被简书的简约、漂亮的界面吸引住了，相比CSDN天花乱坠的广告以及充斥着不少重复内容的情况，简书的吸引力简直太大了，于是开始在上面进行内容的输出，但是没有持续多久，发现这上面的引流做得不是很好，认真写了不少文章基本没啥流量；后来转战segmentfault，也是类似的理由。之后也在github写过一段时间，github好在可以永久的给你保证数据不会丢而且这个平台基本不会倒，但是因为UI以及没有什么好的反馈逐渐放弃。</p>
-<h3 id="v3博客园知乎">V3(博客园/知乎)
-</h3><p>时间：19～21</p>
-<p>在经历过segmentfault/简书后，愈发觉得不应该过度在乎界面，更应该注重内容的质量，同时为了不再折腾，想选一个老牌稳重点网站，于是把目光瞄准了博客园，整体来说博客园应该是做得对开发者很友好的平台，虽然UI比较简陋，但是支持作者自定义UI呀，通过css和js一样能自定义出优美、酷炫的界面，同时它的后台管理功能也是做得比较好的，除此之外还在知乎并行的写文章，但不得不说，知乎的markdown支持真的不行，更适合写一些对格式要求没那么强的内容。</p>
-<h3 id="v4hexo自建网站">V4(hexo自建网站)
-</h3><p>时间：21～22</p>
-<p>虽然很喜欢博客园，但是有不少需要自己动手做的地方了，作为一个非前端要花不少时间去调css和js其实挺恼火的，后来想了想既然反正都花了这么多时间，为什么不直接自己搭建个网站呢，于是基于 hexo+github 搭建了一个，虽然也折腾了不少，但好歹不花钱弄了一个稳定的、属于自己的博客网站，但后来有几次hexo报错并且工作
-忙了起来，就扔在那里了；再后来电脑重装系统导致本地文件丢失，由于当时只是将编译好的博客数据部署到github，因此github也没有保持原来的数据，基于这个原因就不想再继续弄了</p>
-<h3 id="v5csdn公众号">V5(CSDN/公众号)
-</h3><p>时间：23～24</p>
-<p>思考之后，觉得作为已经工作多年的人并且对技术还有热情的人，首先当下重中之重是保持输出技术文章，平台是其次，只要能够保持高质量输出文章内容，自己的水平也会不断进步，平台只是个工具而已，并且随着在CSDN输出文章增多以及粉丝增多，CSDN也逐渐给我开放了不少酷炫的主题，而且用CSDN的话也能降低写博客的成本，于是这一年在CSDN贡献了不少的博客，同时觉得公众号可以打造自己的IP并且也挺酷炫的，因此有些觉得质量不错的文章也会在公众号再发一次。但是随着博客数量的增加，写博客的附加成本在逐渐上升，首先是CSDN不支持导入markdown文件的同时导入图片，因此每次要在CSDN上发布文章，还需要手动的在编辑页面上一张一张
-的上传图片，这个方式现在回想都觉得挫；同理，公众号也是一样，相当于每发一次文章同样的事情需要做两遍，我陷入了沉思～</p>
-<p>在通过摸索后，发现其实可以通过图床的方式例如PicGo来解决，就是在typera写文章时，图片会自动上传到网上例如gitee、github上，然后本地直接引用网络连接，这样就完美解决上诉问题，这样本地、CSDN、公众号的都通过网络连接访问gitee上的图片资源，从而避免了每次发布编辑图片，但是这个时候CSDN网站变得很卡，
-想翻阅历史的博客能加载几个小时，以及编辑一些历史文章再保存时也会卡很久或者直接失败～</p>
-<p>至于公众号，更适合发一些权威或者说改动不大的内容，如果有编辑过自己公众号文章的朋友应该也比较清楚，基于这个原因我也放弃了公众号。</p>
-<h3 id="v6hugo自建网站">V6(hugo自建网站)
-</h3><p>时间：现在</p>
-<p>回顾过去这些年的经历，再结合自己的情况，需求逐渐清晰了起来。</p>
-<p>背景：我是要用一辈子去参与编程的，因此输出博客是长期存在的需求(因为编程是脑力活动，需要深度思考，输出高质量技术博客可以push自己持续吸收高质量技术)</p>
-<p>以下需求按优先级排序：</p>
+    <h2 id="前言">前言
+</h2><p>由于不同场景下需要用的JDK版本不同，常常需要在多个JDK版本之间进行切换，因此将这个操作步骤工具化是很有必要的</p>
+<h2 id="痛点">痛点
+</h2><p>在多个JDK版本之间切换，传统方式是在~/.bash_profile文件中配置以下内容</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="err">#</span><span class="n">JAVA_HOME</span><span class="o">=</span><span class="s">&#34;/Library/Java/JavaVirtualMachines/jdk1.8.0_291.jdk/Contents/Home&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">#</span><span class="n">JAVA_HOME</span><span class="o">=</span><span class="s">&#34;/Users/lin/dev/java/jdk-11.0.13.jdk/Contents/Home&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">JAVA_HOME</span><span class="o">=</span><span class="s">&#34;/Users/lin/dev/java/jdk-17.0.10.jdk/Contents/Home&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">PATH</span><span class="o">=</span><span class="n">$PATH</span><span class="p">:</span><span class="n">$JAVA_HOME</span><span class="o">/</span><span class="n">bin</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">export</span><span class="w"> </span><span class="n">PATH</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>在需要切换版本时通过以下步骤完成</p>
 <ol>
-<li>
-<p>稳定的平台</p>
-<p>每次迁移平台都意味着有一堆适配的杂活要做，这些事情本质上就是没有意义的事情，对个人没有任何的成长而言；不需要过多参与到平台的维护工作中，例如自己购买服务器部署之类的，例如有些时间比较忙服务崩了都不知道，我期望的是这些文章我一旦发布后，即便我很多年不去维护它，它也能持续很好的工作～</p>
-</li>
-<li>
-<p>免费</p>
-<p>一方面不希望花钱，因为也没打算靠写博客赚钱，另一方面，也希望我认真写的文章不要依赖某一个个体，例如我很喜欢的左耳朵耗子，他的文章是购买海外服务器部署的，而在他逝去后，如果服务器被回收了，那真的是一大损失。虽然我的文章质量并不能相提并论，但是也是认真思考过的东西，如果可以我也希望即使我离开这个世界，它也能帮到后来有需要的学徒，就像现在的我依然在看左耳朵耗子的文章一样，即便作者已不在这个世界，但有时候仿佛在跟作者沟通、辩论一样，思想的东西就是这样，因此有一个能够免费并且长期承载这些思想的东西是非常重要的</p>
-</li>
-<li>
-<p>支持自定义</p>
-<p>正如教员所说的“枪杠子里出政权”，一些关键的东西一定要把控在手上。例如主题的选择、交互的控制、响应性能的优化等等，这样在未来有任何变动，我都能通过自己自定义去进行处理</p>
-</li>
-<li>
-<p>维护人工成本低/写文章成本低</p>
-<p>从长期的角度来看，不需要人维护，并且发布新文章的成本要很低，像手动一张张上传图片的操作绝不可取，其他适配的工作也是能少就少</p>
-</li>
+<li>vim ~/.bash_profile</li>
+<li>注释掉当前jdk版本，取消注释目标jdk版本</li>
+<li>source ~/.bash_profile</li>
+<li>通过 java -version 确认jdk版本切换成功</li>
 </ol>
-<p>基于以上需求，我最终的方案也有雏型了，随着不断的完善，以下是我的最终形态</p>
-<p><img src="/p/blog%E5%BD%92%E5%A4%84/image-20240921101717625.png"
-	width="1802"
-	height="844"
-	srcset="/p/blog%E5%BD%92%E5%A4%84/image-20240921101717625_hu16966280033970023673.png 480w, /p/blog%E5%BD%92%E5%A4%84/image-20240921101717625_hu5320191409382372377.png 1024w"
+<p>以上步骤缺点</p>
+<ol>
+<li>较为繁琐，高频切换时会比较疲劳从而影响到真正要做的事情</li>
+<li>手动编辑容易出错，并且~/.bash_profile文件比较重要，要尽量避免手动编辑其内容，内容出错严重可能会导致无法正常的使用电脑</li>
+</ol>
+<h2 id="工具化">工具化
+</h2><p>通过 <code>vim ~/.zshrc</code> 指令编辑zsh配置，如果没有安装zsh工具的同学请务必安装，这是提高开发效率以及体验的必要工具</p>
+<p>追加配置内容如下</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="err">#</span><span class="w"> </span><span class="n">JDK</span><span class="w"> </span><span class="n">多版本管理</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">##</span><span class="w"> </span><span class="n">JDK</span><span class="w"> </span><span class="n">8</span><span class="err">、</span><span class="n">11</span><span class="err">、</span><span class="n">17</span><span class="w"> </span><span class="n">的</span><span class="w"> </span><span class="n">export</span><span class="w"> </span><span class="n">命令</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">export</span><span class="w"> </span><span class="n">JAVA_8_HOME</span><span class="o">=</span><span class="s">&#34;/Library/Java/JavaVirtualMachines/jdk1.8.0_291.jdk/Contents/Home&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">export</span><span class="w"> </span><span class="n">JAVA_11_HOME</span><span class="o">=</span><span class="s">&#34;/Users/lin/dev/java/jdk-11.0.13.jdk/Contents/Home&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">export</span><span class="w"> </span><span class="n">JAVA_17_HOME</span><span class="o">=</span><span class="s">&#34;/Users/lin/dev/java/jdk-17.0.10.jdk/Contents/Home&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">##</span><span class="w"> </span><span class="n">alias</span><span class="w"> </span><span class="n">命令链接到</span><span class="w"> </span><span class="n">export</span><span class="w"> </span><span class="n">命令</span><span class="err">，</span><span class="n">方便随时调整</span><span class="w"> </span><span class="n">JDK</span><span class="w"> </span><span class="n">版本</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">alias</span><span class="w"> </span><span class="n">j8</span><span class="o">=</span><span class="s">&#34;export JAVA_HOME=$JAVA_8_HOME&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">alias</span><span class="w"> </span><span class="n">j11</span><span class="o">=</span><span class="s">&#34;export JAVA_HOME=$JAVA_11_HOME&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">alias</span><span class="w"> </span><span class="n">j17</span><span class="o">=</span><span class="s">&#34;export JAVA_HOME=$JAVA_17_HOME&#34;</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">##</span><span class="w"> </span><span class="n">默认使用</span><span class="w"> </span><span class="n">java8</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">export</span><span class="w"> </span><span class="n">JAVA_HOME</span><span class="o">=</span><span class="n">$JAVA_8_HOME</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">source</span><span class="w"> </span><span class="o">~/</span><span class="p">.</span><span class="na">bash_profile</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>编辑结束后通过 <code>source ~/.zshrc</code> 进行配置生效</p>
+<p>配置好后效果如下</p>
+<p><img src="/p/jdk%E5%A4%9A%E7%89%88%E6%9C%AC%E5%88%87%E6%8D%A2%E5%B7%A5%E5%85%B7/image-20241127114709755.png"
+	width="1376"
+	height="538"
+	srcset="/p/jdk%E5%A4%9A%E7%89%88%E6%9C%AC%E5%88%87%E6%8D%A2%E5%B7%A5%E5%85%B7/image-20241127114709755_hu14185165663127689782.png 480w, /p/jdk%E5%A4%9A%E7%89%88%E6%9C%AC%E5%88%87%E6%8D%A2%E5%B7%A5%E5%85%B7/image-20241127114709755_hu16160759250449147421.png 1024w"
 	loading="lazy"
 	
-		alt="博客系统架构图"
+		alt="image-20241127114709755"
 	
 	
 		class="gallery-image" 
-		data-flex-grow="213"
-		data-flex-basis="512px"
+		data-flex-grow="255"
+		data-flex-basis="613px"
 	
 ></p>
-<ol>
-<li>通过本地电脑的typora编写Blog内容，这些Blog都是通过hugo创建并且管理的，同时这个目录也是由git管理的，这个时候写完文章也可以通过hugo启动本地博客网站进行展示以及调整</li>
-<li>通过git命令将数据push到github服务端持久化起来，此时相当于数据已经持久化备份起来了，之后即便本地电脑坏了对博客内容都不会有丝毫的影响</li>
-<li>通过配置workflows文件，在仓库1感应到有新的资源被push来时，会出发action，将仓库1最新的数据通过hugo编译部署在仓库2上，由仓库2对外提供web服务。</li>
-<li>在有用户在博客评论时，评论信息会自动持久化到仓库3，以issue的形式持久化并且正常展示到博客网站上，这里我使用的是utterances工具来做的持久化操作</li>
-</ol>
-<p>在博客搭建好之后，我们需要做的只有1、2两步，第3和第4步咱们可以永远不用去管它，如果有人像我一样觉得第二步操作输入几条指令太麻烦，可以将起封装成一件执行的shell脚本，这样就之需要专注Blog内容的编写，编写完后点一个按钮，数据会自动上传到仓库1，之后就可以通过访问博客网站正常使用了。</p>
-<h2 id="总结">总结
-</h2><p>如果将这个整个博客系统看作一个软件的话，那么分层如下</p>
-<p><img src="/p/blog%E5%BD%92%E5%A4%84/image-20240921103443532.png"
-	width="1946"
-	height="794"
-	srcset="/p/blog%E5%BD%92%E5%A4%84/image-20240921103443532_hu5957054767704532632.png 480w, /p/blog%E5%BD%92%E5%A4%84/image-20240921103443532_hu16278976074770832749.png 1024w"
-	loading="lazy"
-	
-		alt="博客系统分层图"
-	
-	
-		class="gallery-image" 
-		data-flex-grow="245"
-		data-flex-basis="588px"
-	
-></p>
-<p>再聊回咱们的标题，你觉得理想情况下，blog的归处是什么样子的？或者说博客文章应该放在哪里是最好的？</p>
-<p>有人会觉得，有必要这么大费周张的思考这个吗，但我觉得这是很有必要的，任何事情你如果想把它做好，就一定要有闭环的思维，如果你认真写了几篇高质量的文章，由于像我上面一样，通过多次平台的迁移导致丢失了不少，这难道不是一种损失吗。这就像是工作上的失误导致公司的业务造成损失，这个损失也许是可以接受的(例如博客文章内容质量不高)，但万一哪一天公司业务起来了呢，也就是你文章质量逐渐上来或者是你开始把写博客也当作事业一样来对待时，如何给自己的博客文章提供稳定性保障，这就需要好好思考了也就是标题的问题。</p>
-<p>如果有其他更好的设计，欢迎在底下评论。补充说明下，上面提到的所有平台不排除作者打开方式不对，仅供读者参考，这个解决方案也是，仅供参考，希望能让有同样需求的同学少走一点弯路，这就是我写本篇文章的初衷</p>
+<p>注：之前已经配置了 alias jv=&lsquo;java -version&rsquo; ，因此可以通过jv指令快速查看jdk版本</p>
 
 </section>
 
@@ -478,23 +474,23 @@
             
                 
 <article class="has-image">
-    <a href="/p/jdk%E5%A4%9A%E7%89%88%E6%9C%AC%E5%88%87%E6%8D%A2%E5%B7%A5%E5%85%B7/">
+    <a href="/p/blog%E5%BD%92%E5%A4%84/">
         
         
             <div class="article-image">
-                <img src="/p/jdk%E5%A4%9A%E7%89%88%E6%9C%AC%E5%88%87%E6%8D%A2%E5%B7%A5%E5%85%B7/gannet-9003524_1280.aa511a7310cfa3385af52b3a0fffbbde_hu3687632605550775934.jpg" 
+                <img src="/p/blog%E5%BD%92%E5%A4%84/image-20240921101717625.77ee3da442bbc1952efa74ae2051ce21_hu10242994870817001293.png" 
                         width="250" 
                         height="150" 
                         loading="lazy"
-                        alt="Featured image of post JDK多版本切换工具"
+                        alt="Featured image of post Blog归处"
                         
-                        data-hash="md5-qlEacxDPozha9Ss6D/&#43;73g==">
+                        data-hash="md5-d&#43;49pEK7wZUu&#43;nSuIFHOIQ==">
                 
             </div>
         
 
         <div class="article-details">
-            <h2 class="article-title">JDK多版本切换工具</h2>
+            <h2 class="article-title">Blog归处</h2>
         </div>
     </a>
 </article>
