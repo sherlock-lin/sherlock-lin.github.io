@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="一、概述 Apache Iceberg是一种数据湖格式，它的出现主要是用于解决大型数据湖相关的很多问题。如它允许模式演变、时间旅行查询和高效的数据分区等，同时保持与现有数据引擎的兼容性。Iceberg功能核心是文件 metadata.json，它是表元数据管理的核心。\n">
+<title>解析metadata.json文件</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="解析metadata.json文件">
+<meta property='og:description' content="一、概述 Apache Iceberg是一种数据湖格式，它的出现主要是用于解决大型数据湖相关的很多问题。如它允许模式演变、时间旅行查询和高效的数据分区等，同时保持与现有数据引擎的兼容性。Iceberg功能核心是文件 metadata.json，它是表元数据管理的核心。\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-12-03T15:48:30&#43;08:00'/><meta property='article:modified_time' content='2024-12-03T15:48:30&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/the-creative-exchange-d2zvqp3fpro-unsplash.jpg' />
+<meta name="twitter:title" content="解析metadata.json文件">
+<meta name="twitter:description" content="一、概述 Apache Iceberg是一种数据湖格式，它的出现主要是用于解决大型数据湖相关的很多问题。如它允许模式演变、时间旅行查询和高效的数据分区等，同时保持与现有数据引擎的兼容性。Iceberg功能核心是文件 metadata.json，它是表元数据管理的核心。\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/the-creative-exchange-d2zvqp3fpro-unsplash.jpg' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#一概述">一、概述</a></li>
+    <li><a href="#二metadatajson作用">二、metadata.json作用</a></li>
+    <li><a href="#三内容详解">三、内容详解</a>
+      <ol>
+        <li><a href="#表格式版本">表格式版本</a></li>
+        <li><a href="#表uuid">表UUID</a></li>
+        <li><a href="#数据存储位置">数据存储位置</a></li>
+        <li><a href="#最近更新时间">最近更新时间</a></li>
+        <li><a href="#表schemas信息">表schemas信息</a></li>
+        <li><a href="#分区信息">分区信息</a></li>
+        <li><a href="#快照">快照</a></li>
+        <li><a href="#元数据变更历史">元数据变更历史</a></li>
+        <li><a href="#排序">排序</a></li>
+      </ol>
+    </li>
+    <li><a href="#四metadatajson例子">四、metadata.json例子</a></li>
+    <li><a href="#五查询计算引擎如何使用metadatajson">五、查询/计算引擎如何使用metadata.json</a></li>
+    <li><a href="#六总结">六、总结</a></li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/">
+                <img src="/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/the-creative-exchange-d2zvqp3fpro-unsplash_hu4784715761958561598.jpg"
+                        srcset="/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/the-creative-exchange-d2zvqp3fpro-unsplash_hu4784715761958561598.jpg 800w, /p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/the-creative-exchange-d2zvqp3fpro-unsplash_hu3085507343512068137.jpg 1600w"
+                        width="800" 
+                        height="566" 
+                        loading="lazy"
+                        alt="Featured image of post 解析metadata.json文件" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/%E6%95%B0%E6%8D%AE%E6%B9%96/" style="background-color: #2a9d8f; color: #fff;">
+                数据湖
+            </a>
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/">解析metadata.json文件</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2024-12-03</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 7 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="一概述">一、概述
+</h2><p>Apache Iceberg是一种数据湖格式，它的出现主要是用于解决大型数据湖相关的很多问题。如它允许模式演变、时间旅行查询和高效的数据分区等，同时保持与现有数据引擎的兼容性。Iceberg功能核心是文件 <code>metadata.json</code>，它是表元数据管理的核心。</p>
+<h2 id="二metadatajson作用">二、metadata.json作用
+</h2><p>metadata.json有以下五个重要用途</p>
+<ol>
+<li>集中式表管理：metadata.json是Iceberg表元数据的单一真实来源，这包括schame的定义、分区策略和快照历史记录等等，这让计算引擎更容易理解以及与表交互。</li>
+<li>schema演变：Iceberg表可以随时间进行schema演变，添加新列或修改现有列，跟踪metadata.json的变化，确保历史数据仍然可以访问，并且可以针对表历史记录中的任何点执行查询。</li>
+<li>数据分区和组织：通过<code>metadata.json</code>定义分区方式，有助于优化数据存储和查询性能，分区策略可以更新(分区演变)，并且此文件会跟踪所有此类更改。</li>
+<li>快照管理：Iceberg允许快照，快照本质上是表在不同时间节点的版本。元数据文件记录这些快照，从而实现时间旅行查询等功能，用户可以查询过去存在的表。</li>
+<li>一致性和完整性：通过提供哪些数据应该存在哪里，以何种形态存在的明确参考，确保表上的所有操作都保持数据完整性。</li>
+</ol>
+<p>metadata.json文件不仅是一个静态记录，而是一个随表而不断演化的动态文档，它是Apache Iceberg架构中不可获取的组成部分。在对表进行增删改、优化等操作时，Iceberg都会创建一个新的metadata.json来跟踪表的最新元信息。</p>
+<h2 id="三内容详解">三、内容详解
+</h2><h3 id="表格式版本">表格式版本
+</h3><ul>
+<li>字段：<strong>format-version</strong></li>
+<li>值：整数（1 或 2）</li>
+<li>用途：标识当前表的格式版本，不同版本的表行为不同，例如在2版本时删数据支持MOR特性等</li>
+</ul>
+<h3 id="表uuid">表UUID
+</h3><ul>
+<li>字段：<strong>table-uuid</strong></li>
+<li>值：UUID</li>
+<li>用途：Iceberg 中的每个表都有一个唯一标识符，即<code>table-uuid</code>。此 UUID 在创建表时生成，用于确保表的元数据在不同操作之间匹配，尤其是在元数据刷新后。如果不匹配，则表示存在潜在冲突或损坏，从而引发异常。</li>
+</ul>
+<h3 id="数据存储位置">数据存储位置
+</h3><ul>
+<li>字段：<strong>location</strong></li>
+<li>值：hdfs或者s3地址等，如 <strong>hdfs://localhost:9000/warehouse/db/user</strong></li>
+<li>用途：此字段指定表的数据文件、清单文件和元数据文件的存储基本位置。计算引擎通过此字段来确定新数据的放置位置，确保表的所有部分都位于正确的位置。</li>
+</ul>
+<h3 id="最近更新时间">最近更新时间
+</h3><ul>
+<li>字段：<strong>last-updated-ms</strong></li>
+<li>值：时间戳</li>
+<li>用途：此字段记录元数据的上次更新时间。它在写入元数据文件之前更新，为最新更改的提交提供时间戳。</li>
+</ul>
+<h3 id="表schemas信息">表schemas信息
+</h3><ul>
+<li>字段：<strong>schemas</strong></li>
+<li>值：schema列表，schames是模式对象列表，每个对象都有一个唯一标识<code>schema-id</code>, 而<code>current-schema-id</code>指向的就是当前正在使用的schema对象ID</li>
+<li>用途：Iceberg支持schema演变，列表<code>schemas</code>跟踪已用于表的所有模式，同时 <code>current-schema-id</code>指向最新的模式。此设置允许使用最初写入的schema模式查询历史数据，确保模式更改中的数据一致性和灵活性。</li>
+</ul>
+<p>两者的结构关系如下图</p>
+<p><img src="/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/image-20241203150504944.png"
+	width="912"
+	height="428"
+	srcset="/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/image-20241203150504944_hu8969858685619231916.png 480w, /p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/image-20241203150504944_hu14982880635839008451.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241203150504944"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="213"
+		data-flex-basis="511px"
+	
+></p>
+<h3 id="分区信息">分区信息
+</h3><ul>
+<li>字段：<strong>partition-specs</strong></li>
+<li>描述：它是完整分区对象的列表，每个对象都详细说明了如何对数据进行分区，<code>default-spec-id</code>指向当前表使用的分区对象ID</li>
+<li>用途：Iceberg中的分区对于数据组织和查询优化至关重要，此字段定义如何将数据按分区划分，分区可以基于date、category等进行</li>
+</ul>
+<h3 id="快照">快照
+</h3><ul>
+<li>描述：<code>last-sequence-number</code>是一个单调递增的long，<code>current-snapshot-id</code>是最新快照的ID，<code>snapshots</code>是有效快照的列表，<code>snapshot-log</code>记录了当前快照的变化。</li>
+<li>用途：这些字段管理表状态的历史记录。快照允许进行时间旅行查询，其中可以查询任何时间点存在的数据。这<code>snapshot-log</code>有助于跟踪当前快照的变化，有助于了解表随时间的演变。</li>
+</ul>
+<h3 id="元数据变更历史">元数据变更历史
+</h3><ul>
+<li>
+<p>字段：<code>metadata-log</code></p>
+</li>
+<li>
+<p>描述：<code>metadata-log</code>是一个维护元数据历史变更的数组，或者说此字段维护了Iceberg表 metadata.json之间的继承依赖关系，通过这个关系能够方便维护管理元数据变更的历史</p>
+</li>
+</ul>
+<p>这个字段的内容如下</p>
+<p><img src="/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/image-20241203153756448.png"
+	width="754"
+	height="311"
+	srcset="/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/image-20241203153756448_hu11935074947572951668.png 480w, /p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/image-20241203153756448_hu11841560727045155930.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241203153756448"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="242"
+		data-flex-basis="581px"
+	
+></p>
+<h3 id="排序">排序
+</h3><ul>
+<li>描述：<code>sort-orders</code>是排序顺序对象的列表，<code>default-sort-order-id</code>指定默认排序顺序。</li>
+<li>用途：这些字段定义数据在分区或表中的排序方式。虽然排序对于写入者来说更为重要，但它也会影响数据的读取方式，尤其是对于某些类型的查询而言，其中数据顺序很重要。</li>
+</ul>
+<h2 id="四metadatajson例子">四、metadata.json例子
+</h2><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span><span class="lnt">119
+</span><span class="lnt">120
+</span><span class="lnt">121
+</span><span class="lnt">122
+</span><span class="lnt">123
+</span><span class="lnt">124
+</span><span class="lnt">125
+</span><span class="lnt">126
+</span><span class="lnt">127
+</span><span class="lnt">128
+</span><span class="lnt">129
+</span><span class="lnt">130
+</span><span class="lnt">131
+</span><span class="lnt">132
+</span><span class="lnt">133
+</span><span class="lnt">134
+</span><span class="lnt">135
+</span><span class="lnt">136
+</span><span class="lnt">137
+</span><span class="lnt">138
+</span><span class="lnt">139
+</span><span class="lnt">140
+</span><span class="lnt">141
+</span><span class="lnt">142
+</span><span class="lnt">143
+</span><span class="lnt">144
+</span><span class="lnt">145
+</span><span class="lnt">146
+</span><span class="lnt">147
+</span><span class="lnt">148
+</span><span class="lnt">149
+</span><span class="lnt">150
+</span><span class="lnt">151
+</span><span class="lnt">152
+</span><span class="lnt">153
+</span><span class="lnt">154
+</span><span class="lnt">155
+</span><span class="lnt">156
+</span><span class="lnt">157
+</span><span class="lnt">158
+</span><span class="lnt">159
+</span><span class="lnt">160
+</span><span class="lnt">161
+</span><span class="lnt">162
+</span><span class="lnt">163
+</span><span class="lnt">164
+</span><span class="lnt">165
+</span><span class="lnt">166
+</span><span class="lnt">167
+</span><span class="lnt">168
+</span><span class="lnt">169
+</span><span class="lnt">170
+</span><span class="lnt">171
+</span><span class="lnt">172
+</span><span class="lnt">173
+</span><span class="lnt">174
+</span><span class="lnt">175
+</span><span class="lnt">176
+</span><span class="lnt">177
+</span><span class="lnt">178
+</span><span class="lnt">179
+</span><span class="lnt">180
+</span><span class="lnt">181
+</span><span class="lnt">182
+</span><span class="lnt">183
+</span><span class="lnt">184
+</span><span class="lnt">185
+</span><span class="lnt">186
+</span><span class="lnt">187
+</span><span class="lnt">188
+</span><span class="lnt">189
+</span><span class="lnt">190
+</span><span class="lnt">191
+</span><span class="lnt">192
+</span><span class="lnt">193
+</span><span class="lnt">194
+</span><span class="lnt">195
+</span><span class="lnt">196
+</span><span class="lnt">197
+</span><span class="lnt">198
+</span><span class="lnt">199
+</span><span class="lnt">200
+</span><span class="lnt">201
+</span><span class="lnt">202
+</span><span class="lnt">203
+</span><span class="lnt">204
+</span><span class="lnt">205
+</span><span class="lnt">206
+</span><span class="lnt">207
+</span><span class="lnt">208
+</span><span class="lnt">209
+</span><span class="lnt">210
+</span><span class="lnt">211
+</span><span class="lnt">212
+</span><span class="lnt">213
+</span><span class="lnt">214
+</span><span class="lnt">215
+</span><span class="lnt">216
+</span><span class="lnt">217
+</span><span class="lnt">218
+</span><span class="lnt">219
+</span><span class="lnt">220
+</span><span class="lnt">221
+</span><span class="lnt">222
+</span><span class="lnt">223
+</span><span class="lnt">224
+</span><span class="lnt">225
+</span><span class="lnt">226
+</span><span class="lnt">227
+</span><span class="lnt">228
+</span><span class="lnt">229
+</span><span class="lnt">230
+</span><span class="lnt">231
+</span><span class="lnt">232
+</span><span class="lnt">233
+</span><span class="lnt">234
+</span><span class="lnt">235
+</span><span class="lnt">236
+</span><span class="lnt">237
+</span><span class="lnt">238
+</span><span class="lnt">239
+</span><span class="lnt">240
+</span><span class="lnt">241
+</span><span class="lnt">242
+</span><span class="lnt">243
+</span><span class="lnt">244
+</span><span class="lnt">245
+</span><span class="lnt">246
+</span><span class="lnt">247
+</span><span class="lnt">248
+</span><span class="lnt">249
+</span><span class="lnt">250
+</span><span class="lnt">251
+</span><span class="lnt">252
+</span><span class="lnt">253
+</span><span class="lnt">254
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;format-version&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">2</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;table-uuid&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;f5d68306-5a68-46b7-a937-b01f14855392&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;location&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;hdfs://localhost:9000/warehouse/db/user&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;last-sequence-number&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">3</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;last-updated-ms&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">1732178316826</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;last-column-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">3</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;current-schema-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">0</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;schemas&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;type&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;struct&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;schema-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">0</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;identifier-field-ids&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">1</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="o">]</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;fields&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">1</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;name&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;id&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;required&#34;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;type&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;int&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">2</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;name&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;name&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;required&#34;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;type&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;string&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">3</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;name&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;ts&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;required&#34;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;type&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;timestamptz&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="o">]</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;default-spec-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">0</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;partition-specs&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;spec-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">0</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;fields&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;name&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;ts_day&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;transform&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;day&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;source-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">3</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;field-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">1000</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="o">]</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;last-partition-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">1000</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;default-sort-order-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">0</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;sort-orders&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;order-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">0</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;fields&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="o">]</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;properties&#34;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="s">&#34;owner&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;lin&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="s">&#34;mixed-format.primary-key-fields&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;id&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="s">&#34;flink.max-continuous-empty-commits&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;2147483647&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="s">&#34;table.create-timestamp&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;1732171642459&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="s">&#34;watermark.table&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;1732178316302&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="s">&#34;provider&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;mixed_iceberg&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="s">&#34;write.parquet.compression-codec&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;zstd&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="s">&#34;table-format&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;MIXED_ICEBERG&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="s">&#34;write.metadata.delete-after-commit.enabled&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;true&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="s">&#34;mixed-format.change.identifier&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;db.user_change_&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="s">&#34;mixed-format.table-store&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;base&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;current-snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">526437005861772456</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;refs&#34;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="s">&#34;main&#34;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">526437005861772456</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;type&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;branch&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;snapshots&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;sequence-number&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">1</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">4580221921120736517</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;timestamp-ms&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">1732171680678</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;summary&#34;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;operation&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;overwrite&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;replace-partitions&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;true&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;optimized-sequence.exist&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;true&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;added-data-files&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;3&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;added-records&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;3&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;added-files-size&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;2753&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;changed-partition-count&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;2&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-records&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;3&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-files-size&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;2753&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-data-files&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;3&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-delete-files&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;0&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-position-deletes&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;0&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-equality-deletes&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;0&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;manifest-list&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;hdfs://localhost:9000/warehouse/db/user/metadata/snap-4580221921120736517-1-08d593c9-ab07-4781-8124-543b48782e0d.avro&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;schema-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;sequence-number&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">2</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">8069721931047691859</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;parent-snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">4580221921120736517</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;timestamp-ms&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">1732172970959</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;summary&#34;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;operation&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;overwrite&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;base-optimized-time.exist&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;true&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;optimized-sequence.exist&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;true&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;snapshot.producer&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;OPTIMIZE&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;added-data-files&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;2&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;deleted-data-files&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;1&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;added-records&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;3&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;deleted-records&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;1&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;added-files-size&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;1903&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;removed-files-size&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;918&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;changed-partition-count&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;1&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-records&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;5&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-files-size&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;3738&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-data-files&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;4&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-delete-files&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;0&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-position-deletes&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;0&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-equality-deletes&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;0&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;manifest-list&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;hdfs://localhost:9000/warehouse/db/user/metadata/snap-8069721931047691859-1-bc549902-51ee-461e-af57-3658feb08351.avro&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;schema-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;sequence-number&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">3</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">526437005861772456</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;parent-snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">8069721931047691859</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;timestamp-ms&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">1732178316693</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;summary&#34;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;operation&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;overwrite&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;base-optimized-time.exist&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;true&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;optimized-sequence.exist&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;true&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;snapshot.producer&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;OPTIMIZE&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;added-data-files&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;4&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;deleted-data-files&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;2&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;added-records&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;7&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;deleted-records&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;2&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;added-files-size&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;3832&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;removed-files-size&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;1835&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;changed-partition-count&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;1&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-records&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;10&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-files-size&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;5735&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-data-files&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;6&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-delete-files&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;0&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-position-deletes&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;0&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="s">&#34;total-equality-deletes&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;0&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;manifest-list&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;hdfs://localhost:9000/warehouse/db/user/metadata/snap-526437005861772456-1-dbea59c9-96a1-490b-9b61-3c4a1f844c81.avro&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;schema-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="o">]</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;statistics&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">526437005861772456</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;statistics-path&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;hdfs://localhost:9000/warehouse/db/user/data/puffin/526437005861772456-09efafdd-5090-4548-b637-bf3d644d3b1b.puffin&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;file-size-in-bytes&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">384</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;file-footer-size-in-bytes&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">265</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;blob-metadata&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;type&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;optimized-sequence&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">526437005861772456</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;sequence-number&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">3</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;fields&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;type&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;base-optimized-time&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">526437005861772456</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;sequence-number&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">3</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;fields&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">8069721931047691859</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;statistics-path&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;hdfs://localhost:9000/warehouse/db/user/data/puffin/8069721931047691859-dc9b7437-d23a-4981-8b88-81bd02c246b1.puffin&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;file-size-in-bytes&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">351</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;file-footer-size-in-bytes&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">267</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;blob-metadata&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;type&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;optimized-sequence&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">8069721931047691859</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;sequence-number&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">2</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;fields&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;type&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;base-optimized-time&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">8069721931047691859</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;sequence-number&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">2</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;fields&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">4580221921120736517</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;statistics-path&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;hdfs://localhost:9000/warehouse/db/user/data/puffin/4580221921120736517-10c39b78-c786-4536-8294-ac802f392fe7.puffin&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;file-size-in-bytes&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">195</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;file-footer-size-in-bytes&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">146</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;blob-metadata&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;type&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;optimized-sequence&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">4580221921120736517</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;sequence-number&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">1</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="s">&#34;fields&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="o">]</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;snapshot-log&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;timestamp-ms&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">1732171680678</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">4580221921120736517</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;timestamp-ms&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">1732172970959</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">8069721931047691859</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;timestamp-ms&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">1732178316693</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;snapshot-id&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">526437005861772456</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="o">]</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;metadata-log&#34;</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;timestamp-ms&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">1732171642473</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;metadata-file&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;hdfs://localhost:9000/warehouse/db/user/metadata/v1.metadata.json&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;timestamp-ms&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">1732171680784</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;metadata-file&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;hdfs://localhost:9000/warehouse/db/user/metadata/v2.metadata.json&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">},</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;timestamp-ms&#34;</span><span class="p">:</span><span class="w"> </span><span class="n">1732172970991</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s">&#34;metadata-file&#34;</span><span class="p">:</span><span class="w"> </span><span class="s">&#34;hdfs://localhost:9000/warehouse/db/user/metadata/v3.metadata.json&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="五查询计算引擎如何使用metadatajson">五、查询/计算引擎如何使用metadata.json
+</h2><p>计算引擎会根据 <code>metadata.json</code>构造查询规划，主要根据以下进行</p>
+<ol>
+<li>分区裁剪：根据<code>partition-specs</code>信息，引擎可以获得每个历史分区方案的详细信息，从而方便跟清单列表和清单文件中引用的分区ID相匹配，从而允许它从扫描计划中裁剪掉不必要的数据文件。</li>
+<li>模式验证：在执行查询之前，引擎会检查<code>current-schema-id</code>指定的schame对象跟查询的表元信息是否对应的上</li>
+<li>元数据日志记录：<code>metadata-log</code>给计算引擎提供元数据更改的历史记录，通过识别catalog引用哪个metadata.json来将表回滚到之前的状态。</li>
+<li>MVCC：Iceberg通过序列号在并发事务时保持一致性，写入将在开始时对原来的序列号进行+1操作，并在提交时确认这个号码是否仍然还是序列中的下一个。如果另一个事务在原始写入提交之前已声明下一个序列号，则当前事务则可以重新尝试写入。</li>
+</ol>
+<h2 id="六总结">六、总结
+</h2><p>Apache Iceberg的<code>metadata.json</code>给计算引擎提供了全新的指导，让计算引擎能够高效地管理、查询和演进(包括schema、分区等)大规模数据表。通过提供详细的元数据，从而允许计算引擎在查询规划到数据一致性的各个层面进行优化，从而使Iceberg表具有高性能和灵活性。</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/iceberg%E6%95%B0%E6%8D%AE%E8%AF%BB%E5%8F%96%E6%B5%81%E7%A8%8B/">
+        
+        
+            <div class="article-image">
+                <img src="/p/iceberg%E6%95%B0%E6%8D%AE%E8%AF%BB%E5%8F%96%E6%B5%81%E7%A8%8B/image-20241101160153405.762070f2b32b173f699a285e440d5f88_hu9740190788481667606.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Iceberg数据读取流程"
+                        
+                        data-hash="md5-diBw8rMrFz9pmiheRA1fiA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Iceberg数据读取流程</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/iceberg%E6%95%B0%E6%8D%AE%E5%86%99%E5%85%A5%E6%B5%81%E7%A8%8B/">
+        
+        
+            <div class="article-image">
+                <img src="/p/iceberg%E6%95%B0%E6%8D%AE%E5%86%99%E5%85%A5%E6%B5%81%E7%A8%8B/image-20241105212013545.aeac48b9a144d67f88bc928b3a387067_hu3881838688107310584.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Iceberg数据写入流程"
+                        
+                        data-hash="md5-rqxIuaFE1n&#43;IvJKLOjhwZw==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Iceberg数据写入流程</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/spark%E5%AE%9E%E6%88%9801_rdd%E5%88%9B%E5%BB%BA/">
+        
+        
+            <div class="article-image">
+                <img src="/p/spark%E5%AE%9E%E6%88%9801_rdd%E5%88%9B%E5%BB%BA/trees-8686902_1280%202.d5a54bf226c780d9adbe49f2be923c40_hu7506565270475225831.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post spark实战01_RDD创建"
+                        
+                        data-hash="md5-1aVL8ibHgNmtvknyvpI8QA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">spark实战01_RDD创建</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/sparkonyarn%E4%B8%A4%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/">
+        
+        
+            <div class="article-image">
+                <img src="/p/sparkonyarn%E4%B8%A4%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/image-20241108193357851.c4c3ba7e1c0f83c2831e146bc0f6442d_hu763000391196817285.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post SparkOnYarn两种模式详解"
+                        
+                        data-hash="md5-xMO6fhwPg8KDHhRrwPZELQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">SparkOnYarn两种模式详解</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E4%B8%80%E6%AC%A1yarn%E6%8E%92%E9%9A%9C%E8%AE%B0%E5%BD%95/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E4%B8%80%E6%AC%A1yarn%E6%8E%92%E9%9A%9C%E8%AE%B0%E5%BD%95/dolphin-8949505_1280.b851b2721acfbb3b660cb93a718d57d3_hu5252129146125328555.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 一次Yarn排障记录"
+                        
+                        data-hash="md5-uFGychrPuztmDLk6cY1X0w==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">一次Yarn排障记录</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
