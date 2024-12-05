@@ -7,7 +7,96 @@
         <generator>Hugo -- gohugo.io</generator>
         <language>zh-cn</language>
         <copyright>sherlock-lin</copyright>
-        <lastBuildDate>Tue, 19 Nov 2024 16:27:59 +0800</lastBuildDate><atom:link href="https://sherlock-lin.github.io/categories/spark/index.xml" rel="self" type="application/rss+xml" /><item>
+        <lastBuildDate>Wed, 04 Dec 2024 14:32:32 +0800</lastBuildDate><atom:link href="https://sherlock-lin.github.io/categories/spark/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>Spark调度系统详解</title>
+        <link>https://sherlock-lin.github.io/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/</link>
+        <pubDate>Wed, 04 Dec 2024 14:32:32 +0800</pubDate>
+        
+        <guid>https://sherlock-lin.github.io/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/</guid>
+        <description>&lt;img src="https://sherlock-lin.github.io/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/trees-8136806_1280.png" alt="Featured image of post Spark调度系统详解" /&gt;&lt;h2 id=&#34;概述&#34;&gt;概述
+&lt;/h2&gt;&lt;p&gt;Spark进程模型中Driver负责解析用户代码、构建计算流图，然后将计算流图转化为分布式任务，并把任务分发给集群中的Executors交付运行。而Driver是怎么把计算图拆解为分布式任务，又是按照什么规则分发给Executors的呢？还有，Executors具体又是如何执行分布式任务的呢？&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;分布式计算的精髓，在于如何把抽象的计算图，转化为实实在在的分布式计算任务，然后以并行计算的方式交付执行。&lt;/code&gt;因此深入探索调度系统是掌握Spark的必经之路。&lt;/p&gt;
+&lt;h2 id=&#34;角色划分&#34;&gt;角色划分
+&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;Driver
+&lt;ul&gt;
+&lt;li&gt;DAGScheduler：负责将DAG转换为执行阶段Stages&lt;/li&gt;
+&lt;li&gt;TaskScheduler：负责将DAGScheduler划分好的计算任务分发给SchedulerBackend执行&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Executors
+&lt;ul&gt;
+&lt;li&gt;SchedulerBackend：是资源管理器的代理，用于适配Standalone、Yarn上的计算资源&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;从全局视角来看，DAGScheduler是任务调度的发起者，DAGScheduler以TaskSet为粒度，向TaskScheduler提交任务调度请求。TaskScheduler在初始化的过程中，会创建任务调度队列，任务调度队列用于缓存 DAGScheduler提交的TaskSets。TaskScheduler结合SchedulerBackend提供的 WorkerOffer，按照预先设置的调度策略依次对队列中的任务进行调度。&lt;/p&gt;
+&lt;p&gt;简而言之，DAGScheduler手里有“活儿”，SchedulerBackend手里有“人力”，TaskScheduler的核心职能，就是把合适的“活儿”派发到合适的“人”的手里。由此可见，TaskScheduler承担的是承上启下、上通下达的关键角色，这也正是我们将“塔斯克”视为斯巴克建筑公司元老之一的重要原因。&lt;/p&gt;
+&lt;h2 id=&#34;dagscheduler&#34;&gt;DAGScheduler
+&lt;/h2&gt;&lt;p&gt;作为集团公司的“总架”（总架构师），戴格的核心职责，是把计算图DAG拆分为执行阶段Stages，Stages指的是不同的运行阶段，同时还要负责把Stages转化为任务集合TaskSets，也就是把“建筑图纸”转化成可执行、可操作的“建筑项目”。&lt;/p&gt;
+&lt;p&gt;用一句话来概括从 DAG 到 Stages 的拆分过程，那就是：&lt;strong&gt;以 Actions 算子为起点，从后向前回溯 DAG，以 Shuffle 操作为边界去划分 Stages。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;具体来说，在Word Count的例子中，DAGScheduler最先提请执行的是Stage1。在提交的时候，DAGScheduler发现Stage1依赖的父Stage，也就是Stage0，还没有执行过，那么这个时候它会把Stage1的提交动作压栈，转而去提请执行Stage0。当Stage0执行完毕的时候，DAGScheduler通过出栈的动作，再次提请执行Stage 1。对于提请执行的每一个Stage，DAGScheduler根据Stage内RDD的partitions属性创建分布式任务集合TaskSet。TaskSet包含一个又一个分布式任务Task，RDD有多少数据分区，TaskSet就包含多少个Task。换句话说，Task与RDD的分区，是一一对应的。&lt;/p&gt;
+&lt;p&gt;DAGScheduler的主要职责有三个：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;根据用户代码构建DAG；&lt;/li&gt;
+&lt;li&gt;以Shuffle为边界切割Stages；&lt;/li&gt;
+&lt;li&gt;基于Stages创建TaskSets，并将TaskSets提交给TaskScheduler请求调度。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;schedulerbackend&#34;&gt;SchedulerBackend
+&lt;/h2&gt;&lt;p&gt;SchedulerBackend用一个叫做ExecutorDataMap的数据结构，来记录每一个计算节点中Executors的资源状态。这里的ExecutorDataMap是一种HashMap，它的Key是标记 Executor 的字符串，Value是一种叫做ExecutorData的数据结构。ExecutorData用于封装Executor的资源状态，如RPC地址、主机地址、可用CPU核数和满配CPU核数等等，它相当于是对Executor做的“资源画像”。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/image-20241119104829622.png&#34;
+	width=&#34;771&#34;
+	height=&#34;257&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/image-20241119104829622_hu9701068714922944154.png 480w, https://sherlock-lin.github.io/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/image-20241119104829622_hu10475458622657205816.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20241119104829622&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;300&#34;
+		data-flex-basis=&#34;720px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;SchedulerBackend与集群内所有Executors中的ExecutorBackend保持周期性通信，双方通过LaunchedExecutor、RemoveExecutor、StatusUpdate等消息来互通有无、变更可用计算资源。拜肯德正是通过这些小弟发送的“信件”，来不停地更新自己手中的那本小册子，从而对集团人力资源了如指掌。&lt;/p&gt;
+&lt;h2 id=&#34;taskscheduler&#34;&gt;TaskScheduler
+&lt;/h2&gt;&lt;p&gt;一把手戴格有“活儿”，三把手拜肯德出“人力”，接下来，终于轮到牵线搭桥的塔斯克出马了。作为施工经理，塔斯克的核心职责是，给定拜肯德提供的“人力”，遴选出最合适的“活儿”并派发出去。而这个遴选的过程，就是任务调度的核心所在&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;TaskScheduler是按照任务的本地倾向性，来遴选出TaskSet中适合调度的Tasks。&lt;/code&gt;这是什么意思呢？听上去比较抽象，我们还是从DAGScheduler在Stage内创建任务集TaskSet说起。&lt;/p&gt;
+&lt;p&gt;我们刚刚说过，Task与RDD的partitions是一一对应的，在创建Task的过程中，DAGScheduler会根据数据分区的物理地址，来为Task设置locs属性。locs属性记录了数据分区所在的计算节点、甚至是Executor进程ID。举例来说，当我们调用textFile API从HDFS文件系统中读取源文件时，Spark会根据HDFS NameNode当中记录的元数据，获取数据分区的存储地址，例如node0:/rootPath/partition0-replica0，node1:/rootPath/partition0-replica1和node2:/rootPath/partition0-replica2。&lt;/p&gt;
+&lt;p&gt;那么，DAGScheduler在为该数据分区创建Task0的时候，会把这些地址中的计算节点记录到Task0的locs属性。如此一来，当TaskScheduler需要调度Task0这个分布式任务的时候，根据Task0的locs属性，它就知道：“Task0所需处理的数据分区，在节点node0、node1、node2上存有副本，因此，如果WorkOffer是来自这3个节点的计算资源，那对Task0来说就是投其所好”。从这个例子我们就能更好地理解，每个任务都是自带&lt;strong&gt;本地倾向性&lt;/strong&gt;的，换句话说，每个任务都有自己的“调度意愿”。像上面这种定向到计算节点粒度的本地性倾向，Spark中的术语叫做NODE_LOCAL。除了定向到节点，Task还可以定向到进程（Executor）、机架、任意地址，它们对应的术语分别是PROCESS_LOCAL、RACK_LOCAL和ANY。&lt;/p&gt;
+&lt;p&gt;下图展示的是，TaskScheduler依据本地性倾向，依次进行任务调度的运行逻辑：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/image-20241119105502827.png&#34;
+	width=&#34;829&#34;
+	height=&#34;273&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/image-20241119105502827_hu17495466396625353449.png 480w, https://sherlock-lin.github.io/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/image-20241119105502827_hu18215913574059066348.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20241119105502827&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;303&#34;
+		data-flex-basis=&#34;728px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;不难发现，从PROCESS_LOCAL、NODE_LOCAL、到RACK_LOCAL、再到ANY，Task的本地性倾向逐渐从严苛变得宽松。TaskScheduler接收到WorkerOffer之后，也正是按照这个顺序来遍历TaskSet中的Tasks，优先调度本地性倾向为PROCESS_LOCAL的Task，而NODE_LOCAL次之，RACK_LOCAL为再次，最后是ANY。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;Spark调度系统的核心思想，是“数据不动、代码动。&lt;/code&gt;也就是说，在任务调度的过程中，为了完成分布式计算，Spark倾向于让数据待在原地、保持不动，而把计算任务（代码）调度、分发到数据所在的地方，从而消除数据分发引入的性能隐患。毕竟，相比分发数据，分发代码要轻量得多。&lt;/p&gt;
+&lt;p&gt;结合WorkerOffer与任务的本地性倾向，塔斯克TaskScheduler挑选出了适合调度的“活儿”：Tasks。接下来，TaskScheduler就把这些Tasks通过LaunchTask消息，发送给好基友SchedulerBackend。人力资源总监SchedulerBackend拿到这些活儿之后，同样使用LaunchTask消息，把活儿进一步下发给分公司的小弟：ExecutorBackend。&lt;/p&gt;
+&lt;h2 id=&#34;executorbackend&#34;&gt;ExecutorBackend
+&lt;/h2&gt;&lt;p&gt;ExecutorBackend拿到“活儿”之后，随即把活儿派发给分公司的建筑工人。这些工人，就是Executors线程池中一个又一个的CPU线程，每个线程负责处理一个Task。每当Task处理完毕，这些线程便会通过ExecutorBackend，向Driver端的SchedulerBackend发送StatusUpdate事件，告知Task执行状态。接下来，TaskScheduler与SchedulerBackend通过接力的方式，最终把状态汇报给DAGScheduler。&lt;/p&gt;
+&lt;p&gt;对于同一个TaskSet当中的Tasks来说，当它们分别完成了任务调度与任务执行这两个环节时，也就是上图中步骤1到步骤9的计算过程，Spark调度系统就完成了DAG中某一个Stage的任务调度。不过，故事到这里并未结束。我们知道，一个DAG会包含多个Stages，一个Stage的结束即宣告下一个Stage的开始，而这也是戴格起初将DAG划分为Stages的意义所在。只有当所有的Stages全部调度、执行完毕，才表示一个完整的Spark作业宣告结束。&lt;/p&gt;
+&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;p&gt;具体说来，任务调度分为如下5个步骤：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;DAGScheduler以Shuffle为边界，将开发者设计的计算图DAG拆分为多个执行阶段Stages，然后为每个Stage创建任务集TaskSet。&lt;/li&gt;
+&lt;li&gt;SchedulerBackend通过与Executors中的ExecutorBackend的交互来实时地获取集群中可用的计算资源，并将这些信息记录到ExecutorDataMap数据结构。&lt;/li&gt;
+&lt;li&gt;与此同时，SchedulerBackend根据ExecutorDataMap中可用资源创建WorkerOffer，以WorkerOffer为粒度提供计算资源。&lt;/li&gt;
+&lt;li&gt;对于给定WorkerOffer，TaskScheduler结合TaskSet中任务的本地性倾向，按照PROCESS_LOCAL、NODE_LOCAL、RACK_LOCAL和ANY的顺序，依次对TaskSet中的任务进行遍历，优先调度本地性倾向要求苛刻的Task。&lt;/li&gt;
+&lt;li&gt;被选中的Task由TaskScheduler传递给SchedulerBackend，再由SchedulerBackend分发到Executors中的ExecutorBackend。Executors接收到Task之后，即调用本地线程池来执行分布式任务。&lt;/li&gt;
+&lt;/ol&gt;
+</description>
+        </item>
+        <item>
         <title>spark实战01_RDD创建</title>
         <link>https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9801_rdd%E5%88%9B%E5%BB%BA/</link>
         <pubDate>Tue, 19 Nov 2024 16:27:59 +0800</pubDate>

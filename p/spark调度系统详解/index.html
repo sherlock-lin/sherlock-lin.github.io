@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="概述 Spark进程模型中Driver负责解析用户代码、构建计算流图，然后将计算流图转化为分布式任务，并把任务分发给集群中的Executors交付运行。而Driver是怎么把计算图拆解为分布式任务，又是按照什么规则分发给Executors的呢？还有，Executors具体又是如何执行分布式任务的呢？\n">
+<title>Spark调度系统详解</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="Spark调度系统详解">
+<meta property='og:description' content="概述 Spark进程模型中Driver负责解析用户代码、构建计算流图，然后将计算流图转化为分布式任务，并把任务分发给集群中的Executors交付运行。而Driver是怎么把计算图拆解为分布式任务，又是按照什么规则分发给Executors的呢？还有，Executors具体又是如何执行分布式任务的呢？\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-12-04T14:32:32&#43;08:00'/><meta property='article:modified_time' content='2024-12-04T14:32:32&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/trees-8136806_1280.png' />
+<meta name="twitter:title" content="Spark调度系统详解">
+<meta name="twitter:description" content="概述 Spark进程模型中Driver负责解析用户代码、构建计算流图，然后将计算流图转化为分布式任务，并把任务分发给集群中的Executors交付运行。而Driver是怎么把计算图拆解为分布式任务，又是按照什么规则分发给Executors的呢？还有，Executors具体又是如何执行分布式任务的呢？\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/trees-8136806_1280.png' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#概述">概述</a></li>
+    <li><a href="#角色划分">角色划分</a></li>
+    <li><a href="#dagscheduler">DAGScheduler</a></li>
+    <li><a href="#schedulerbackend">SchedulerBackend</a></li>
+    <li><a href="#taskscheduler">TaskScheduler</a></li>
+    <li><a href="#executorbackend">ExecutorBackend</a></li>
+    <li><a href="#总结">总结</a></li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/">
+                <img src="/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/trees-8136806_1280_hu8854782184935210420.png"
+                        srcset="/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/trees-8136806_1280_hu8854782184935210420.png 800w, /p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/trees-8136806_1280_hu3353683797597004090.png 1600w"
+                        width="800" 
+                        height="566" 
+                        loading="lazy"
+                        alt="Featured image of post Spark调度系统详解" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/spark/" style="background-color: #2a9d8f; color: #fff;">
+                Spark
+            </a>
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/">Spark调度系统详解</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2024-12-04</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 9 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="概述">概述
+</h2><p>Spark进程模型中Driver负责解析用户代码、构建计算流图，然后将计算流图转化为分布式任务，并把任务分发给集群中的Executors交付运行。而Driver是怎么把计算图拆解为分布式任务，又是按照什么规则分发给Executors的呢？还有，Executors具体又是如何执行分布式任务的呢？</p>
+<p><code>分布式计算的精髓，在于如何把抽象的计算图，转化为实实在在的分布式计算任务，然后以并行计算的方式交付执行。</code>因此深入探索调度系统是掌握Spark的必经之路。</p>
+<h2 id="角色划分">角色划分
+</h2><ul>
+<li>Driver
+<ul>
+<li>DAGScheduler：负责将DAG转换为执行阶段Stages</li>
+<li>TaskScheduler：负责将DAGScheduler划分好的计算任务分发给SchedulerBackend执行</li>
+</ul>
+</li>
+<li>Executors
+<ul>
+<li>SchedulerBackend：是资源管理器的代理，用于适配Standalone、Yarn上的计算资源</li>
+</ul>
+</li>
+</ul>
+<p>从全局视角来看，DAGScheduler是任务调度的发起者，DAGScheduler以TaskSet为粒度，向TaskScheduler提交任务调度请求。TaskScheduler在初始化的过程中，会创建任务调度队列，任务调度队列用于缓存 DAGScheduler提交的TaskSets。TaskScheduler结合SchedulerBackend提供的 WorkerOffer，按照预先设置的调度策略依次对队列中的任务进行调度。</p>
+<p>简而言之，DAGScheduler手里有“活儿”，SchedulerBackend手里有“人力”，TaskScheduler的核心职能，就是把合适的“活儿”派发到合适的“人”的手里。由此可见，TaskScheduler承担的是承上启下、上通下达的关键角色，这也正是我们将“塔斯克”视为斯巴克建筑公司元老之一的重要原因。</p>
+<h2 id="dagscheduler">DAGScheduler
+</h2><p>作为集团公司的“总架”（总架构师），戴格的核心职责，是把计算图DAG拆分为执行阶段Stages，Stages指的是不同的运行阶段，同时还要负责把Stages转化为任务集合TaskSets，也就是把“建筑图纸”转化成可执行、可操作的“建筑项目”。</p>
+<p>用一句话来概括从 DAG 到 Stages 的拆分过程，那就是：<strong>以 Actions 算子为起点，从后向前回溯 DAG，以 Shuffle 操作为边界去划分 Stages。</strong></p>
+<p>具体来说，在Word Count的例子中，DAGScheduler最先提请执行的是Stage1。在提交的时候，DAGScheduler发现Stage1依赖的父Stage，也就是Stage0，还没有执行过，那么这个时候它会把Stage1的提交动作压栈，转而去提请执行Stage0。当Stage0执行完毕的时候，DAGScheduler通过出栈的动作，再次提请执行Stage 1。对于提请执行的每一个Stage，DAGScheduler根据Stage内RDD的partitions属性创建分布式任务集合TaskSet。TaskSet包含一个又一个分布式任务Task，RDD有多少数据分区，TaskSet就包含多少个Task。换句话说，Task与RDD的分区，是一一对应的。</p>
+<p>DAGScheduler的主要职责有三个：</p>
+<ul>
+<li>根据用户代码构建DAG；</li>
+<li>以Shuffle为边界切割Stages；</li>
+<li>基于Stages创建TaskSets，并将TaskSets提交给TaskScheduler请求调度。</li>
+</ul>
+<h2 id="schedulerbackend">SchedulerBackend
+</h2><p>SchedulerBackend用一个叫做ExecutorDataMap的数据结构，来记录每一个计算节点中Executors的资源状态。这里的ExecutorDataMap是一种HashMap，它的Key是标记 Executor 的字符串，Value是一种叫做ExecutorData的数据结构。ExecutorData用于封装Executor的资源状态，如RPC地址、主机地址、可用CPU核数和满配CPU核数等等，它相当于是对Executor做的“资源画像”。</p>
+<p><img src="/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/image-20241119104829622.png"
+	width="771"
+	height="257"
+	srcset="/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/image-20241119104829622_hu9701068714922944154.png 480w, /p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/image-20241119104829622_hu10475458622657205816.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241119104829622"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="300"
+		data-flex-basis="720px"
+	
+></p>
+<p>SchedulerBackend与集群内所有Executors中的ExecutorBackend保持周期性通信，双方通过LaunchedExecutor、RemoveExecutor、StatusUpdate等消息来互通有无、变更可用计算资源。拜肯德正是通过这些小弟发送的“信件”，来不停地更新自己手中的那本小册子，从而对集团人力资源了如指掌。</p>
+<h2 id="taskscheduler">TaskScheduler
+</h2><p>一把手戴格有“活儿”，三把手拜肯德出“人力”，接下来，终于轮到牵线搭桥的塔斯克出马了。作为施工经理，塔斯克的核心职责是，给定拜肯德提供的“人力”，遴选出最合适的“活儿”并派发出去。而这个遴选的过程，就是任务调度的核心所在</p>
+<p><code>TaskScheduler是按照任务的本地倾向性，来遴选出TaskSet中适合调度的Tasks。</code>这是什么意思呢？听上去比较抽象，我们还是从DAGScheduler在Stage内创建任务集TaskSet说起。</p>
+<p>我们刚刚说过，Task与RDD的partitions是一一对应的，在创建Task的过程中，DAGScheduler会根据数据分区的物理地址，来为Task设置locs属性。locs属性记录了数据分区所在的计算节点、甚至是Executor进程ID。举例来说，当我们调用textFile API从HDFS文件系统中读取源文件时，Spark会根据HDFS NameNode当中记录的元数据，获取数据分区的存储地址，例如node0:/rootPath/partition0-replica0，node1:/rootPath/partition0-replica1和node2:/rootPath/partition0-replica2。</p>
+<p>那么，DAGScheduler在为该数据分区创建Task0的时候，会把这些地址中的计算节点记录到Task0的locs属性。如此一来，当TaskScheduler需要调度Task0这个分布式任务的时候，根据Task0的locs属性，它就知道：“Task0所需处理的数据分区，在节点node0、node1、node2上存有副本，因此，如果WorkOffer是来自这3个节点的计算资源，那对Task0来说就是投其所好”。从这个例子我们就能更好地理解，每个任务都是自带<strong>本地倾向性</strong>的，换句话说，每个任务都有自己的“调度意愿”。像上面这种定向到计算节点粒度的本地性倾向，Spark中的术语叫做NODE_LOCAL。除了定向到节点，Task还可以定向到进程（Executor）、机架、任意地址，它们对应的术语分别是PROCESS_LOCAL、RACK_LOCAL和ANY。</p>
+<p>下图展示的是，TaskScheduler依据本地性倾向，依次进行任务调度的运行逻辑：</p>
+<p><img src="/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/image-20241119105502827.png"
+	width="829"
+	height="273"
+	srcset="/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/image-20241119105502827_hu17495466396625353449.png 480w, /p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/image-20241119105502827_hu18215913574059066348.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241119105502827"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="303"
+		data-flex-basis="728px"
+	
+></p>
+<p>不难发现，从PROCESS_LOCAL、NODE_LOCAL、到RACK_LOCAL、再到ANY，Task的本地性倾向逐渐从严苛变得宽松。TaskScheduler接收到WorkerOffer之后，也正是按照这个顺序来遍历TaskSet中的Tasks，优先调度本地性倾向为PROCESS_LOCAL的Task，而NODE_LOCAL次之，RACK_LOCAL为再次，最后是ANY。</p>
+<p><code>Spark调度系统的核心思想，是“数据不动、代码动。</code>也就是说，在任务调度的过程中，为了完成分布式计算，Spark倾向于让数据待在原地、保持不动，而把计算任务（代码）调度、分发到数据所在的地方，从而消除数据分发引入的性能隐患。毕竟，相比分发数据，分发代码要轻量得多。</p>
+<p>结合WorkerOffer与任务的本地性倾向，塔斯克TaskScheduler挑选出了适合调度的“活儿”：Tasks。接下来，TaskScheduler就把这些Tasks通过LaunchTask消息，发送给好基友SchedulerBackend。人力资源总监SchedulerBackend拿到这些活儿之后，同样使用LaunchTask消息，把活儿进一步下发给分公司的小弟：ExecutorBackend。</p>
+<h2 id="executorbackend">ExecutorBackend
+</h2><p>ExecutorBackend拿到“活儿”之后，随即把活儿派发给分公司的建筑工人。这些工人，就是Executors线程池中一个又一个的CPU线程，每个线程负责处理一个Task。每当Task处理完毕，这些线程便会通过ExecutorBackend，向Driver端的SchedulerBackend发送StatusUpdate事件，告知Task执行状态。接下来，TaskScheduler与SchedulerBackend通过接力的方式，最终把状态汇报给DAGScheduler。</p>
+<p>对于同一个TaskSet当中的Tasks来说，当它们分别完成了任务调度与任务执行这两个环节时，也就是上图中步骤1到步骤9的计算过程，Spark调度系统就完成了DAG中某一个Stage的任务调度。不过，故事到这里并未结束。我们知道，一个DAG会包含多个Stages，一个Stage的结束即宣告下一个Stage的开始，而这也是戴格起初将DAG划分为Stages的意义所在。只有当所有的Stages全部调度、执行完毕，才表示一个完整的Spark作业宣告结束。</p>
+<h2 id="总结">总结
+</h2><p>具体说来，任务调度分为如下5个步骤：</p>
+<ol>
+<li>DAGScheduler以Shuffle为边界，将开发者设计的计算图DAG拆分为多个执行阶段Stages，然后为每个Stage创建任务集TaskSet。</li>
+<li>SchedulerBackend通过与Executors中的ExecutorBackend的交互来实时地获取集群中可用的计算资源，并将这些信息记录到ExecutorDataMap数据结构。</li>
+<li>与此同时，SchedulerBackend根据ExecutorDataMap中可用资源创建WorkerOffer，以WorkerOffer为粒度提供计算资源。</li>
+<li>对于给定WorkerOffer，TaskScheduler结合TaskSet中任务的本地性倾向，按照PROCESS_LOCAL、NODE_LOCAL、RACK_LOCAL和ANY的顺序，依次对TaskSet中的任务进行遍历，优先调度本地性倾向要求苛刻的Task。</li>
+<li>被选中的Task由TaskScheduler传递给SchedulerBackend，再由SchedulerBackend分发到Executors中的ExecutorBackend。Executors接收到Task之后，即调用本地线程池来执行分布式任务。</li>
+</ol>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/spark%E5%AE%9E%E6%88%9801_rdd%E5%88%9B%E5%BB%BA/">
+        
+        
+            <div class="article-image">
+                <img src="/p/spark%E5%AE%9E%E6%88%9801_rdd%E5%88%9B%E5%BB%BA/trees-8686902_1280%202.d5a54bf226c780d9adbe49f2be923c40_hu7506565270475225831.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post spark实战01_RDD创建"
+                        
+                        data-hash="md5-1aVL8ibHgNmtvknyvpI8QA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">spark实战01_RDD创建</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%A7%A3%E6%9E%90iceberg%E6%96%87%E4%BB%B6%E5%B8%83%E5%B1%80/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%A7%A3%E6%9E%90iceberg%E6%96%87%E4%BB%B6%E5%B8%83%E5%B1%80/image-20241204180525798.de933deee4261707f0c97a5baaa068b6_hu14123869769676742353.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 解析Iceberg文件布局"
+                        
+                        data-hash="md5-3pM97uQmFwfwyXpbqqBotg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">解析Iceberg文件布局</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/the-creative-exchange-d2zvqp3fpro-unsplash.60116b1ccfc8632e9a65f7d51df3efc2_hu2042364712198079406.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 解析metadata.json文件"
+                        
+                        data-hash="md5-YBFrHM/IYy6aZffVHfPvwg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">解析metadata.json文件</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/sparkonyarn%E4%B8%A4%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/">
+        
+        
+            <div class="article-image">
+                <img src="/p/sparkonyarn%E4%B8%A4%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/image-20241108193357851.c4c3ba7e1c0f83c2831e146bc0f6442d_hu763000391196817285.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post SparkOnYarn两种模式详解"
+                        
+                        data-hash="md5-xMO6fhwPg8KDHhRrwPZELQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">SparkOnYarn两种模式详解</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E4%B8%80%E6%AC%A1yarn%E6%8E%92%E9%9A%9C%E8%AE%B0%E5%BD%95/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E4%B8%80%E6%AC%A1yarn%E6%8E%92%E9%9A%9C%E8%AE%B0%E5%BD%95/dolphin-8949505_1280.b851b2721acfbb3b660cb93a718d57d3_hu5252129146125328555.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 一次Yarn排障记录"
+                        
+                        data-hash="md5-uFGychrPuztmDLk6cY1X0w==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">一次Yarn排障记录</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
