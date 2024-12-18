@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="一、引言 任何领域的技能都分为“道术器”三个层面\n1. 器 器对应的就是具体的工具如大数据组件Spark、Flink、Hadoop、MySQL，也可以是一门编程语言如Java、Go、Shell，甚至我们写的一个脚本、小程序都是工具，简单来说就是一切具像化、可直接使用的具体个体，并且能够发挥作用的东西都可以统称为器。\n">
+<title>软件设计之道</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="软件设计之道">
+<meta property='og:description' content="一、引言 任何领域的技能都分为“道术器”三个层面\n1. 器 器对应的就是具体的工具如大数据组件Spark、Flink、Hadoop、MySQL，也可以是一门编程语言如Java、Go、Shell，甚至我们写的一个脚本、小程序都是工具，简单来说就是一切具像化、可直接使用的具体个体，并且能够发挥作用的东西都可以统称为器。\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-12-18T18:44:58&#43;08:00'/><meta property='article:modified_time' content='2024-12-18T18:44:58&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241212112322120.png' />
+<meta name="twitter:title" content="软件设计之道">
+<meta name="twitter:description" content="一、引言 任何领域的技能都分为“道术器”三个层面\n1. 器 器对应的就是具体的工具如大数据组件Spark、Flink、Hadoop、MySQL，也可以是一门编程语言如Java、Go、Shell，甚至我们写的一个脚本、小程序都是工具，简单来说就是一切具像化、可直接使用的具体个体，并且能够发挥作用的东西都可以统称为器。\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241212112322120.png' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu12794431219067479509.jpg" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">😊</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#一引言">一、引言</a>
+      <ol>
+        <li><a href="#1-器">1. 器</a></li>
+        <li><a href="#2-术">2. 术</a></li>
+        <li><a href="#3-道">3. 道</a></li>
+        <li><a href="#小结">小结</a></li>
+      </ol>
+    </li>
+    <li><a href="#二概述">二、概述</a></li>
+    <li><a href="#三内存替代磁盘顺序写代替随机写">三、内存替代磁盘、顺序写代替随机写</a>
+      <ol>
+        <li><a href="#1-简析">1. 简析</a></li>
+        <li><a href="#2-kafka-pagecache">2. Kafka PageCache</a></li>
+        <li><a href="#3-mysql-innodb缓冲池">3. MySQL InnoDB缓冲池</a></li>
+        <li><a href="#4-wal">4. WAL</a></li>
+        <li><a href="#5-lsm">5. LSM</a></li>
+      </ol>
+    </li>
+    <li><a href="#四移动少量数据替代移动大量数据">四、移动少量数据替代移动大量数据</a>
+      <ol>
+        <li><a href="#1-本地化计算">1. 本地化计算</a></li>
+        <li><a href="#2--广播变量">2.  广播变量</a></li>
+        <li><a href="#3-数据湖">3. 数据湖</a></li>
+      </ol>
+    </li>
+    <li><a href="#五资源轻量级使用">五、资源轻量级使用</a>
+      <ol>
+        <li><a href="#1-协程">1. 协程</a></li>
+        <li><a href="#2-池化技术">2. 池化技术</a></li>
+        <li><a href="#3-slab">3. SLAB</a></li>
+        <li><a href="#4-mmap">4. mmap</a></li>
+        <li><a href="#5-零拷贝">5. 零拷贝</a></li>
+      </ol>
+    </li>
+    <li><a href="#总结">总结</a></li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/">
+                <img src="/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241212112322120_hu2686801451196375650.png"
+                        srcset="/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241212112322120_hu2686801451196375650.png 800w, /p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241212112322120_hu15108808260448733293.png 1600w"
+                        width="800" 
+                        height="555" 
+                        loading="lazy"
+                        alt="Featured image of post 软件设计之道" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/%E8%81%8C%E4%B8%9A%E7%94%9F%E6%B6%AF/" style="background-color: #2a9d8f; color: #fff;">
+                职业生涯
+            </a>
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/">软件设计之道</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2024-12-18</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 12 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="一引言">一、引言
+</h2><p>任何领域的技能都分为“道术器”三个层面</p>
+<p><img src="/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241212112322120.png"
+	width="721"
+	height="500"
+	srcset="/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241212112322120_hu7870060918374888501.png 480w, /p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241212112322120_hu10813589177620249159.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241212112322120"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="144"
+		data-flex-basis="346px"
+	
+></p>
+<h3 id="1-器">1. 器
+</h3><p>器对应的就是具体的工具如大数据组件Spark、Flink、Hadoop、MySQL，也可以是一门编程语言如Java、Go、Shell，甚至我们写的一个脚本、小程序都是工具，简单来说就是一切具像化、可直接使用的具体个体，并且能够发挥作用的东西都可以统称为器。</p>
+<h3 id="2-术">2. 术
+</h3><p>术对应的是技巧，这个技巧包括使用工具的技巧以及设计的技巧等，例如用Spark时在联小表join的时候我们可以考虑将小表进行广播来避免shuffle操作、在庞大数据量场景下可以考虑Hadoop这类能横向扩展磁盘的组件、在大数据场景下对分析性能有严格要求的场景可以考虑用Doris、CK等olap引擎等等，这类技巧可以称之为术。</p>
+<h3 id="3-道">3. 道
+</h3><p>道对应的是规律，如这个世界的日升日落、潮涨潮落、沧海桑田的规律一般，软件也是有自己的一套规律，或者说底层逻辑。当你遵循这套规律，你设计出来的东西能够放大收益，例如性能更高、资源更加节约、服务更加稳定等等。这也是今天想聊聊的软件设计之道。</p>
+<h3 id="小结">小结
+</h3><p>从人类历史发展的宏观角度看过去、现在以及未来，有一个词贯穿着整个人类文明，那就是“效率”。即便是在软件设计包括大数据时代这个词也是核心，简单来说就是如何用更少的资源做成更多的事情，包括但不仅限于用有限的CPU、内存跑更多的任务、相同的计算存储资源能够比别人计算以及分析得更快、存储同样数量级的数据只需更少的资源等等。那么围绕“效率”这个核心来聊聊软件设计的道。</p>
+<h2 id="二概述">二、概述
+</h2><p>如今的组件层出不穷，新技术更是日新月异，会让不少入门不久的程序员觉得遥遥无期，但实际上无论是多牛X的软件技术，最终都是要运行在操作系统上面或者说最终都是要借助操作系统的CPU、内存、磁盘、网络来实现它的功能，那么无论是多好的设计，只要映射到跟操作系统的交互并抽象出来，就会发现很多软件解决方案就是自相似的，正所谓万变不离其宗，只要将这抽象出来的解决方案掌握，后续即便有再新的技术也仅需要往上靠就好了。</p>
+<p>以下是结合自身的知识栈列举出的软件设计之道</p>
+<ul>
+<li>
+<p>内存替代磁盘/顺序写代替随机写</p>
+<ul>
+<li>kafka pagecache</li>
+<li>mysql InnoDB内存池</li>
+<li>WAL</li>
+<li>LSM</li>
+</ul>
+</li>
+<li>
+<p>移动少量数据替代移动大量数据</p>
+<ul>
+<li>MR、Spark、Flink本地化计算</li>
+<li>广播变量</li>
+<li>数据湖</li>
+</ul>
+</li>
+<li>
+<p>资源轻量级使用</p>
+<ul>
+<li>协程</li>
+<li>复用-池化技术(内存池、线程池、对象池、连接池、进程标识符)</li>
+<li>进程是CPU的抽象，进程被CPU调用本质上是一种闭包的实现</li>
+<li>SLAB</li>
+<li>mmap</li>
+<li>零拷贝(分为追尾读和追赶读两种场景)</li>
+</ul>
+</li>
+</ul>
+<h2 id="三内存替代磁盘顺序写代替随机写">三、内存替代磁盘、顺序写代替随机写
+</h2><h3 id="1-简析">1. 简析
+</h3><p>软件计算的对象只有一个，就是数据，而数据是要有一个载体，常见的载体有内存、磁盘，它们的读写性能比例在下面这张图可看出来(仅供参考)</p>
+<p><img src="/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/735367-20190611193807170-2101813158.png"
+	width="586"
+	height="318"
+	srcset="/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/735367-20190611193807170-2101813158_hu7248377708564337154.png 480w, /p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/735367-20190611193807170-2101813158_hu8068069976726568005.png 1024w"
+	loading="lazy"
+	
+		alt="img"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="184"
+		data-flex-basis="442px"
+	
+></p>
+<p>从这张图我们能够得到以下几个有用的信息</p>
+<ol>
+<li>顺序读写内存的性能是最高的</li>
+<li>顺序读写磁盘跟随机读写内存的性能几乎一致</li>
+<li>随机读写磁盘性能最差，顺序读写磁盘性能是随机读写磁盘的千倍以上。相当于顺序往磁盘里写一千条数据等同于随机往磁盘里写一条数据，这个性能差距可想而知。</li>
+</ol>
+<p>随机读写磁盘性能差原因原因：是因为机械硬盘采用传统的磁头探针结构，随机读写时需要频繁寻道，也就需要磁头和探针频繁的转动，而机械结构的磁头和探针的位置调整是十分费时的，这就严重影响到硬盘的寻址速度，进而影响到随机写入速度。</p>
+<h3 id="2-kafka-pagecache">2. Kafka PageCache
+</h3><p>设计思想：内存替代磁盘</p>
+<p>由于读写硬盘的速度比读写内存要慢很多，所以为了避免每次读写文件时，都需要对硬盘进行读写操作，Linux 内核使用 页缓存（Page Cache） 机制来对文件中的数据进行缓存。而Kafka作为一个高性能、高吞吐的流平台，如果每条消息都要进行落盘操作，那就会严重受限于读写磁盘的性能，因此Kafka仅会将数据写到PageCache，然后就给生产者返回写入成功的状态，而稳定性是通过多副本机制来进行保证的。</p>
+<p>而PageCache的落盘时机通过Kafka的配置进行控制。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">log</span><span class="p">.</span><span class="na">flush</span><span class="p">.</span><span class="na">interval</span><span class="p">.</span><span class="na">messages</span><span class="w">  </span><span class="c1">//多少条消息，刷盘1次 默认值 LONG.MAX_VALUE</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">log</span><span class="p">.</span><span class="na">flush</span><span class="p">.</span><span class="na">interval</span><span class="p">.</span><span class="na">ms</span><span class="w">  </span><span class="c1">//割多长时间，刷盘1次 LONG.MAX_VALUE</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">log</span><span class="p">.</span><span class="na">flush</span><span class="p">.</span><span class="na">scheduler</span><span class="p">.</span><span class="na">interval</span><span class="p">.</span><span class="na">ms</span><span class="w"> </span><span class="c1">//周期性的刷盘，缺省3000，即3s。</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="3-mysql-innodb缓冲池">3. MySQL InnoDB缓冲池
+</h3><p>设计思想：内存代替磁盘。</p>
+<p>Mysql的InnoDB引擎是基于磁盘存储数据的，并将其中的数据按照页的方式进行管理。而由于CPU速度与磁盘速度之间的鸿沟，InnoDB使用缓冲池技术来提高数据库的整体性能(不用操作系统提供的PageCache机制)。缓冲池简单来说就是一块内存区域，通过内存的速度来弥补磁盘速度较慢对数据库性能的影响。</p>
+<p>缓冲池中存储以下数据</p>
+<ul>
+<li>data page</li>
+<li>insert buffer</li>
+<li>lock info</li>
+<li>index page</li>
+<li>自适应哈希</li>
+<li>数据字典信息</li>
+</ul>
+<p>在读取数据时会先去查缓冲池，如果命中则读取该页，否则去磁盘读取该页并放到缓冲池中。而在写数据时，会修改缓冲池中的页，然后再以一定的频率刷新到磁盘上，从而大幅提升MySQL的读写性能。</p>
+<h3 id="4-wal">4. WAL
+</h3><p>设计思想：批量顺序写磁盘代替随机写磁盘</p>
+<p>内存取代磁盘能够大幅提升性能，因此大部分存储相关的大数据组件都会选择将数据落到内存即可，但内存是没法提供持久化保证的，如果在数据落盘之前服务故障或者关机就会导致这部分数据丢失。针对这种问题一种方式是像kafka一样通过多副本机制+一致性算法来提供保证；另一种方式就是WAL方式。</p>
+<p>WAL的核心就是避免内存中的数据丢失，在数据写入时先通过顺序写的方式持久化这部分写请求(用于故障恢复)，然后这部分数据只写到内存并异步的进行刷盘操作，从而避免了随机写磁盘的低效操作。可以发现这个过程WAL有两个特点 1. 通过顺序写磁盘记录变动数据的高效操作保证了写在内存中数据的稳定性 2. 数据写在内存中再定期去刷盘，能够大幅提升刷盘的吞吐量，本质上也是将原先的落盘操作从 随机写磁盘化为顺序写磁盘。</p>
+<p>WAL本质上是通过两次顺序写磁盘取代一次随机写磁盘，它的应用场景的非常广泛，如MySQL、HDFS、HBase、Pulsar等，基本上跟存储相关的组件都会采用WAL的设计思路，生产上有一条通用的落地方案，就是将WAL的数据落到SSD固态硬盘中来提升数据写的性能，因为SSD固态硬盘性能比HDD硬盘高，但价格比内存低很多且能提供持久化能力，因此非常适合挂载到WAL日志持久化的目录。</p>
+<h3 id="5-lsm">5. LSM
+</h3><p>设计思想：批量顺序写磁盘代替随机写磁盘</p>
+<p>在大数据写入密集场景，LSM设计结构通过WAL保证数据可恢复，然后并发写到内存中，在达到某些阈值后就会进行刷盘将数据刷到Level0的文件中，每个SSTable中的数据都是局部有序的，在Level0的数据文件变多后，也会进行合并，并将合并后的结果写到Level1层的文件，一层一层这样，避免小文件过多影响读的性能以及后续维护的成本。</p>
+<p><img src="/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241213141835369.png"
+	width="1016"
+	height="593"
+	srcset="/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241213141835369_hu1879789929682053506.png 480w, /p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241213141835369_hu12907388819336627346.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241213141835369"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="171"
+		data-flex-basis="411px"
+	
+></p>
+<p>通过上述结果看到数据会先写到内存中缓存一下，那为什么不直接通过顺序写的方式写到磁盘呢，这是因为单条写的性能肯定没有批量写的性能好，即便是像kafka这种也是通过PageCache来进行批量的顺序写的。而且在内存中缓冲一下的好处是，对于追尾读以及一些读取的场景，可以直接查询内存并进行返回，避免去查询磁盘提升查询效率和提升资源利用率，另一个好处是，LSM结构需要在内存中对数据进行排序。</p>
+<h2 id="四移动少量数据替代移动大量数据">四、移动少量数据替代移动大量数据
+</h2><h3 id="1-本地化计算">1. 本地化计算
+</h3><p>在大数据计算领域，有一句经典的话“移动计算优于移动数据”，因为计算逻辑也是数据所以本质上也是移动少量数据替代移动大量数据，因为在大数据领域，虽然机器能够横向扩展，但是如果移动大量数据的话对网络以及内存的负担会比较大，并且在业务高峰期时还容易影响到其他服务，而大数据计算的核心也是计算，就是通过CPU对数据运行程序逻辑进行处理，那既然在那台机器计算都一样，与其将数据移动到程序所在的机器，将程序移动到数据所在的节点的成本是最低并且对服务来说也是最稳定的。</p>
+<p>应用场景：Spark、Flink、MR、边缘计算等</p>
+<h3 id="2--广播变量">2.  广播变量
+</h3><p>在大数据计算场景为了在任务之间隔离，基本上每个任务都会用一份全量临时数据，这个出发点是好的，但是在任务较多并且数据量稍微大些的场景，你会发现同一台机器上跑几十、上百甚至上千个任务时，这台机器的内存里会存放同样数量的数据，这无异是一种浪费。因此解决方案就是机器上仅存一份，各个任务共享这份数据仅可，当然这份数据往往是常量，不支持修改，从而大幅提升资源的有效使用率。</p>
+<p>除此之外，在大数据计算场景，常常会出现联表查询的时候，这个时候会容易触发shuffle操作，本质上就是将两张表都重新做打散，相同规则的数据聚合到同一个下游节点做计算，而通过将其中的小表全量广播到计算节点，就能有效避免shuffle，他们数据直接本地化计算即可。</p>
+<h3 id="3-数据湖">3. 数据湖
+</h3><p>大数据发展到如今，大部分公司都是通过Hive来搭建数仓，但随着数仓的维护Hive的不足也逐渐暴露出来，主要面临以下几个痛点</p>
+<ol>
+<li>Hive要通过显示分区来避免全表扫描，因此有时候要维护多层分区，这会导致小文件过多并且分区规则变化时需要将所有数据重新计算重新分区，并且对于使用者来说需要了解表结构并一定要在查询语句中显示的指定分区条件。</li>
+<li>数据更新、删除支持较弱，因此Hive更适合做按天级别的更新，如小时分钟级别的更新需要依赖实时链路</li>
+<li>数据多版本管理能力较差，一般都是用分区来做的但是非常重量级</li>
+<li>不支持ACID</li>
+</ol>
+<p>Hive的这些场景的核心都是大部分操作都会导致数据的大量计算，本质上就是Hive设计之初对增量场景的能力支持较弱，元数据管理方面没有花太多精力。因此数据湖的出现填补了这方面的不足，例如Hudi、Iceberg等技术，在数据变动时，以增加元数据、数据文件的形式来记录，并通过清单列表文件跟踪变动情况，同时在元数据中记录分区情况以及列的极限值。主要的显著能力有如下</p>
+<ol>
+<li>通过元数据保存分区情况取代Hive的文件目录管理方式，在分区变动时仅需要变更元数据文件即可</li>
+<li>有数据更新删除时，通过添加增量数据文件，同时也增加新的元数据文件维护变化的关系</li>
+<li>由于清单列表文件中记录变动的情况，这天然的支持数据多版本</li>
+<li>由于数据都是增量的并互不干扰，因此在新建过程中也是能很好的做数据原子性提交、回滚</li>
+</ol>
+<p>可以看到数据湖每次只需要<code>计算、处理必要的少量数据</code>，而不是像Hive大部分情况下都去全量计算</p>
+<p><img src="/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241105212055859.png"
+	width="1240"
+	height="1530"
+	srcset="/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241105212055859_hu12755898869869609782.png 480w, /p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241105212055859_hu15854725226511155005.png 1024w"
+	loading="lazy"
+	
+		alt="image-20241105212055859"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="81"
+		data-flex-basis="194px"
+	
+></p>
+<h2 id="五资源轻量级使用">五、资源轻量级使用
+</h2><h3 id="1-协程">1. 协程
+</h3><p>随着用户量、数据量的暴增，并发处理场景越来越多，像很多编程语言如Java原生只支持多线程，都是通过多个线程并发去处理任务，但这面临以下问题</p>
+<ol>
+<li>线程的本质就是进程，只不过具有共享能力，因此对操作系统的资源占用是比较重的，每台机器能创建的线程数也是比较有限</li>
+<li>线程之间的CPU上下文切换，这会导致CPU中寄存器的缓存不断被覆盖导致命中率大幅降低从而影响程序的并发处理性能</li>
+</ol>
+<p>因此像协程就派上用场了，核心思路是既然之前每一个并发逻辑都独占一个线程，那么就让这些并发逻辑共享一个线程或者少量几个线程，从而从根本上解决线程资源占用以及高频上下文切换的问题。而协程的设计可以是语言原生支持的如Go语言，也可以是第三方库支持的如Java的Quasar等，但不变的是，它要解决时间片分配以及调度这些并发逻辑的事情。相当于在线程内部跑一套小型的CPU调度算法逻辑，除此之外，由于协程相比操作系统来说处于更上层，它能获得更多并发逻辑相关的数据来做更多的调度、计算的优化。因此在一些对资源管控比较严格或者在一些高并发的场景，采用协程的设计是要远远优于基于线程。</p>
+<h3 id="2-池化技术">2. 池化技术
+</h3><p>完成一次请求处理，一般需要经历以下几个阶段</p>
+<ol>
+<li>客户端跟服务端建立TCP连接</li>
+<li>服务端处理线程创建子线程去并行处理这个任务</li>
+<li>子线程处理这个任务是需要创建一些对象去接受数据、处理逻辑</li>
+<li>处理任务时会涉及从磁盘读取数据</li>
+</ol>
+<p>可以看到处理一次请求的代价是庞大的，对网络、CPU、内存、磁盘都有不同程度的损耗，那在高并发场景这无疑是致命的，为了降低单次请求的成本，我们可以通过复用技术也就是池化能力将上述流程进行优化</p>
+<ol>
+<li>连接池：客户端提前跟服务端建立多个连接并放到池子里，需要发送请求时从池子里拿一个连接进行数据发送即可</li>
+<li>线程池：服务端提前创建好具有多个子线程的线程池，在请求到达服务端时，直接从线程池里取一个线程去处理即可</li>
+<li>对象池：对象池是一种特殊的工厂对象，具体实现就是连接池、线程池以及一些常用到的重量级的对象，可以预先创建好并放到池子里，避免处理任务时频繁去创建和释放</li>
+<li>内存池：将会频繁读取的数据以页的形式存储在内存池中，相当于从原先的基于磁盘读写数据优化成了基于内存读写的效果</li>
+</ol>
+<p>除了这些以外，像Linux还会通过复用进程标识符也就是进程ID来加速进程/线程的创建。</p>
+<h3 id="3-slab">3. SLAB
+</h3><p>进程/线程处理任务时，经常会需要频繁跟Linux申请内存，而由于内存是全局共享的，分配内存和释放内存都需要加锁操作，因此如果高频申请内存会影响服务性能。因此无论是Linux还是JVM都提供了SLAB机制，简单来说就是分配给每个进程/线程一小块内存，这些线程在运行过程中是独享这块内存的，因此无需加锁，需要内存时就直接拿来用，用完了就放回来，从而提升进程处理性能，也避免了高频从共享内存申请/释放内存导致的一些异常问题。</p>
+<h3 id="4-mmap">4. mmap
+</h3><p>传统写数据，我们需要将数据从应用内存写到用户态内存，再切换到内核态将数据从用户态内存拷贝到内核态内存，最终再拷贝到磁盘。这个过程不仅对资源消耗较多，同时性能也比较糟糕。因此linux提供mmap机制，将磁盘映射到内核态的一段内存，用户程序直接通过指针往这块内存写数据，有linux自动将脏页刷到磁盘，从而避免了数据的多次拷贝，降低资源消耗以及提升处理性能。</p>
+<h3 id="5-零拷贝">5. 零拷贝
+</h3><p>在将本地上的数据发送到远程机器上时，常常要经历以下几个阶段</p>
+<ol>
+<li>将数据从磁盘拷贝到内核态内存</li>
+<li>将数据从内核态内存拷贝到用户态内存</li>
+<li>将数据从用户态内存拷贝到应用内存</li>
+<li>将数据从应用内存拷贝到网卡缓冲区</li>
+</ol>
+<p>这个过程中要涉及4次CPU上下文切换，并且一份数据要拷贝4次</p>
+<p>使用零拷贝技术后，CPU只需要向磁盘发送一次指令，磁盘就会通过DMA技术将数据从磁盘拷贝到网卡缓冲区并发送出去，从而提升处理的能力。</p>
+<h2 id="总结">总结
+</h2><ul>
+<li>
+<p>内存替代磁盘、顺序写代替随机写</p>
+<p>通过内存缓冲一层，不仅能够 “化” 随机写为顺序写，还 “化”单次顺序写为批量顺序写，更重要的是还能将内存缓冲当作“缓存”，用来加速查询性能以及磁盘资源损耗。</p>
+</li>
+<li>
+<p>移动少量数据替代移动大量数据</p>
+<p>通过移动必要的数据来化解移动大量数据的操作，不仅能够显著降低资源使用情况，更能提升大数据场景下任务处理能力。</p>
+</li>
+<li>
+<p>资源轻量级使用</p>
+<p>通过科学化、精细化的分配处理请求时依赖的各项操作资源来大幅降低处理请求的成本以及提升处理的性能。</p>
+</li>
+</ul>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%A7%A3%E6%9E%90iceberg%E6%96%87%E4%BB%B6%E5%B8%83%E5%B1%80/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%A7%A3%E6%9E%90iceberg%E6%96%87%E4%BB%B6%E5%B8%83%E5%B1%80/image-20241204180525798.de933deee4261707f0c97a5baaa068b6_hu14123869769676742353.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 解析Iceberg文件布局"
+                        
+                        data-hash="md5-3pM97uQmFwfwyXpbqqBotg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">解析Iceberg文件布局</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/">
+        
+        
+            <div class="article-image">
+                <img src="/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/trees-8136806_1280.357dd549ed51f498bcbf5425f76e0416_hu9173719500181869714.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Spark调度系统详解"
+                        
+                        data-hash="md5-NX3VSe1R9Ji8v1Ql924EFg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Spark调度系统详解</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/the-creative-exchange-d2zvqp3fpro-unsplash.60116b1ccfc8632e9a65f7d51df3efc2_hu2042364712198079406.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 解析metadata.json文件"
+                        
+                        data-hash="md5-YBFrHM/IYy6aZffVHfPvwg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">解析metadata.json文件</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/spark%E5%AE%9E%E6%88%9801_rdd%E5%88%9B%E5%BB%BA/">
+        
+        
+            <div class="article-image">
+                <img src="/p/spark%E5%AE%9E%E6%88%9801_rdd%E5%88%9B%E5%BB%BA/trees-8686902_1280%202.d5a54bf226c780d9adbe49f2be923c40_hu7506565270475225831.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post spark实战01_RDD创建"
+                        
+                        data-hash="md5-1aVL8ibHgNmtvknyvpI8QA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">spark实战01_RDD创建</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/sparkonyarn%E4%B8%A4%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/">
+        
+        
+            <div class="article-image">
+                <img src="/p/sparkonyarn%E4%B8%A4%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/image-20241108193357851.c4c3ba7e1c0f83c2831e146bc0f6442d_hu763000391196817285.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post SparkOnYarn两种模式详解"
+                        
+                        data-hash="md5-xMO6fhwPg8KDHhRrwPZELQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">SparkOnYarn两种模式详解</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2024 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>

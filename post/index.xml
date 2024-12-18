@@ -7,7 +7,238 @@
         <generator>Hugo -- gohugo.io</generator>
         <language>zh-cn</language>
         <copyright>sherlock-lin</copyright>
-        <lastBuildDate>Wed, 11 Dec 2024 17:46:04 +0800</lastBuildDate><atom:link href="https://sherlock-lin.github.io/post/index.xml" rel="self" type="application/rss+xml" /><item>
+        <lastBuildDate>Wed, 18 Dec 2024 18:44:58 +0800</lastBuildDate><atom:link href="https://sherlock-lin.github.io/post/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>软件设计之道</title>
+        <link>https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/</link>
+        <pubDate>Wed, 18 Dec 2024 18:44:58 +0800</pubDate>
+        
+        <guid>https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/</guid>
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241212112322120.png" alt="Featured image of post 软件设计之道" /&gt;&lt;h2 id=&#34;一引言&#34;&gt;一、引言
+&lt;/h2&gt;&lt;p&gt;任何领域的技能都分为“道术器”三个层面&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241212112322120.png&#34;
+	width=&#34;721&#34;
+	height=&#34;500&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241212112322120_hu7870060918374888501.png 480w, https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241212112322120_hu10813589177620249159.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20241212112322120&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;144&#34;
+		data-flex-basis=&#34;346px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h3 id=&#34;1-器&#34;&gt;1. 器
+&lt;/h3&gt;&lt;p&gt;器对应的就是具体的工具如大数据组件Spark、Flink、Hadoop、MySQL，也可以是一门编程语言如Java、Go、Shell，甚至我们写的一个脚本、小程序都是工具，简单来说就是一切具像化、可直接使用的具体个体，并且能够发挥作用的东西都可以统称为器。&lt;/p&gt;
+&lt;h3 id=&#34;2-术&#34;&gt;2. 术
+&lt;/h3&gt;&lt;p&gt;术对应的是技巧，这个技巧包括使用工具的技巧以及设计的技巧等，例如用Spark时在联小表join的时候我们可以考虑将小表进行广播来避免shuffle操作、在庞大数据量场景下可以考虑Hadoop这类能横向扩展磁盘的组件、在大数据场景下对分析性能有严格要求的场景可以考虑用Doris、CK等olap引擎等等，这类技巧可以称之为术。&lt;/p&gt;
+&lt;h3 id=&#34;3-道&#34;&gt;3. 道
+&lt;/h3&gt;&lt;p&gt;道对应的是规律，如这个世界的日升日落、潮涨潮落、沧海桑田的规律一般，软件也是有自己的一套规律，或者说底层逻辑。当你遵循这套规律，你设计出来的东西能够放大收益，例如性能更高、资源更加节约、服务更加稳定等等。这也是今天想聊聊的软件设计之道。&lt;/p&gt;
+&lt;h3 id=&#34;小结&#34;&gt;小结
+&lt;/h3&gt;&lt;p&gt;从人类历史发展的宏观角度看过去、现在以及未来，有一个词贯穿着整个人类文明，那就是“效率”。即便是在软件设计包括大数据时代这个词也是核心，简单来说就是如何用更少的资源做成更多的事情，包括但不仅限于用有限的CPU、内存跑更多的任务、相同的计算存储资源能够比别人计算以及分析得更快、存储同样数量级的数据只需更少的资源等等。那么围绕“效率”这个核心来聊聊软件设计的道。&lt;/p&gt;
+&lt;h2 id=&#34;二概述&#34;&gt;二、概述
+&lt;/h2&gt;&lt;p&gt;如今的组件层出不穷，新技术更是日新月异，会让不少入门不久的程序员觉得遥遥无期，但实际上无论是多牛X的软件技术，最终都是要运行在操作系统上面或者说最终都是要借助操作系统的CPU、内存、磁盘、网络来实现它的功能，那么无论是多好的设计，只要映射到跟操作系统的交互并抽象出来，就会发现很多软件解决方案就是自相似的，正所谓万变不离其宗，只要将这抽象出来的解决方案掌握，后续即便有再新的技术也仅需要往上靠就好了。&lt;/p&gt;
+&lt;p&gt;以下是结合自身的知识栈列举出的软件设计之道&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;内存替代磁盘/顺序写代替随机写&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;kafka pagecache&lt;/li&gt;
+&lt;li&gt;mysql InnoDB内存池&lt;/li&gt;
+&lt;li&gt;WAL&lt;/li&gt;
+&lt;li&gt;LSM&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;移动少量数据替代移动大量数据&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;MR、Spark、Flink本地化计算&lt;/li&gt;
+&lt;li&gt;广播变量&lt;/li&gt;
+&lt;li&gt;数据湖&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;资源轻量级使用&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;协程&lt;/li&gt;
+&lt;li&gt;复用-池化技术(内存池、线程池、对象池、连接池、进程标识符)&lt;/li&gt;
+&lt;li&gt;进程是CPU的抽象，进程被CPU调用本质上是一种闭包的实现&lt;/li&gt;
+&lt;li&gt;SLAB&lt;/li&gt;
+&lt;li&gt;mmap&lt;/li&gt;
+&lt;li&gt;零拷贝(分为追尾读和追赶读两种场景)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;三内存替代磁盘顺序写代替随机写&#34;&gt;三、内存替代磁盘、顺序写代替随机写
+&lt;/h2&gt;&lt;h3 id=&#34;1-简析&#34;&gt;1. 简析
+&lt;/h3&gt;&lt;p&gt;软件计算的对象只有一个，就是数据，而数据是要有一个载体，常见的载体有内存、磁盘，它们的读写性能比例在下面这张图可看出来(仅供参考)&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/735367-20190611193807170-2101813158.png&#34;
+	width=&#34;586&#34;
+	height=&#34;318&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/735367-20190611193807170-2101813158_hu7248377708564337154.png 480w, https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/735367-20190611193807170-2101813158_hu8068069976726568005.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;img&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;184&#34;
+		data-flex-basis=&#34;442px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;从这张图我们能够得到以下几个有用的信息&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;顺序读写内存的性能是最高的&lt;/li&gt;
+&lt;li&gt;顺序读写磁盘跟随机读写内存的性能几乎一致&lt;/li&gt;
+&lt;li&gt;随机读写磁盘性能最差，顺序读写磁盘性能是随机读写磁盘的千倍以上。相当于顺序往磁盘里写一千条数据等同于随机往磁盘里写一条数据，这个性能差距可想而知。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;随机读写磁盘性能差原因原因：是因为机械硬盘采用传统的磁头探针结构，随机读写时需要频繁寻道，也就需要磁头和探针频繁的转动，而机械结构的磁头和探针的位置调整是十分费时的，这就严重影响到硬盘的寻址速度，进而影响到随机写入速度。&lt;/p&gt;
+&lt;h3 id=&#34;2-kafka-pagecache&#34;&gt;2. Kafka PageCache
+&lt;/h3&gt;&lt;p&gt;设计思想：内存替代磁盘&lt;/p&gt;
+&lt;p&gt;由于读写硬盘的速度比读写内存要慢很多，所以为了避免每次读写文件时，都需要对硬盘进行读写操作，Linux 内核使用 页缓存（Page Cache） 机制来对文件中的数据进行缓存。而Kafka作为一个高性能、高吞吐的流平台，如果每条消息都要进行落盘操作，那就会严重受限于读写磁盘的性能，因此Kafka仅会将数据写到PageCache，然后就给生产者返回写入成功的状态，而稳定性是通过多副本机制来进行保证的。&lt;/p&gt;
+&lt;p&gt;而PageCache的落盘时机通过Kafka的配置进行控制。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;3
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;log&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;flush&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;interval&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;messages&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;  &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;//多少条消息，刷盘1次 默认值 LONG.MAX_VALUE&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;log&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;flush&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;interval&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;ms&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;  &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;//割多长时间，刷盘1次 LONG.MAX_VALUE&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;log&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;flush&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;scheduler&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;interval&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;ms&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;//周期性的刷盘，缺省3000，即3s。&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h3 id=&#34;3-mysql-innodb缓冲池&#34;&gt;3. MySQL InnoDB缓冲池
+&lt;/h3&gt;&lt;p&gt;设计思想：内存代替磁盘。&lt;/p&gt;
+&lt;p&gt;Mysql的InnoDB引擎是基于磁盘存储数据的，并将其中的数据按照页的方式进行管理。而由于CPU速度与磁盘速度之间的鸿沟，InnoDB使用缓冲池技术来提高数据库的整体性能(不用操作系统提供的PageCache机制)。缓冲池简单来说就是一块内存区域，通过内存的速度来弥补磁盘速度较慢对数据库性能的影响。&lt;/p&gt;
+&lt;p&gt;缓冲池中存储以下数据&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;data page&lt;/li&gt;
+&lt;li&gt;insert buffer&lt;/li&gt;
+&lt;li&gt;lock info&lt;/li&gt;
+&lt;li&gt;index page&lt;/li&gt;
+&lt;li&gt;自适应哈希&lt;/li&gt;
+&lt;li&gt;数据字典信息&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在读取数据时会先去查缓冲池，如果命中则读取该页，否则去磁盘读取该页并放到缓冲池中。而在写数据时，会修改缓冲池中的页，然后再以一定的频率刷新到磁盘上，从而大幅提升MySQL的读写性能。&lt;/p&gt;
+&lt;h3 id=&#34;4-wal&#34;&gt;4. WAL
+&lt;/h3&gt;&lt;p&gt;设计思想：批量顺序写磁盘代替随机写磁盘&lt;/p&gt;
+&lt;p&gt;内存取代磁盘能够大幅提升性能，因此大部分存储相关的大数据组件都会选择将数据落到内存即可，但内存是没法提供持久化保证的，如果在数据落盘之前服务故障或者关机就会导致这部分数据丢失。针对这种问题一种方式是像kafka一样通过多副本机制+一致性算法来提供保证；另一种方式就是WAL方式。&lt;/p&gt;
+&lt;p&gt;WAL的核心就是避免内存中的数据丢失，在数据写入时先通过顺序写的方式持久化这部分写请求(用于故障恢复)，然后这部分数据只写到内存并异步的进行刷盘操作，从而避免了随机写磁盘的低效操作。可以发现这个过程WAL有两个特点 1. 通过顺序写磁盘记录变动数据的高效操作保证了写在内存中数据的稳定性 2. 数据写在内存中再定期去刷盘，能够大幅提升刷盘的吞吐量，本质上也是将原先的落盘操作从 随机写磁盘化为顺序写磁盘。&lt;/p&gt;
+&lt;p&gt;WAL本质上是通过两次顺序写磁盘取代一次随机写磁盘，它的应用场景的非常广泛，如MySQL、HDFS、HBase、Pulsar等，基本上跟存储相关的组件都会采用WAL的设计思路，生产上有一条通用的落地方案，就是将WAL的数据落到SSD固态硬盘中来提升数据写的性能，因为SSD固态硬盘性能比HDD硬盘高，但价格比内存低很多且能提供持久化能力，因此非常适合挂载到WAL日志持久化的目录。&lt;/p&gt;
+&lt;h3 id=&#34;5-lsm&#34;&gt;5. LSM
+&lt;/h3&gt;&lt;p&gt;设计思想：批量顺序写磁盘代替随机写磁盘&lt;/p&gt;
+&lt;p&gt;在大数据写入密集场景，LSM设计结构通过WAL保证数据可恢复，然后并发写到内存中，在达到某些阈值后就会进行刷盘将数据刷到Level0的文件中，每个SSTable中的数据都是局部有序的，在Level0的数据文件变多后，也会进行合并，并将合并后的结果写到Level1层的文件，一层一层这样，避免小文件过多影响读的性能以及后续维护的成本。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241213141835369.png&#34;
+	width=&#34;1016&#34;
+	height=&#34;593&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241213141835369_hu1879789929682053506.png 480w, https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241213141835369_hu12907388819336627346.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20241213141835369&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;171&#34;
+		data-flex-basis=&#34;411px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;通过上述结果看到数据会先写到内存中缓存一下，那为什么不直接通过顺序写的方式写到磁盘呢，这是因为单条写的性能肯定没有批量写的性能好，即便是像kafka这种也是通过PageCache来进行批量的顺序写的。而且在内存中缓冲一下的好处是，对于追尾读以及一些读取的场景，可以直接查询内存并进行返回，避免去查询磁盘提升查询效率和提升资源利用率，另一个好处是，LSM结构需要在内存中对数据进行排序。&lt;/p&gt;
+&lt;h2 id=&#34;四移动少量数据替代移动大量数据&#34;&gt;四、移动少量数据替代移动大量数据
+&lt;/h2&gt;&lt;h3 id=&#34;1-本地化计算&#34;&gt;1. 本地化计算
+&lt;/h3&gt;&lt;p&gt;在大数据计算领域，有一句经典的话“移动计算优于移动数据”，因为计算逻辑也是数据所以本质上也是移动少量数据替代移动大量数据，因为在大数据领域，虽然机器能够横向扩展，但是如果移动大量数据的话对网络以及内存的负担会比较大，并且在业务高峰期时还容易影响到其他服务，而大数据计算的核心也是计算，就是通过CPU对数据运行程序逻辑进行处理，那既然在那台机器计算都一样，与其将数据移动到程序所在的机器，将程序移动到数据所在的节点的成本是最低并且对服务来说也是最稳定的。&lt;/p&gt;
+&lt;p&gt;应用场景：Spark、Flink、MR、边缘计算等&lt;/p&gt;
+&lt;h3 id=&#34;2--广播变量&#34;&gt;2.  广播变量
+&lt;/h3&gt;&lt;p&gt;在大数据计算场景为了在任务之间隔离，基本上每个任务都会用一份全量临时数据，这个出发点是好的，但是在任务较多并且数据量稍微大些的场景，你会发现同一台机器上跑几十、上百甚至上千个任务时，这台机器的内存里会存放同样数量的数据，这无异是一种浪费。因此解决方案就是机器上仅存一份，各个任务共享这份数据仅可，当然这份数据往往是常量，不支持修改，从而大幅提升资源的有效使用率。&lt;/p&gt;
+&lt;p&gt;除此之外，在大数据计算场景，常常会出现联表查询的时候，这个时候会容易触发shuffle操作，本质上就是将两张表都重新做打散，相同规则的数据聚合到同一个下游节点做计算，而通过将其中的小表全量广播到计算节点，就能有效避免shuffle，他们数据直接本地化计算即可。&lt;/p&gt;
+&lt;h3 id=&#34;3-数据湖&#34;&gt;3. 数据湖
+&lt;/h3&gt;&lt;p&gt;大数据发展到如今，大部分公司都是通过Hive来搭建数仓，但随着数仓的维护Hive的不足也逐渐暴露出来，主要面临以下几个痛点&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Hive要通过显示分区来避免全表扫描，因此有时候要维护多层分区，这会导致小文件过多并且分区规则变化时需要将所有数据重新计算重新分区，并且对于使用者来说需要了解表结构并一定要在查询语句中显示的指定分区条件。&lt;/li&gt;
+&lt;li&gt;数据更新、删除支持较弱，因此Hive更适合做按天级别的更新，如小时分钟级别的更新需要依赖实时链路&lt;/li&gt;
+&lt;li&gt;数据多版本管理能力较差，一般都是用分区来做的但是非常重量级&lt;/li&gt;
+&lt;li&gt;不支持ACID&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Hive的这些场景的核心都是大部分操作都会导致数据的大量计算，本质上就是Hive设计之初对增量场景的能力支持较弱，元数据管理方面没有花太多精力。因此数据湖的出现填补了这方面的不足，例如Hudi、Iceberg等技术，在数据变动时，以增加元数据、数据文件的形式来记录，并通过清单列表文件跟踪变动情况，同时在元数据中记录分区情况以及列的极限值。主要的显著能力有如下&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;通过元数据保存分区情况取代Hive的文件目录管理方式，在分区变动时仅需要变更元数据文件即可&lt;/li&gt;
+&lt;li&gt;有数据更新删除时，通过添加增量数据文件，同时也增加新的元数据文件维护变化的关系&lt;/li&gt;
+&lt;li&gt;由于清单列表文件中记录变动的情况，这天然的支持数据多版本&lt;/li&gt;
+&lt;li&gt;由于数据都是增量的并互不干扰，因此在新建过程中也是能很好的做数据原子性提交、回滚&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;可以看到数据湖每次只需要&lt;code&gt;计算、处理必要的少量数据&lt;/code&gt;，而不是像Hive大部分情况下都去全量计算&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241105212055859.png&#34;
+	width=&#34;1240&#34;
+	height=&#34;1530&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241105212055859_hu12755898869869609782.png 480w, https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241105212055859_hu15854725226511155005.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20241105212055859&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;81&#34;
+		data-flex-basis=&#34;194px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h2 id=&#34;五资源轻量级使用&#34;&gt;五、资源轻量级使用
+&lt;/h2&gt;&lt;h3 id=&#34;1-协程&#34;&gt;1. 协程
+&lt;/h3&gt;&lt;p&gt;随着用户量、数据量的暴增，并发处理场景越来越多，像很多编程语言如Java原生只支持多线程，都是通过多个线程并发去处理任务，但这面临以下问题&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;线程的本质就是进程，只不过具有共享能力，因此对操作系统的资源占用是比较重的，每台机器能创建的线程数也是比较有限&lt;/li&gt;
+&lt;li&gt;线程之间的CPU上下文切换，这会导致CPU中寄存器的缓存不断被覆盖导致命中率大幅降低从而影响程序的并发处理性能&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;因此像协程就派上用场了，核心思路是既然之前每一个并发逻辑都独占一个线程，那么就让这些并发逻辑共享一个线程或者少量几个线程，从而从根本上解决线程资源占用以及高频上下文切换的问题。而协程的设计可以是语言原生支持的如Go语言，也可以是第三方库支持的如Java的Quasar等，但不变的是，它要解决时间片分配以及调度这些并发逻辑的事情。相当于在线程内部跑一套小型的CPU调度算法逻辑，除此之外，由于协程相比操作系统来说处于更上层，它能获得更多并发逻辑相关的数据来做更多的调度、计算的优化。因此在一些对资源管控比较严格或者在一些高并发的场景，采用协程的设计是要远远优于基于线程。&lt;/p&gt;
+&lt;h3 id=&#34;2-池化技术&#34;&gt;2. 池化技术
+&lt;/h3&gt;&lt;p&gt;完成一次请求处理，一般需要经历以下几个阶段&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;客户端跟服务端建立TCP连接&lt;/li&gt;
+&lt;li&gt;服务端处理线程创建子线程去并行处理这个任务&lt;/li&gt;
+&lt;li&gt;子线程处理这个任务是需要创建一些对象去接受数据、处理逻辑&lt;/li&gt;
+&lt;li&gt;处理任务时会涉及从磁盘读取数据&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;可以看到处理一次请求的代价是庞大的，对网络、CPU、内存、磁盘都有不同程度的损耗，那在高并发场景这无疑是致命的，为了降低单次请求的成本，我们可以通过复用技术也就是池化能力将上述流程进行优化&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;连接池：客户端提前跟服务端建立多个连接并放到池子里，需要发送请求时从池子里拿一个连接进行数据发送即可&lt;/li&gt;
+&lt;li&gt;线程池：服务端提前创建好具有多个子线程的线程池，在请求到达服务端时，直接从线程池里取一个线程去处理即可&lt;/li&gt;
+&lt;li&gt;对象池：对象池是一种特殊的工厂对象，具体实现就是连接池、线程池以及一些常用到的重量级的对象，可以预先创建好并放到池子里，避免处理任务时频繁去创建和释放&lt;/li&gt;
+&lt;li&gt;内存池：将会频繁读取的数据以页的形式存储在内存池中，相当于从原先的基于磁盘读写数据优化成了基于内存读写的效果&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;除了这些以外，像Linux还会通过复用进程标识符也就是进程ID来加速进程/线程的创建。&lt;/p&gt;
+&lt;h3 id=&#34;3-slab&#34;&gt;3. SLAB
+&lt;/h3&gt;&lt;p&gt;进程/线程处理任务时，经常会需要频繁跟Linux申请内存，而由于内存是全局共享的，分配内存和释放内存都需要加锁操作，因此如果高频申请内存会影响服务性能。因此无论是Linux还是JVM都提供了SLAB机制，简单来说就是分配给每个进程/线程一小块内存，这些线程在运行过程中是独享这块内存的，因此无需加锁，需要内存时就直接拿来用，用完了就放回来，从而提升进程处理性能，也避免了高频从共享内存申请/释放内存导致的一些异常问题。&lt;/p&gt;
+&lt;h3 id=&#34;4-mmap&#34;&gt;4. mmap
+&lt;/h3&gt;&lt;p&gt;传统写数据，我们需要将数据从应用内存写到用户态内存，再切换到内核态将数据从用户态内存拷贝到内核态内存，最终再拷贝到磁盘。这个过程不仅对资源消耗较多，同时性能也比较糟糕。因此linux提供mmap机制，将磁盘映射到内核态的一段内存，用户程序直接通过指针往这块内存写数据，有linux自动将脏页刷到磁盘，从而避免了数据的多次拷贝，降低资源消耗以及提升处理性能。&lt;/p&gt;
+&lt;h3 id=&#34;5-零拷贝&#34;&gt;5. 零拷贝
+&lt;/h3&gt;&lt;p&gt;在将本地上的数据发送到远程机器上时，常常要经历以下几个阶段&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;将数据从磁盘拷贝到内核态内存&lt;/li&gt;
+&lt;li&gt;将数据从内核态内存拷贝到用户态内存&lt;/li&gt;
+&lt;li&gt;将数据从用户态内存拷贝到应用内存&lt;/li&gt;
+&lt;li&gt;将数据从应用内存拷贝到网卡缓冲区&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这个过程中要涉及4次CPU上下文切换，并且一份数据要拷贝4次&lt;/p&gt;
+&lt;p&gt;使用零拷贝技术后，CPU只需要向磁盘发送一次指令，磁盘就会通过DMA技术将数据从磁盘拷贝到网卡缓冲区并发送出去，从而提升处理的能力。&lt;/p&gt;
+&lt;h2 id=&#34;总结&#34;&gt;总结
+&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;内存替代磁盘、顺序写代替随机写&lt;/p&gt;
+&lt;p&gt;通过内存缓冲一层，不仅能够 “化” 随机写为顺序写，还 “化”单次顺序写为批量顺序写，更重要的是还能将内存缓冲当作“缓存”，用来加速查询性能以及磁盘资源损耗。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;移动少量数据替代移动大量数据&lt;/p&gt;
+&lt;p&gt;通过移动必要的数据来化解移动大量数据的操作，不仅能够显著降低资源使用情况，更能提升大数据场景下任务处理能力。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;资源轻量级使用&lt;/p&gt;
+&lt;p&gt;通过科学化、精细化的分配处理请求时依赖的各项操作资源来大幅降低处理请求的成本以及提升处理的性能。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+        </item>
+        <item>
         <title>【Go教程】全网最经典、易懂、适合入门学习的学生成绩管理系统设计与实现</title>
         <link>https://sherlock-lin.github.io/p/go%E6%95%99%E7%A8%8B%E5%85%A8%E7%BD%91%E6%9C%80%E7%BB%8F%E5%85%B8%E6%98%93%E6%87%82%E9%80%82%E5%90%88%E5%85%A5%E9%97%A8%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%AD%A6%E7%94%9F%E6%88%90%E7%BB%A9%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0/</link>
         <pubDate>Wed, 11 Dec 2024 17:46:04 +0800</pubDate>
