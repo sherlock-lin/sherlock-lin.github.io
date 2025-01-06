@@ -7,7 +7,383 @@
         <generator>Hugo -- gohugo.io</generator>
         <language>zh-cn</language>
         <copyright>sherlock-lin</copyright>
-        <lastBuildDate>Wed, 18 Dec 2024 18:44:58 +0800</lastBuildDate><atom:link href="https://sherlock-lin.github.io/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/index.xml" rel="self" type="application/rss+xml" /><item>
+        <lastBuildDate>Mon, 06 Jan 2025 19:50:12 +0800</lastBuildDate><atom:link href="https://sherlock-lin.github.io/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>Spark实战02_RDD算子基本操作</title>
+        <link>https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/</link>
+        <pubDate>Mon, 06 Jan 2025 19:50:12 +0800</pubDate>
+        
+        <guid>https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/</guid>
+        <description>&lt;img src="https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/gull-8151932_1280.jpg" alt="Featured image of post Spark实战02_RDD算子基本操作" /&gt;&lt;h2 id=&#34;概述&#34;&gt;概述
+&lt;/h2&gt;&lt;p&gt;Spark算子根据使用方式可以整体成如下&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Transformations&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;数据转换&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;map&lt;/p&gt;
+&lt;p&gt;最常用的算子没有之一，对传进来的数据进行处理转换，属于进一个元素处理一个，处理完后将这个元素进行输出&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;mapPartitions/mapPartitionsWithIndex&lt;/p&gt;
+&lt;p&gt;map算子的拓展补充，跟map一样是对数据进行转换处理，例如在map处理逻辑中依赖一些外部资源如mysql连接场景，如果是在map中进行连接创建的话，会严重影响执行效率，而mapPartitions支持先遍历Partitions，基于Partition级别初始化依赖的资源，再进行对数据map转换处理，属于是对map算子中的共享变量优化的补充算子；mapPartitionsWithIndex相比mapPartitions来说仅仅多出一个数据分区索引，也就是分区编号，如果在业务逻辑中需要用到这个编号可以考虑使用mapPartitionsWithIndex算子。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;flatMap&lt;/p&gt;
+&lt;p&gt;用于对数据进行扁平化处理，也就是原来集合中的每一条数据再次打散成多条数据，方面后面的聚合计算。简单的说，map是（元素） =&amp;gt; （元素），而flatMap是（元素） =&amp;gt; （集合）。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;filter&lt;/p&gt;
+&lt;p&gt;对数据进行过滤，仅保留计算结果为true的数据&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;数据聚合&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;groupByKey&lt;/p&gt;
+&lt;p&gt;以Key为单位，分组收集同一Key的Value列表&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;sortByKey&lt;/p&gt;
+&lt;p&gt;以Key为单位，对数据集进行排序&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;reduceByKey&lt;/p&gt;
+&lt;p&gt;给定reduce函数，以Key为单位，分组聚合同一个Key对应的Value列表，常见的如请求平均值、求和等&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;aggregateByKey&lt;/p&gt;
+&lt;p&gt;aggregateByKey相比reduceByKey有初始值，也是以Key为单位，进行分组聚合计算&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;数据整合&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;union&lt;/p&gt;
+&lt;p&gt;对类型完全一致的RDD做合并，不会去重&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;intersection&lt;/p&gt;
+&lt;p&gt;计算两个RDD的交集&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;join&lt;/p&gt;
+&lt;p&gt;跟mysql的表join一样，用来做联表查询。union只能产生窄依赖，join既能产生窄依赖，也能产生宽依赖&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;cogroup&lt;/p&gt;
+&lt;p&gt;对具有相同键的元素进行联表查询。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;cartesian&lt;/p&gt;
+&lt;p&gt;对两个RDD做笛卡尔积操作&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;数据整理&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;sample&lt;/p&gt;
+&lt;p&gt;给定采样率，对RDD数据集做统计抽样&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;distinct&lt;/p&gt;
+&lt;p&gt;对结果进行去重操作&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;数据分布&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;repartition&lt;/p&gt;
+&lt;p&gt;给定目标并行度N，重新调整RDD并行度&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;coalesce&lt;/p&gt;
+&lt;p&gt;给定目标并行度，降低RDD并行度，coalesce底层也是调用的repartition算子来实现的&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Actions&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;数据收集&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;collect&lt;/p&gt;
+&lt;p&gt;将RDD数据全量收集到Driver端上，一般用于遍历RDD中的每条数据&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;first&lt;/p&gt;
+&lt;p&gt;随机提取RDD数据集中任意一条记录&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;take&lt;/p&gt;
+&lt;p&gt;随机提取RDD数据集中任意N条记录&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;count&lt;/p&gt;
+&lt;p&gt;对数据条数进行统计&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;数据持久化&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;saveAsTextFile&lt;/p&gt;
+&lt;p&gt;直接通过Executors将RDD数据集物化到文件系统&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;saveAsSequenceFile/saveAsObjectFile&lt;/p&gt;
+&lt;p&gt;跟saveAsTextFile一样，只是物化到文件系统的数据格式有些差异&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;数据遍历&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;foreach&lt;/p&gt;
+&lt;p&gt;遍历RDD中的每条数据&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;实战&#34;&gt;实战
+&lt;/h2&gt;&lt;h3 id=&#34;1-map&#34;&gt;1. map
+&lt;/h3&gt;&lt;p&gt;最常用的算子没有之一，对传进来的数据进行处理转换，属于进一个元素处理一个，处理完后将这个元素进行输出。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195052940.png&#34;
+	width=&#34;2030&#34;
+	height=&#34;698&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195052940_hu7698775818688053408.png 480w, https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195052940_hu12313604916600868830.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250106195052940&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;290&#34;
+		data-flex-basis=&#34;697px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;输出如下，可以看到所有数据都已经按照预期的乘于3倍&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106182236990.png&#34;
+	width=&#34;1510&#34;
+	height=&#34;228&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106182236990_hu16399264085366732481.png 480w, https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106182236990_hu16996616948548630391.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250106182236990&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;662&#34;
+		data-flex-basis=&#34;1589px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h3 id=&#34;2-flatmap&#34;&gt;2. flatMap
+&lt;/h3&gt;&lt;p&gt;用于对数据进行扁平化处理，也就是原来集合中的每一条数据再次打散成多条数据，方面后面的聚合计算。简单的说，map是（元素） =&amp;gt; （元素），而flatMap是（元素） =&amp;gt; （集合）。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195132692.png&#34;
+	width=&#34;2216&#34;
+	height=&#34;1022&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195132692_hu8000665386731351968.png 480w, https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195132692_hu10114956676853505278.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250106195132692&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;216&#34;
+		data-flex-basis=&#34;520px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;输出如下，原先的(1,2)元素被取出来转换成一个集合的形式，并针对集合中每个元素乘与5&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106182515103.png&#34;
+	width=&#34;1572&#34;
+	height=&#34;212&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106182515103_hu3242277866570793933.png 480w, https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106182515103_hu11638891287709830573.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250106182515103&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;741&#34;
+		data-flex-basis=&#34;1779px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h3 id=&#34;3-filter&#34;&gt;3. filter
+&lt;/h3&gt;&lt;p&gt;对数据进行过滤，仅保留计算结果为true的数据&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195145319.png&#34;
+	width=&#34;2048&#34;
+	height=&#34;324&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195145319_hu10687268433818927726.png 480w, https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195145319_hu3285123917904909088.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250106195145319&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;632&#34;
+		data-flex-basis=&#34;1517px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;输出如下，可以看到根据过滤逻辑仅保留奇数下来&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106194432610.png&#34;
+	width=&#34;1472&#34;
+	height=&#34;122&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106194432610_hu15036563100202738008.png 480w, https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106194432610_hu15864776082737828792.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250106194432610&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;1206&#34;
+		data-flex-basis=&#34;2895px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h3 id=&#34;4-groupby&#34;&gt;4. groupBy
+&lt;/h3&gt;&lt;p&gt;以Key为单位，分组收集同一Key的Value列表&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106194704457.png&#34;
+	width=&#34;2452&#34;
+	height=&#34;862&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106194704457_hu11350242889742738446.png 480w, https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106194704457_hu8615481609193518059.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250106194704457&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;284&#34;
+		data-flex-basis=&#34;682px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;输出如下&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106194920242.png&#34;
+	width=&#34;1712&#34;
+	height=&#34;128&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106194920242_hu12601183479120882911.png 480w, https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106194920242_hu10696215641911941814.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250106194920242&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;1337&#34;
+		data-flex-basis=&#34;3210px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h3 id=&#34;sortbykey&#34;&gt;sortByKey
+&lt;/h3&gt;&lt;p&gt;以Key为单位，对数据集进行排序&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195711416.png&#34;
+	width=&#34;1026&#34;
+	height=&#34;296&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195711416_hu11998833485568950955.png 480w, https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195711416_hu7078793185425518868.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250106195711416&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;346&#34;
+		data-flex-basis=&#34;831px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;输出如下&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195742292.png&#34;
+	width=&#34;880&#34;
+	height=&#34;162&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195742292_hu6891755883241297554.png 480w, https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195742292_hu2063172786012408573.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250106195742292&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;543&#34;
+		data-flex-basis=&#34;1303px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h3 id=&#34;reducebykey&#34;&gt;reduceByKey
+&lt;/h3&gt;&lt;p&gt;给定reduce函数，以Key为单位，分组聚合同一个Key对应的Value列表，常见的如请求平均值、求和等&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195928591.png&#34;
+	width=&#34;1096&#34;
+	height=&#34;377&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195928591_hu1754036612176008219.png 480w, https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106195928591_hu12944889750921412951.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250106195928591&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;290&#34;
+		data-flex-basis=&#34;697px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;输出如下&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106200021800.png&#34;
+	width=&#34;1342&#34;
+	height=&#34;67&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106200021800_hu18152258443360224014.png 480w, https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106200021800_hu7317121547002224033.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250106200021800&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;2002&#34;
+		data-flex-basis=&#34;4807px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h3 id=&#34;distinct&#34;&gt;distinct
+&lt;/h3&gt;&lt;p&gt;对结果进行去重操作&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106200307790.png&#34;
+	width=&#34;1140&#34;
+	height=&#34;239&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106200307790_hu6022920778888709237.png 480w, https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106200307790_hu16922446401159494389.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250106200307790&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;476&#34;
+		data-flex-basis=&#34;1144px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;输出如下&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106200324028.png&#34;
+	width=&#34;1334&#34;
+	height=&#34;308&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106200324028_hu11712127189702871378.png 480w, https://sherlock-lin.github.io/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/image-20250106200324028_hu17742477176390160464.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250106200324028&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;433&#34;
+		data-flex-basis=&#34;1039px&#34;
+	
+&gt;&lt;/p&gt;
+</description>
+        </item>
+        <item>
         <title>软件设计之道</title>
         <link>https://sherlock-lin.github.io/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/</link>
         <pubDate>Wed, 18 Dec 2024 18:44:58 +0800</pubDate>
