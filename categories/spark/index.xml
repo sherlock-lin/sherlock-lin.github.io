@@ -14,7 +14,8 @@
         
         <guid>https://sherlock-lin.github.io/p/%E8%AF%A6%E8%A7%A3spark%E7%9A%84shuffle%E6%BC%94%E5%8F%98/</guid>
         <description>&lt;img src="https://sherlock-lin.github.io/p/%E8%AF%A6%E8%A7%A3spark%E7%9A%84shuffle%E6%BC%94%E5%8F%98/lizard-8007238_1280.jpg" alt="Featured image of post 详解Spark的shuffle演变" /&gt;&lt;h2 id=&#34;概述&#34;&gt;概述
-&lt;/h2&gt;&lt;p&gt;shuffle就是将一组无规则的数据重组成具有一定规则的数据，在分布式计算场景下常常会通过shuffle将计算流程划分为map和reduce阶段，在reduce阶段前计算框架会将数据进行shuffle将具有相同规则的数据分发到同一个reduce节点来进行聚合计算，这个过程往往会伴随大量的磁盘和网络IO，因此在分布式计算链路中，shuffle环节的执行性能是最差的。在spark中，每执行一个action算子都会创建一个对应的Job任务，在对这个Job进行DAG调度的过程中，会判断算子之间是否存在ShuffleDependency 宽依赖，最终每个Job提交后都会生成一个ResultStage和若干个ShuffleMapStage，ResultStage表示这个Stage输出最终的结果，然后spark会通过shuffle为边界将Job划分为多个Stage。&lt;/p&gt;
+&lt;/h2&gt;&lt;p&gt;shuffle就是将一组无规则的数据重组成具有一定规则的数据，在分布式计算场景下常常会通过shuffle将计算流程划分为map和reduce阶段，在reduce阶段前计算框架会将数据进行shuffle将具有相同规则的数据分发到同一个reduce节点来进行聚合计算，这个过程往往会伴随大量的磁盘和网络IO，因此在分布式计算链路中，shuffle环节的执行性能是最差的。&lt;/p&gt;
+&lt;p&gt;在spark中，每执行一个action算子都会创建一个对应的Job任务，在对这个Job进行DAG调度的过程中，会判断算子之间是否存在ShuffleDependency 宽依赖，最终每个Job提交后都会生成一个ResultStage和若干个ShuffleMapStage，ResultStage表示这个Stage输出最终的结果，然后spark会通过shuffle为边界将Job划分为多个Stage。&lt;/p&gt;
 &lt;p&gt;一张图了解下 Spark Shuffle 的迭代历史：&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E8%AF%A6%E8%A7%A3spark%E7%9A%84shuffle%E6%BC%94%E5%8F%98/image-20250218112118325-9848881.png&#34;
 	width=&#34;1024&#34;
