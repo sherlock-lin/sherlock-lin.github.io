@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="概述 距离Spark 3.0版本的发布已经将近一年的时间了，这次版本升级添加了自适应查询执行（AQE）、动态分区剪裁（DPP）和扩展的 Join Hints 等新特性。利用好这些新特性，可以让我们的性能调优如虎添翼。因此，我会用三讲的时间和你聊聊它们。今天，我们先来说说AQE。\n">
+<title>详解AQE三大特性</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="详解AQE三大特性">
+<meta property='og:description' content="概述 距离Spark 3.0版本的发布已经将近一年的时间了，这次版本升级添加了自适应查询执行（AQE）、动态分区剪裁（DPP）和扩展的 Join Hints 等新特性。利用好这些新特性，可以让我们的性能调优如虎添翼。因此，我会用三讲的时间和你聊聊它们。今天，我们先来说说AQE。\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2025-02-21T13:56:45&#43;08:00'/><meta property='article:modified_time' content='2025-02-21T13:56:45&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/paddle-boat-8253274_1280.jpg' />
+<meta name="twitter:title" content="详解AQE三大特性">
+<meta name="twitter:description" content="概述 距离Spark 3.0版本的发布已经将近一年的时间了，这次版本升级添加了自适应查询执行（AQE）、动态分区剪裁（DPP）和扩展的 Join Hints 等新特性。利用好这些新特性，可以让我们的性能调优如虎添翼。因此，我会用三讲的时间和你聊聊它们。今天，我们先来说说AQE。\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/paddle-boat-8253274_1280.jpg' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/cs_hu10005534405353342465.jpg" width="300"
+                            height="294" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">🥳</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#概述">概述</a></li>
+    <li><a href="#spark为什么需要aqe">Spark为什么需要AQE</a></li>
+    <li><a href="#aqe是什么">AQE是什么</a></li>
+    <li><a href="#如何用好aqe">如何用好AQE</a>
+      <ol>
+        <li><a href="#join策略调整">Join策略调整</a></li>
+        <li><a href="#自动分区合并">自动分区合并</a></li>
+        <li><a href="#自动倾斜处理">自动倾斜处理</a></li>
+      </ol>
+    </li>
+    <li><a href="#总结">总结</a></li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/">
+                <img src="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/paddle-boat-8253274_1280_hu225873996440328347.jpg"
+                        srcset="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/paddle-boat-8253274_1280_hu225873996440328347.jpg 800w, /p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/paddle-boat-8253274_1280_hu9431023362219031979.jpg 1600w"
+                        width="800" 
+                        height="519" 
+                        loading="lazy"
+                        alt="Featured image of post 详解AQE三大特性" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/spark/" style="background-color: #2a9d8f; color: #fff;">
+                Spark
+            </a>
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/">详解AQE三大特性</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2025-02-21</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 13 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="概述">概述
+</h2><p>距离Spark 3.0版本的发布已经将近一年的时间了，这次版本升级添加了自适应查询执行（AQE）、动态分区剪裁（DPP）和扩展的 Join Hints 等新特性。利用好这些新特性，可以让我们的性能调优如虎添翼。因此，我会用三讲的时间和你聊聊它们。今天，我们先来说说AQE。</p>
+<h2 id="spark为什么需要aqe">Spark为什么需要AQE
+</h2><p>在2.0版本之前，Spark SQL仅仅支持启发式、静态的优化过程，启发式的优化又叫RBO（Rule Based Optimization，基于规则的优化），它往往基于一些规则和策略实现，如谓词下推、列剪枝，这些规则和策略来源于数据库领域已有的应用经验。也就是说，<strong>启发式的优化实际上算是一种经验主义</strong>。经验主义的弊端就是不分青红皂白、胡子眉毛一把抓，对待相似的问题和场景都使用同一类套路。Spark社区正是因为意识到了RBO的局限性，因此在2.2版本中推出了CBO（Cost Based Optimization，基于成本的优化）。</p>
+<p><strong>CBO的特点是“实事求是”</strong>，基于数据表的统计信息（如表大小、数据列分布）来选择优化策略。CBO支持的统计信息很丰富，比如数据表的行数、每列的基数（Cardinality）、空值数、最大值、最小值和直方图等等。因为有统计数据做支持，所以CBO选择的优化策略往往优于RBO选择的优化规则。</p>
+<p>但是，<strong>CBO也面临三个方面的窘境：“窄、慢、静”</strong>。窄指的是适用面太窄，CBO仅支持注册到Hive Metastore的数据表，但在大量的应用场景中，数据源往往是存储在分布式文件系统的各类文件，如Parquet、ORC、CSV等等。慢指的是统计信息的搜集效率比较低。对于注册到Hive Metastore的数据表，开发者需要调用ANALYZE TABLE COMPUTE STATISTICS语句收集统计信息，而各类信息的收集会消耗大量时间。静指的是静态优化，这一点与RBO一样。CBO结合各类统计信息制定执行计划，一旦执行计划交付运行，CBO的使命就算完成了。换句话说，如果在运行时数据分布发生动态变化，CBO先前制定的执行计划并不会跟着调整、适配。</p>
+<h2 id="aqe是什么">AQE是什么
+</h2><p>考虑到RBO和CBO的种种限制，Spark在3.0版本推出了AQE（Adaptive Query Execution，自适应查询执行）。如果用一句话来概括，<strong>AQE是Spark SQL的一种动态优化机制，在运行时，每当Shuffle Map阶段执行完毕，AQE都会结合这个阶段的统计信息，基于既定的规则动态地调整、修正尚未执行的逻辑计划和物理计划，来完成对原始查询语句的运行时优化</strong>。</p>
+<p>从定义中，我们不难发现，<strong>AQE优化机制触发的时机是Shuffle Map阶段执行完毕。也就是说，AQE优化的频次与执行计划中Shuffle的次数一致</strong>。反过来说，如果你的查询语句不会引入Shuffle操作，那么Spark SQL是不会触发AQE的。对于这样的查询，无论你怎么调整AQE相关的配置项，AQE也都爱莫能助。</p>
+<p>对于AQE的定义，我相信你还有很多问题，比如，AQE依赖的统计信息具体是什么？既定的规则和策略具体指什么？接下来，我们一一来解答。</p>
+<p>**首先，AQE赖以优化的统计信息与CBO不同，这些统计信息并不是关于某张表或是哪个列，而是Shuffle Map阶段输出的中间文件。**学习过Shuffle的工作原理之后，我们知道，每个Map Task都会输出以data为后缀的数据文件，还有以index为结尾的索引文件，这些文件统称为中间文件。每个data文件的大小、空文件数量与占比、每个Reduce Task对应的分区大小，所有这些基于中间文件的统计值构成了AQE进行优化的信息来源。</p>
+<p><strong>其次，结合Spark SQL端到端优化流程图我们可以看到，AQE从运行时获取统计信息，在条件允许的情况下，优化决策会分别作用到逻辑计划和物理计划。</strong></p>
+<p><img src="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/image-20250219151424592.png"
+	width="1647"
+	height="307"
+	srcset="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/image-20250219151424592_hu954673915790631539.png 480w, /p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/image-20250219151424592_hu6027153327087593060.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250219151424592"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="536"
+		data-flex-basis="1287px"
+	
+></p>
+<p>**AQE既定的规则和策略主要有4个，分为1个逻辑优化规则和3个物理优化策略。**我把这些规则与策略，和相应的AQE特性，以及每个特性仰仗的统计信息，都汇总到了如下的表格中。</p>
+<p><img src="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/image-20250219154208196.png"
+	width="862"
+	height="330"
+	srcset="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/image-20250219154208196_hu1412337480153493381.png 480w, /p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/image-20250219154208196_hu9739172829192103816.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250219154208196"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="261"
+		data-flex-basis="626px"
+	
+></p>
+<h2 id="如何用好aqe">如何用好AQE
+</h2><p>那么，AQE是如何根据Map阶段的统计信息以及这4个规则与策略，来动态地调整和修正尚未执行的逻辑计划和物理计划的呢？这就要提到AQE的三大特性，也就是Join策略调整、自动分区合并，以及自动倾斜处理，我们需要借助它们去分析AQE动态优化的过程。它们的基本概念我们在<a class="link" href="https://time.geekbang.org/column/article/357342"  target="_blank" rel="noopener"
+    >第9讲</a>说过，这里我再带你简单回顾一下。</p>
+<ul>
+<li>Join策略调整：如果某张表在过滤之后，尺寸小于广播变量阈值，这张表参与的数据关联就会从Shuffle Sort Merge Join降级（Demote）为执行效率更高的Broadcast Hash Join。</li>
+<li>自动分区合并：在Shuffle过后，Reduce Task数据分布参差不齐，AQE将自动合并过小的数据分区。</li>
+<li>自动倾斜处理：结合配置项，AQE自动拆分Reduce阶段过大的数据分区，降低单个Reduce Task的工作负载。</li>
+</ul>
+<p>接下来，我们就一起来分析这3个特性的动态优化过程。</p>
+<h3 id="join策略调整">Join策略调整
+</h3><p>我们先来说说Join策略调整，这个特性涉及了一个逻辑规则和一个物理策略，它们分别是DemoteBroadcastHashJoin和OptimizeLocalShuffleReader。</p>
+<p>**DemoteBroadcastHashJoin规则的作用，是把Shuffle Joins降级为Broadcast Joins。需要注意的是，这个规则仅适用于Shuffle Sort Merge Join这种关联机制，其他机制如Shuffle Hash Join、Shuffle Nested Loop Join都不支持。**对于参与Join的两张表来说，在它们分别完成Shuffle Map阶段的计算之后，DemoteBroadcastHashJoin会判断中间文件是否满足如下条件：</p>
+<ul>
+<li>中间文件尺寸总和小于广播阈值spark.sql.autoBroadcastJoinThreshold</li>
+<li>空文件占比小于配置项spark.sql.adaptive.nonEmptyPartitionRatioForBroadcastJoin</li>
+</ul>
+<p>只要有任意一张表的统计信息满足这两个条件，Shuffle Sort Merge Join就会降级为Broadcast Hash Join。说到这儿，你可能会问：“既然DemoteBroadcastHashJoin逻辑规则可以把Sort Merge Join转换为Broadcast Join，那同样用来调整Join策略的OptimizeLocalShuffleReader规则又是干什么用的呢？看上去有些多余啊！”</p>
+<p>不知道你注意到没有，我一直强调，<strong>AQE依赖的统计信息来自于Shuffle Map阶段生成的中间文件</strong>。这意味什么呢？这就意味着AQE在开始优化之前，Shuffle操作已经执行过半了！</p>
+<p>我们来举个例子，现在有两张表：事实表Order和维度表User，它们的查询语句和初始的执行计划如下。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-csharp" data-lang="csharp"><span class="line"><span class="cl"><span class="c1">//订单表与用户表关联</span>
+</span></span><span class="line"><span class="cl"><span class="k">select</span> <span class="n">sum</span><span class="p">(</span><span class="n">order</span><span class="p">.</span><span class="n">price</span> <span class="p">*</span> <span class="n">order</span><span class="p">.</span><span class="n">volume</span><span class="p">),</span> <span class="n">user</span><span class="p">.</span><span class="n">id</span>
+</span></span><span class="line"><span class="cl"><span class="k">from</span> <span class="n">order</span> <span class="n">inner</span> <span class="k">join</span> <span class="n">user</span>
+</span></span><span class="line"><span class="cl"><span class="k">on</span> <span class="n">order</span><span class="p">.</span><span class="n">userId</span> <span class="p">=</span> <span class="n">user</span><span class="p">.</span><span class="n">id</span>
+</span></span><span class="line"><span class="cl"><span class="k">where</span> <span class="n">user</span><span class="p">.</span><span class="n">type</span> <span class="p">=</span> <span class="err">‘</span><span class="n">Head</span> <span class="n">Users</span><span class="err">’</span>
+</span></span><span class="line"><span class="cl"><span class="k">group</span> <span class="k">by</span> <span class="n">user</span><span class="p">.</span><span class="n">id</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>由于两张表大都到超过了广播阈值，因此Spark SQL在最初的执行计划中选择了Sort Merge Join。AQE需要同时结合两个分支中的Shuffle（Exchange）输出，才能判断是否可以降级为Broadcast Join，以及用哪张表降级。这就意味着，不论大表还是小表都要完成Shuffle Map阶段的计算，并且把中间文件落盘，AQE才能做出决策。</p>
+<p><img src="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/12e0c35eff85471ab05dbeec1189c6da.jpg"
+	width="1659"
+	height="1779"
+	srcset="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/12e0c35eff85471ab05dbeec1189c6da_hu2385790656740784354.jpg 480w, /p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/12e0c35eff85471ab05dbeec1189c6da_hu4985461621015762799.jpg 1024w"
+	loading="lazy"
+	
+		alt="img"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="93"
+		data-flex-basis="223px"
+	
+></p>
+<p>你可能会说：“根本不需要大表做Shuffle呀，AQE只需要去判断小表Shuffle的中间文件就好啦”。可问题是，AQE可分不清哪张是大表、哪张是小表。在Shuffle Map阶段结束之前，数据表的尺寸大小对于AQE来说是“透明的”。因此，AQE必须等待两张表都完成Shuffle Map的计算，然后统计中间文件，才能判断降级条件是否成立，以及用哪张表做广播变量。</p>
+<p>在常规的Shuffle计算流程中，Reduce阶段的计算需要跨节点访问中间文件拉取数据分片。如果遵循常规步骤，即便AQE在运行时把Shuffle Sort Merge Join降级为Broadcast Join，大表的中间文件还是需要通过网络进行分发。这个时候，AQE的动态Join策略调整也就失去了实用价值。原因很简单，负载最重的大表Shuffle计算已经完成，再去决定切换到Broadcast Join已经没有任何意义。</p>
+<p>在这样的背景下，OptimizeLocalShuffleReader物理策略就非常重要了。既然大表已经完成Shuffle Map阶段的计算，这些计算可不能白白浪费掉。<strong>采取OptimizeLocalShuffleReader策略可以省去Shuffle常规步骤中的网络分发，Reduce Task可以就地读取本地节点（Local）的中间文件，完成与广播小表的关联操作。</strong></p>
+<p>不过，需要我们特别注意的是，<strong>OptimizeLocalShuffleReader物理策略的生效与否由一个配置项决定</strong>。这个配置项是spark.sql.adaptive.localShuffleReader.enabled，尽管它的默认值是True，但是你千万不要把它的值改为False。否则，就像我们刚才说的，AQE的Join策略调整就变成了形同虚设。</p>
+<p>说到这里，你可能会说：“这么看，AQE的Join策略调整有些鸡肋啊！毕竟Shuffle计算都已经过半，Shuffle Map阶段的内存消耗和磁盘I/O是半点没省！”确实，Shuffle Map阶段的计算开销是半点没省。但是，OptimizeLocalShuffleReader策略避免了Reduce阶段数据在网络中的全量分发，仅凭这一点，大多数的应用都能获益匪浅。因此，对于AQE的Join策略调整，<strong>我们可以用一个成语来形容：“亡羊补牢、犹未为晚”</strong>。</p>
+<h3 id="自动分区合并">自动分区合并
+</h3><p>接下来，我们再来说说自动分区合并。分区合并的原理比较简单，<strong>在Reduce阶段，当Reduce Task从全网把数据分片拉回，AQE按照分区编号的顺序，依次把小于目标尺寸的分区合并在一起</strong>。目标分区尺寸由以下两个参数共同决定。这部分我们在第10讲详细讲过，如果不记得，你可以翻回去看一看。</p>
+<ul>
+<li>spark.sql.adaptive.advisoryPartitionSizeInBytes，由开发者指定分区合并后的推荐尺寸。</li>
+<li>spark.sql.adaptive.coalescePartitions.minPartitionNum，分区合并后，分区数不能低于该值。</li>
+</ul>
+<p><img src="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/image-20250221133924081.png"
+	width="810"
+	height="299"
+	srcset="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/image-20250221133924081_hu17342918569931937219.png 480w, /p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/image-20250221133924081_hu4529873912637380941.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250221133924081"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="270"
+		data-flex-basis="650px"
+	
+></p>
+<p>除此之外，我们还要注意，在Shuffle Map阶段完成之后，AQE优化机制被触发，CoalesceShufflePartitions策略“无条件”地被添加到新的物理计划中。读取配置项、计算目标分区大小、依序合并相邻分区这些计算逻辑，在Tungsten WSCG的作用下融合进“手写代码”于Reduce阶段执行。</p>
+<h3 id="自动倾斜处理">自动倾斜处理
+</h3><p>与自动分区合并相反，自动倾斜处理的操作是“拆”。在Reduce阶段，当Reduce Task所需处理的分区尺寸大于一定阈值时，利用OptimizeSkewedJoin策略，AQE会把大分区拆成多个小分区。倾斜分区和拆分粒度由以下这些配置项决定。关于它们的含义与作用，我们在<a class="link" href="https://time.geekbang.org/column/article/357342"  target="_blank" rel="noopener"
+    >第10讲</a>说过，你可以再翻回去看一看。</p>
+<ul>
+<li>spark.sql.adaptive.skewJoin.skewedPartitionFactor，判定倾斜的膨胀系数</li>
+<li>spark.sql.adaptive.skewJoin.skewedPartitionThresholdInBytes，判定倾斜的最低阈值</li>
+<li>spark.sql.adaptive.advisoryPartitionSizeInBytes，以字节为单位，定义拆分粒度</li>
+</ul>
+<p>自动倾斜处理的拆分操作也是在Reduce阶段执行的。在同一个Executor内部，本该由一个Task去处理的大分区，被AQE拆成多个小分区并交由多个Task去计算。这样一来，Task之间的计算负载就可以得到平衡。但是，这并不能解决不同Executors之间的负载均衡问题。</p>
+<p>我们来举个例子，假设有个Shuffle操作，它的Map阶段有3个分区，Reduce阶段有4个分区。4个分区中的两个都是倾斜的大分区，而且这两个倾斜的大分区刚好都分发到了Executor 0。通过下图，我们能够直观地看到，尽管两个大分区被拆分，但横向来看，整个作业的主要负载还是落在了Executor 0的身上。Executor 0的计算能力依然是整个作业的瓶颈，这一点并没有因为分区拆分而得到实质性的缓解。</p>
+<p><img src="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/a443064257e148ada0f5b12d4972ce60.jpg"
+	width="2889"
+	height="1614"
+	srcset="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/a443064257e148ada0f5b12d4972ce60_hu15217154261491542213.jpg 480w, /p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/a443064257e148ada0f5b12d4972ce60_hu6596538477882970293.jpg 1024w"
+	loading="lazy"
+	
+		alt="img"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="178"
+		data-flex-basis="429px"
+	
+></p>
+<p>另外，在数据关联的场景中，对于参与Join的两张表，我们暂且把它们记做数据表1和数据表2，如果表1存在数据倾斜，表2不倾斜，那在关联的过程中，AQE除了对表1做拆分之外，还需要对表2对应的数据分区做复制，来保证关联关系不被破坏。</p>
+<p><img src="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/788cded1192649d792a72e2fae8f8a1c.jpg"
+	width="4359"
+	height="1224"
+	srcset="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/788cded1192649d792a72e2fae8f8a1c_hu658660210830894480.jpg 480w, /p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/788cded1192649d792a72e2fae8f8a1c_hu17553265363599514277.jpg 1024w"
+	loading="lazy"
+	
+		alt="img"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="356"
+		data-flex-basis="854px"
+	
+></p>
+<p>在这样的运行机制下，如果两张表都存在数据倾斜怎么办？这个时候，事情就开始变得逐渐复杂起来了。对于上图中的表1和表2，我们假设表1还是拆出来两个分区，表2因为倾斜也拆出来两个分区。这个时候，为了不破坏逻辑上的关联关系，表1、表2拆分出来的分区还要各自复制出一份，如下图所示。</p>
+<p><img src="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/59ae8cb1d4eb4be6a9a8a8a76155c831.jpg"
+	width="8800"
+	height="3266"
+	srcset="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/59ae8cb1d4eb4be6a9a8a8a76155c831_hu15468543644751961208.jpg 480w, /p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/59ae8cb1d4eb4be6a9a8a8a76155c831_hu5735764401763753271.jpg 1024w"
+	loading="lazy"
+	
+		alt="img"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="269"
+		data-flex-basis="646px"
+	
+></p>
+<p>如果现在问题变得更复杂了，左表拆出M个分区，右表拆出N各分区，那么每张表最终都需要保持M x N份分区数据，才能保证关联逻辑的一致性。当M和N逐渐变大时，AQE处理数据倾斜所需的计算开销将会面临失控的风险。</p>
+<p>**总的来说，当应用场景中的数据倾斜比较简单，比如虽然有倾斜但数据分布相对均匀，或是关联计算中只有一边倾斜，我们完全可以依赖AQE的自动倾斜处理机制。但是，当我们的场景中数据倾斜变得复杂，比如数据中不同Key的分布悬殊，或是参与关联的两表都存在大量的倾斜，我们就需要衡量AQE的自动化机制与手工处理倾斜之间的利害得失。**关于手工处理倾斜，我们留到第28讲再去展开。</p>
+<h2 id="总结">总结
+</h2><p>AQE是Spark SQL的一种动态优化机制，它的诞生解决了RBO、CBO，这些启发式、静态优化机制的局限性。想要用好AQE，我们就要掌握它的特点，以及它支持的三种优化特性的工作原理和使用方法。</p>
+<p>如果用一句话来概括AQE的定义，就是每当Shuffle Map阶段执行完毕，它都会结合这个阶段的统计信息，根据既定的规则和策略动态地调整、修正尚未执行的逻辑计划和物理计划，从而完成对原始查询语句的运行时优化。也因此，只有当你的查询语句会引入Shuffle操作的时候，Spark SQL才会触发AQE。</p>
+<p>AQE支持的三种优化特性分别是Join策略调整、自动分区合并和自动倾斜处理。</p>
+<p>关于Join策略调整，我们首先要知道DemoteBroadcastHashJoin规则仅仅适用于Shuffle Sort Merge Join这种关联机制，对于其他Shuffle Joins类型，AQE暂不支持把它们转化为Broadcast Joins。其次，为了确保AQE的Join策略调整正常运行，我们要确保spark.sql.adaptive.localShuffleReader.enabled配置项始终为开启状态。</p>
+<p>关于自动分区合并，我们要知道，在Shuffle Map阶段完成之后，结合分区推荐尺寸与分区数量限制，AQE会自动帮我们完成分区合并的计算过程。</p>
+<p>关于AQE的自动倾斜处理我们要知道，它只能以Task为粒度缓解数据倾斜，并不能解决不同Executors之间的负载均衡问题。针对场景较为简单的倾斜问题，比如关联计算中只涉及单边倾斜，我们完全可以依赖AQE的自动倾斜处理机制。但是，当数据倾斜问题变得复杂的时候，我们需要衡量AQE的自动化机制与手工处理倾斜之间的利害得失。</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%AF%A6%E8%A7%A3dpp%E7%89%B9%E6%80%A7/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%AF%A6%E8%A7%A3dpp%E7%89%B9%E6%80%A7/mountains-8585535_1280.56d4c40673b260df8ed14227d7af25f7_hu2786413640161431340.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 详解DPP特性"
+                        
+                        data-hash="md5-VtTEBnOyYN&#43;O0UIn168l9w==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">详解DPP特性</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%AF%A6%E8%A7%A3spark%E7%9A%84shuffle%E6%BC%94%E5%8F%98/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%AF%A6%E8%A7%A3spark%E7%9A%84shuffle%E6%BC%94%E5%8F%98/lizard-8007238_1280.99221b6ddc6adbd3b3d4b2a2ff222b99_hu9270167774858500963.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 详解Spark的shuffle演变"
+                        
+                        data-hash="md5-mSIbbdxq29Oz1LKi/yIrmQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">详解Spark的shuffle演变</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/">
+        
+        
+            <div class="article-image">
+                <img src="/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/gull-8151932_1280.2050c59bb0284804503603eb8e507404_hu6399228128241274359.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Spark实战02_RDD算子基本操作"
+                        
+                        data-hash="md5-IFDFm7AoSARQNgPrjlB0BA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Spark实战02_RDD算子基本操作</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/">
+        
+        
+            <div class="article-image">
+                <img src="/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/trees-8136806_1280.357dd549ed51f498bcbf5425f76e0416_hu9173719500181869714.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Spark调度系统详解"
+                        
+                        data-hash="md5-NX3VSe1R9Ji8v1Ql924EFg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Spark调度系统详解</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/spark%E5%AE%9E%E6%88%9801_rdd%E5%88%9B%E5%BB%BA/">
+        
+        
+            <div class="article-image">
+                <img src="/p/spark%E5%AE%9E%E6%88%9801_rdd%E5%88%9B%E5%BB%BA/trees-8686902_1280%202.d5a54bf226c780d9adbe49f2be923c40_hu7506565270475225831.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post spark实战01_RDD创建"
+                        
+                        data-hash="md5-1aVL8ibHgNmtvknyvpI8QA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">spark实战01_RDD创建</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2025 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
