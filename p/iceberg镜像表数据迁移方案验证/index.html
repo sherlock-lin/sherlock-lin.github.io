@@ -1,0 +1,1865 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="一、背景 迁移Hive数仓历史数据到数据湖的流程中，会先将Hive迁移到Iceberg镜像表，待质量验证通过再同步到Iceberg正式表。本次验证的是就是从Iceberg镜像表迁移数据到Iceberg正式表的流程\n">
+<title>Iceberg镜像表数据迁移方案验证</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="Iceberg镜像表数据迁移方案验证">
+<meta property='og:description' content="一、背景 迁移Hive数仓历史数据到数据湖的流程中，会先将Hive迁移到Iceberg镜像表，待质量验证通过再同步到Iceberg正式表。本次验证的是就是从Iceberg镜像表迁移数据到Iceberg正式表的流程\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2025-02-21T11:01:17&#43;08:00'/><meta property='article:modified_time' content='2025-02-21T11:01:17&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/book-8643905_1280.jpg' />
+<meta name="twitter:title" content="Iceberg镜像表数据迁移方案验证">
+<meta name="twitter:description" content="一、背景 迁移Hive数仓历史数据到数据湖的流程中，会先将Hive迁移到Iceberg镜像表，待质量验证通过再同步到Iceberg正式表。本次验证的是就是从Iceberg镜像表迁移数据到Iceberg正式表的流程\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/book-8643905_1280.jpg' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/cs_hu10005534405353342465.jpg" width="300"
+                            height="294" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">🥳</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#一背景">一、背景</a></li>
+    <li><a href="#二验证思路">二、验证思路</a>
+      <ol>
+        <li><a href="#操作步骤">操作步骤</a></li>
+        <li><a href="#分析步骤">分析步骤</a></li>
+      </ol>
+    </li>
+    <li><a href="#三验证场景">三、验证场景</a></li>
+    <li><a href="#四验证场景一仅add_files方式">四、验证场景一（仅add_files方式）</a>
+      <ol>
+        <li><a href="#启动sparksql">启动SparkSQL</a></li>
+        <li><a href="#创建镜像表a并写入数据">创建镜像表A并写入数据</a></li>
+        <li><a href="#查看镜像表a的结构信息以及hdfs布局信息">查看镜像表A的结构信息以及HDFS布局信息</a></li>
+        <li><a href="#创建正式表b">创建正式表B</a></li>
+        <li><a href="#查看表b的结构信息以及hdfs布局迁移前">查看表B的结构信息以及HDFS布局(迁移前)</a></li>
+        <li><a href="#执行迁移存储过程add_files">执行迁移存储过程add_files</a></li>
+        <li><a href="#验证数据">验证数据</a></li>
+        <li><a href="#分析迁移后的两张表结构信息">分析迁移后的两张表结构信息</a></li>
+        <li><a href="#分析迁移后的hdfs上两张表文件布局">分析迁移后的HDFS上两张表文件布局</a></li>
+        <li><a href="#检验镜像表数据时间戳">检验镜像表数据时间戳</a></li>
+        <li><a href="#分析iceberg正式表的清单数据">分析Iceberg正式表的清单数据</a></li>
+      </ol>
+    </li>
+    <li><a href="#五验证场景二移动data数据文件并add_files方式">五、验证场景二（移动data数据文件并add_files方式）</a>
+      <ol>
+        <li><a href="#启动sparksql-1">启动SparkSQL</a></li>
+        <li><a href="#创建镜像表a并写入数据-1">创建镜像表A并写入数据</a></li>
+        <li><a href="#查看镜像表a的结构信息以及hdfs布局信息-1">查看镜像表A的结构信息以及HDFS布局信息</a></li>
+        <li><a href="#创建正式表b-1">创建正式表B</a></li>
+        <li><a href="#查看表b的结构信息以及hdfs布局迁移前-1">查看表B的结构信息以及HDFS布局(迁移前)</a></li>
+        <li><a href="#移动镜像表a的数据文件到正式表b的目录下">移动镜像表A的数据文件到正式表B的目录下</a></li>
+        <li><a href="#迁移前验证查表操作">迁移前验证(查表操作)</a></li>
+        <li><a href="#执行迁移存储过程add_files-1">执行迁移存储过程add_files</a></li>
+        <li><a href="#验证数据-1">验证数据</a></li>
+        <li><a href="#分析迁移后的两张表结构信息-1">分析迁移后的两张表结构信息</a></li>
+        <li><a href="#检验正式表数据文件时间戳">检验正式表数据文件时间戳</a></li>
+        <li><a href="#分析iceberg正式表的清单数据-1">分析Iceberg正式表的清单数据</a></li>
+        <li><a href="#分析iceberg正式表的stage数据">分析Iceberg正式表的stage数据</a></li>
+      </ol>
+    </li>
+    <li><a href="#六验证场景三iceberg分支方式">六、验证场景三（Iceberg分支方式）</a></li>
+    <li><a href="#七结论">七、结论</a></li>
+    <li><a href="#额外思考">额外思考</a></li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/">
+                <img src="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/book-8643905_1280_hu9108783421195329478.jpg"
+                        srcset="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/book-8643905_1280_hu9108783421195329478.jpg 800w, /p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/book-8643905_1280_hu4531868929635011439.jpg 1600w"
+                        width="800" 
+                        height="533" 
+                        loading="lazy"
+                        alt="Featured image of post Iceberg镜像表数据迁移方案验证" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/%E6%95%B0%E6%8D%AE%E6%B9%96/" style="background-color: #2a9d8f; color: #fff;">
+                数据湖
+            </a>
+        
+            <a href="/categories/spark/" style="background-color: #2a9d8f; color: #fff;">
+                Spark
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/">Iceberg镜像表数据迁移方案验证</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2025-02-21</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 6 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="一背景">一、背景
+</h2><p>迁移Hive数仓历史数据到数据湖的流程中，会先将Hive迁移到Iceberg镜像表，待质量验证通过再同步到Iceberg正式表。本次验证的是就是从Iceberg镜像表迁移数据到Iceberg正式表的流程</p>
+<h2 id="二验证思路">二、验证思路
+</h2><ol>
+<li>
+<h3 id="操作步骤">操作步骤
+</h3></li>
+</ol>
+<p>启动SparkSQL环境</p>
+<ol>
+<li>
+<p>创建Iceberg镜像表A并写入数据</p>
+</li>
+<li>
+<p>创建跟镜像表A相同表结构的正式表B</p>
+</li>
+<li>
+<p>通过Iceberg原生的add_files存储过程将镜像表A的数据迁移到正式表B</p>
+</li>
+<li>
+<h3 id="分析步骤">分析步骤
+</h3></li>
+<li>
+<p>分析迁移前后表A和表B的表元信息</p>
+</li>
+<li>
+<p>分析迁移前后表A和表B的文件布局</p>
+</li>
+<li>
+<p>分析迁移前后位于HDFS上文件的内容差异</p>
+</li>
+</ol>
+<h2 id="三验证场景">三、验证场景
+</h2><p>本次从三个场景进行验证分析</p>
+<ol>
+<li>不移动数据文件，仅通过add_files方式进行验证</li>
+<li>手动移动数据文件到正式表data目录下，再通过add_files进行数据加载</li>
+<li>验证Iceberg分支特性应用于迁移场景的效果</li>
+</ol>
+<h2 id="四验证场景一仅add_files方式">四、验证场景一（仅add_files方式）
+</h2><ol>
+<li>
+<h3 id="启动sparksql">启动SparkSQL
+</h3></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="n">spark</span><span class="o">-</span><span class="k">sql</span><span class="w"> </span><span class="c1">--conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="w">    </span><span class="c1">--conf spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkSessionCatalog \
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="w">    </span><span class="c1">--conf spark.sql.catalog.spark_catalog.type=hive \
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="w">    </span><span class="c1">--conf spark.sql.catalog.hive=org.apache.iceberg.spark.SparkCatalog \
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="w">    </span><span class="c1">--conf spark.sql.catalog.hive.type=hive \
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="w">    </span><span class="c1">--conf spark.sql.catalog.hive.uri=thrift://127.0.0.1:9083 \
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="w">    </span><span class="c1">--conf spark.sql.catalog.hive.warehouse=hdfs://warehouse
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>
+<h3 id="创建镜像表a并写入数据">创建镜像表A并写入数据
+</h3></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="n">use</span><span class="w"> </span><span class="n">hive_prod</span><span class="p">.</span><span class="k">default</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">test_add_files_src</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="k">data</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="n">category</span><span class="w"> </span><span class="n">string</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">USING</span><span class="w"> </span><span class="n">iceberg</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="n">PARTITIONED</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="p">(</span><span class="n">category</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">test_add_files_src</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;a&#39;</span><span class="p">,</span><span class="s1">&#39;test&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;b&#39;</span><span class="p">,</span><span class="s1">&#39;test&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;c&#39;</span><span class="p">,</span><span class="s1">&#39;now&#39;</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">desc</span><span class="w"> </span><span class="n">formatted</span><span class="w"> </span><span class="n">test_add_files_src</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>
+<h3 id="查看镜像表a的结构信息以及hdfs布局信息">查看镜像表A的结构信息以及HDFS布局信息
+</h3></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="n">id</span><span class="w">                          </span><span class="nb">bigint</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">data</span><span class="w">                        </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">category</span><span class="w">                    </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Partition</span><span class="w"> </span><span class="n">Information</span><span class="w">                                                        
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">col_name</span><span class="w">                  </span><span class="n">data_type</span><span class="w">                   </span><span class="k">comment</span><span class="w">             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">category</span><span class="w">                    </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Metadata</span><span class="w"> </span><span class="n">Columns</span><span class="w">                                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_spec_id</span><span class="w">                    </span><span class="nb">int</span><span class="w">                                             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_partition</span><span class="w">                  </span><span class="n">struct</span><span class="o">&lt;</span><span class="n">category</span><span class="p">:</span><span class="n">string</span><span class="o">&gt;</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_file</span><span class="w">                       </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_pos</span><span class="w">                        </span><span class="nb">bigint</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_deleted</span><span class="w">                    </span><span class="nb">boolean</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Detailed</span><span class="w"> </span><span class="k">Table</span><span class="w"> </span><span class="n">Information</span><span class="w">                                                        
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Name</span><span class="w">                        </span><span class="n">hive_prod</span><span class="p">.</span><span class="k">default</span><span class="p">.</span><span class="n">test_add_files_src</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Type</span><span class="w">                        </span><span class="n">MANAGED</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Location</span><span class="w">                    </span><span class="n">hdfs</span><span class="p">:</span><span class="o">//</span><span class="n">localhost</span><span class="p">:</span><span class="mi">9000</span><span class="o">/</span><span class="k">user</span><span class="o">/</span><span class="n">hive</span><span class="o">/</span><span class="n">warehouse</span><span class="o">/</span><span class="n">test_add_files_src</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Provider</span><span class="w">                    </span><span class="n">iceberg</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Owner</span><span class="w">                       </span><span class="n">lin</span><span class="w">                                             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Table</span><span class="w"> </span><span class="n">Properties</span><span class="w">            </span><span class="p">[</span><span class="k">current</span><span class="o">-</span><span class="n">snapshot</span><span class="o">-</span><span class="n">id</span><span class="o">=</span><span class="mi">4643790123769250304</span><span class="p">,</span><span class="n">format</span><span class="o">=</span><span class="n">iceberg</span><span class="o">/</span><span class="n">parquet</span><span class="p">,</span><span class="n">format</span><span class="o">-</span><span class="k">version</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="k">write</span><span class="p">.</span><span class="n">parquet</span><span class="p">.</span><span class="n">compression</span><span class="o">-</span><span class="n">codec</span><span class="o">=</span><span class="n">zstd</span><span class="p">]</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Time</span><span class="w"> </span><span class="n">taken</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">216</span><span class="w"> </span><span class="n">seconds</span><span class="p">,</span><span class="w"> </span><span class="n">Fetched</span><span class="w"> </span><span class="mi">21</span><span class="w"> </span><span class="k">row</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">├──</span><span class="w"> </span><span class="n">test_add_files_src</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="k">data</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">category</span><span class="o">=</span><span class="n">now</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="mi">3</span><span class="o">-</span><span class="mi">9</span><span class="n">b80e070</span><span class="o">-</span><span class="mi">0</span><span class="n">c5a</span><span class="o">-</span><span class="mi">4</span><span class="n">b73</span><span class="o">-</span><span class="n">a874</span><span class="o">-</span><span class="n">b3bead890332</span><span class="o">-</span><span class="mi">0</span><span class="o">-</span><span class="mi">00002</span><span class="p">.</span><span class="n">parquet</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">category</span><span class="o">=</span><span class="n">test</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="mi">3</span><span class="o">-</span><span class="mi">9</span><span class="n">b80e070</span><span class="o">-</span><span class="mi">0</span><span class="n">c5a</span><span class="o">-</span><span class="mi">4</span><span class="n">b73</span><span class="o">-</span><span class="n">a874</span><span class="o">-</span><span class="n">b3bead890332</span><span class="o">-</span><span class="mi">0</span><span class="o">-</span><span class="mi">00001</span><span class="p">.</span><span class="n">parquet</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">metadata</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="mi">26</span><span class="n">c68598</span><span class="o">-</span><span class="n">db37</span><span class="o">-</span><span class="mi">4</span><span class="n">cf9</span><span class="o">-</span><span class="n">a592</span><span class="o">-</span><span class="mi">86</span><span class="n">eec8010e77</span><span class="p">.</span><span class="n">metadata</span><span class="p">.</span><span class="n">json</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="mi">00001</span><span class="o">-</span><span class="mi">55</span><span class="n">d99ee8</span><span class="o">-</span><span class="mi">0145</span><span class="o">-</span><span class="mi">4</span><span class="n">af2</span><span class="o">-</span><span class="n">ba60</span><span class="o">-</span><span class="mi">41</span><span class="n">ba2f9c2260</span><span class="p">.</span><span class="n">metadata</span><span class="p">.</span><span class="n">json</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="n">a7a44fcc</span><span class="o">-</span><span class="mi">68</span><span class="n">ae</span><span class="o">-</span><span class="mi">4341</span><span class="o">-</span><span class="n">bb34</span><span class="o">-</span><span class="n">f0f93f065d58</span><span class="o">-</span><span class="n">m0</span><span class="p">.</span><span class="n">avro</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="n">snap</span><span class="o">-</span><span class="mi">4643790123769250304</span><span class="o">-</span><span class="mi">1</span><span class="o">-</span><span class="n">a7a44fcc</span><span class="o">-</span><span class="mi">68</span><span class="n">ae</span><span class="o">-</span><span class="mi">4341</span><span class="o">-</span><span class="n">bb34</span><span class="o">-</span><span class="n">f0f93f065d58</span><span class="p">.</span><span class="n">avro</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>
+<h3 id="创建正式表b">创建正式表B
+</h3></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">test_add_files_target</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="k">data</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="n">category</span><span class="w"> </span><span class="n">string</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">USING</span><span class="w"> </span><span class="n">iceberg</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="n">PARTITIONED</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="p">(</span><span class="n">category</span><span class="p">);</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>
+<h3 id="查看表b的结构信息以及hdfs布局迁移前">查看表B的结构信息以及HDFS布局(迁移前)
+</h3></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="n">id</span><span class="w">                          </span><span class="nb">bigint</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">data</span><span class="w">                        </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">category</span><span class="w">                    </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Partition</span><span class="w"> </span><span class="n">Information</span><span class="w">                                                        
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">col_name</span><span class="w">                  </span><span class="n">data_type</span><span class="w">                   </span><span class="k">comment</span><span class="w">             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">category</span><span class="w">                    </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Metadata</span><span class="w"> </span><span class="n">Columns</span><span class="w">                                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_spec_id</span><span class="w">                    </span><span class="nb">int</span><span class="w">                                             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_partition</span><span class="w">                  </span><span class="n">struct</span><span class="o">&lt;</span><span class="n">category</span><span class="p">:</span><span class="n">string</span><span class="o">&gt;</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_file</span><span class="w">                       </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_pos</span><span class="w">                        </span><span class="nb">bigint</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_deleted</span><span class="w">                    </span><span class="nb">boolean</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Detailed</span><span class="w"> </span><span class="k">Table</span><span class="w"> </span><span class="n">Information</span><span class="w">                                                        
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Name</span><span class="w">                        </span><span class="n">hive_prod</span><span class="p">.</span><span class="k">default</span><span class="p">.</span><span class="n">test_add_files_target</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Type</span><span class="w">                        </span><span class="n">MANAGED</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Location</span><span class="w">                    </span><span class="n">hdfs</span><span class="p">:</span><span class="o">//</span><span class="n">localhost</span><span class="p">:</span><span class="mi">9000</span><span class="o">/</span><span class="k">user</span><span class="o">/</span><span class="n">hive</span><span class="o">/</span><span class="n">warehouse</span><span class="o">/</span><span class="n">test_add_files_target</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Provider</span><span class="w">                    </span><span class="n">iceberg</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Owner</span><span class="w">                       </span><span class="n">lin</span><span class="w">                                             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Table</span><span class="w"> </span><span class="n">Properties</span><span class="w">            </span><span class="p">[</span><span class="k">current</span><span class="o">-</span><span class="n">snapshot</span><span class="o">-</span><span class="n">id</span><span class="o">=</span><span class="k">none</span><span class="p">,</span><span class="n">format</span><span class="o">=</span><span class="n">iceberg</span><span class="o">/</span><span class="n">parquet</span><span class="p">,</span><span class="n">format</span><span class="o">-</span><span class="k">version</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="k">write</span><span class="p">.</span><span class="n">parquet</span><span class="p">.</span><span class="n">compression</span><span class="o">-</span><span class="n">codec</span><span class="o">=</span><span class="n">zstd</span><span class="p">]</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Time</span><span class="w"> </span><span class="n">taken</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">216</span><span class="w"> </span><span class="n">seconds</span><span class="p">,</span><span class="w"> </span><span class="n">Fetched</span><span class="w"> </span><span class="mi">21</span><span class="w"> </span><span class="k">row</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">├──</span><span class="w"> </span><span class="n">test_add_files_target</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">metadata</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="n">cb0ee426</span><span class="o">-</span><span class="mi">8</span><span class="n">a4e</span><span class="o">-</span><span class="mi">45</span><span class="n">be</span><span class="o">-</span><span class="mi">8</span><span class="n">b35</span><span class="o">-</span><span class="n">fa9276cebc9d</span><span class="p">.</span><span class="n">metadata</span><span class="p">.</span><span class="n">json</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>
+<h3 id="执行迁移存储过程add_files">执行迁移存储过程add_files
+</h3></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="k">call</span><span class="w"> </span><span class="n">spark_catalog</span><span class="p">.</span><span class="k">system</span><span class="p">.</span><span class="n">add_files</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="s1">&#39;default.test_add_files_target&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">source_table</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="s1">&#39;`parquet`.`hdfs://localhost:9000/user/hive/warehouse/test_add_files_src/data`&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">);</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><img src="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105330039.png"
+	width="719"
+	height="88"
+	srcset="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105330039_hu10740003757073170235.png 480w, /p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105330039_hu17331039691264326752.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250221105330039"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="817"
+		data-flex-basis="1960px"
+	
+></p>
+<h3 id="验证数据">验证数据
+</h3><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">test_add_files_target</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过查询可看到数据已经成功迁移到正式表B</p>
+<p><img src="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105407295.png"
+	width="581"
+	height="71"
+	srcset="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105407295_hu11648042741371309766.png 480w, /p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105407295_hu8913840228489967936.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250221105407295"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="818"
+		data-flex-basis="1963px"
+	
+></p>
+<ol>
+<li>
+<h3 id="分析迁移后的两张表结构信息">分析迁移后的两张表结构信息
+</h3></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="k">desc</span><span class="w"> </span><span class="n">formatted</span><span class="w"> </span><span class="n">test_add_files_src</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">desc</span><span class="w"> </span><span class="n">formatted</span><span class="w"> </span><span class="n">test_add_files_target</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>镜像表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="n">id</span><span class="w">                          </span><span class="nb">bigint</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">data</span><span class="w">                        </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">category</span><span class="w">                    </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Partition</span><span class="w"> </span><span class="n">Information</span><span class="w">                                                        
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">col_name</span><span class="w">                  </span><span class="n">data_type</span><span class="w">                   </span><span class="k">comment</span><span class="w">             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">category</span><span class="w">                    </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Metadata</span><span class="w"> </span><span class="n">Columns</span><span class="w">                                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_spec_id</span><span class="w">                    </span><span class="nb">int</span><span class="w">                                             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_partition</span><span class="w">                  </span><span class="n">struct</span><span class="o">&lt;</span><span class="n">category</span><span class="p">:</span><span class="n">string</span><span class="o">&gt;</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_file</span><span class="w">                       </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_pos</span><span class="w">                        </span><span class="nb">bigint</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_deleted</span><span class="w">                    </span><span class="nb">boolean</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Detailed</span><span class="w"> </span><span class="k">Table</span><span class="w"> </span><span class="n">Information</span><span class="w">                                                        
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Name</span><span class="w">                        </span><span class="n">hive_prod</span><span class="p">.</span><span class="k">default</span><span class="p">.</span><span class="n">test_add_files_src</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Type</span><span class="w">                        </span><span class="n">MANAGED</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Location</span><span class="w">                    </span><span class="n">hdfs</span><span class="p">:</span><span class="o">//</span><span class="n">localhost</span><span class="p">:</span><span class="mi">9000</span><span class="o">/</span><span class="k">user</span><span class="o">/</span><span class="n">hive</span><span class="o">/</span><span class="n">warehouse</span><span class="o">/</span><span class="n">test_add_files_src</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Provider</span><span class="w">                    </span><span class="n">iceberg</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Owner</span><span class="w">                       </span><span class="n">lin</span><span class="w">                                             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Table</span><span class="w"> </span><span class="n">Properties</span><span class="w">            </span><span class="p">[</span><span class="k">current</span><span class="o">-</span><span class="n">snapshot</span><span class="o">-</span><span class="n">id</span><span class="o">=</span><span class="mi">4643790123769250304</span><span class="p">,</span><span class="n">format</span><span class="o">=</span><span class="n">iceberg</span><span class="o">/</span><span class="n">parquet</span><span class="p">,</span><span class="n">format</span><span class="o">-</span><span class="k">version</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="k">write</span><span class="p">.</span><span class="n">parquet</span><span class="p">.</span><span class="n">compression</span><span class="o">-</span><span class="n">codec</span><span class="o">=</span><span class="n">zstd</span><span class="p">]</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Time</span><span class="w"> </span><span class="n">taken</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">128</span><span class="w"> </span><span class="n">seconds</span><span class="p">,</span><span class="w"> </span><span class="n">Fetched</span><span class="w"> </span><span class="mi">21</span><span class="w"> </span><span class="k">row</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>正式表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="n">id</span><span class="w">                          </span><span class="nb">bigint</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">data</span><span class="w">                        </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">category</span><span class="w">                    </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Partition</span><span class="w"> </span><span class="n">Information</span><span class="w">                                                        
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">col_name</span><span class="w">                  </span><span class="n">data_type</span><span class="w">                   </span><span class="k">comment</span><span class="w">             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">category</span><span class="w">                    </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Metadata</span><span class="w"> </span><span class="n">Columns</span><span class="w">                                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_spec_id</span><span class="w">                    </span><span class="nb">int</span><span class="w">                                             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_partition</span><span class="w">                  </span><span class="n">struct</span><span class="o">&lt;</span><span class="n">category</span><span class="p">:</span><span class="n">string</span><span class="o">&gt;</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_file</span><span class="w">                       </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_pos</span><span class="w">                        </span><span class="nb">bigint</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_deleted</span><span class="w">                    </span><span class="nb">boolean</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Detailed</span><span class="w"> </span><span class="k">Table</span><span class="w"> </span><span class="n">Information</span><span class="w">                                                        
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Name</span><span class="w">                        </span><span class="n">hive_prod</span><span class="p">.</span><span class="k">default</span><span class="p">.</span><span class="n">test_add_files_target</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Type</span><span class="w">                        </span><span class="n">MANAGED</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Location</span><span class="w">                    </span><span class="n">hdfs</span><span class="p">:</span><span class="o">//</span><span class="n">localhost</span><span class="p">:</span><span class="mi">9000</span><span class="o">/</span><span class="k">user</span><span class="o">/</span><span class="n">hive</span><span class="o">/</span><span class="n">warehouse</span><span class="o">/</span><span class="n">test_add_files_target</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Provider</span><span class="w">                    </span><span class="n">iceberg</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Owner</span><span class="w">                       </span><span class="n">lin</span><span class="w">                                             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Table</span><span class="w"> </span><span class="n">Properties</span><span class="w">            </span><span class="p">[</span><span class="k">current</span><span class="o">-</span><span class="n">snapshot</span><span class="o">-</span><span class="n">id</span><span class="o">=</span><span class="mi">1222093753720340072</span><span class="p">,</span><span class="n">format</span><span class="o">=</span><span class="n">iceberg</span><span class="o">/</span><span class="n">parquet</span><span class="p">,</span><span class="n">format</span><span class="o">-</span><span class="k">version</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="k">schema</span><span class="p">.</span><span class="n">name</span><span class="o">-</span><span class="n">mapping</span><span class="p">.</span><span class="k">default</span><span class="o">=</span><span class="p">[</span><span class="w"> </span><span class="err">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="s2">&#34;field-id&#34;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="s2">&#34;names&#34;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&#34;id&#34;</span><span class="w"> </span><span class="p">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">}</span><span class="p">,</span><span class="w"> </span><span class="err">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="s2">&#34;field-id&#34;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="s2">&#34;names&#34;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&#34;data&#34;</span><span class="w"> </span><span class="p">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">}</span><span class="p">,</span><span class="w"> </span><span class="err">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="s2">&#34;field-id&#34;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="s2">&#34;names&#34;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&#34;category&#34;</span><span class="w"> </span><span class="p">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">}</span><span class="w"> </span><span class="p">],</span><span class="k">write</span><span class="p">.</span><span class="n">parquet</span><span class="p">.</span><span class="n">compression</span><span class="o">-</span><span class="n">codec</span><span class="o">=</span><span class="n">zstd</span><span class="p">]</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Time</span><span class="w"> </span><span class="n">taken</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">13</span><span class="w"> </span><span class="n">seconds</span><span class="p">,</span><span class="w"> </span><span class="n">Fetched</span><span class="w"> </span><span class="mi">21</span><span class="w"> </span><span class="k">row</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>
+<h3 id="分析迁移后的hdfs上两张表文件布局">分析迁移后的HDFS上两张表文件布局
+</h3></li>
+</ol>
+<p>镜像表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="err">├──</span><span class="w"> </span><span class="n">test_add_files_src</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="k">data</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">category</span><span class="o">=</span><span class="n">now</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="mi">3</span><span class="o">-</span><span class="mi">9</span><span class="n">b80e070</span><span class="o">-</span><span class="mi">0</span><span class="n">c5a</span><span class="o">-</span><span class="mi">4</span><span class="n">b73</span><span class="o">-</span><span class="n">a874</span><span class="o">-</span><span class="n">b3bead890332</span><span class="o">-</span><span class="mi">0</span><span class="o">-</span><span class="mi">00002</span><span class="p">.</span><span class="n">parquet</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">category</span><span class="o">=</span><span class="n">test</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="mi">3</span><span class="o">-</span><span class="mi">9</span><span class="n">b80e070</span><span class="o">-</span><span class="mi">0</span><span class="n">c5a</span><span class="o">-</span><span class="mi">4</span><span class="n">b73</span><span class="o">-</span><span class="n">a874</span><span class="o">-</span><span class="n">b3bead890332</span><span class="o">-</span><span class="mi">0</span><span class="o">-</span><span class="mi">00001</span><span class="p">.</span><span class="n">parquet</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">metadata</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="mi">26</span><span class="n">c68598</span><span class="o">-</span><span class="n">db37</span><span class="o">-</span><span class="mi">4</span><span class="n">cf9</span><span class="o">-</span><span class="n">a592</span><span class="o">-</span><span class="mi">86</span><span class="n">eec8010e77</span><span class="p">.</span><span class="n">metadata</span><span class="p">.</span><span class="n">json</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="mi">00001</span><span class="o">-</span><span class="mi">55</span><span class="n">d99ee8</span><span class="o">-</span><span class="mi">0145</span><span class="o">-</span><span class="mi">4</span><span class="n">af2</span><span class="o">-</span><span class="n">ba60</span><span class="o">-</span><span class="mi">41</span><span class="n">ba2f9c2260</span><span class="p">.</span><span class="n">metadata</span><span class="p">.</span><span class="n">json</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="n">a7a44fcc</span><span class="o">-</span><span class="mi">68</span><span class="n">ae</span><span class="o">-</span><span class="mi">4341</span><span class="o">-</span><span class="n">bb34</span><span class="o">-</span><span class="n">f0f93f065d58</span><span class="o">-</span><span class="n">m0</span><span class="p">.</span><span class="n">avro</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="n">snap</span><span class="o">-</span><span class="mi">4643790123769250304</span><span class="o">-</span><span class="mi">1</span><span class="o">-</span><span class="n">a7a44fcc</span><span class="o">-</span><span class="mi">68</span><span class="n">ae</span><span class="o">-</span><span class="mi">4341</span><span class="o">-</span><span class="n">bb34</span><span class="o">-</span><span class="n">f0f93f065d58</span><span class="p">.</span><span class="n">avro</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>正式表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="err">├──</span><span class="w"> </span><span class="n">test_add_files_target</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">metadata</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="n">cb0ee426</span><span class="o">-</span><span class="mi">8</span><span class="n">a4e</span><span class="o">-</span><span class="mi">45</span><span class="n">be</span><span class="o">-</span><span class="mi">8</span><span class="n">b35</span><span class="o">-</span><span class="n">fa9276cebc9d</span><span class="p">.</span><span class="n">metadata</span><span class="p">.</span><span class="n">json</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="mi">00001</span><span class="o">-</span><span class="mi">42</span><span class="n">c5de92</span><span class="o">-</span><span class="n">c6eb</span><span class="o">-</span><span class="mi">4659</span><span class="o">-</span><span class="n">a0dc</span><span class="o">-</span><span class="mi">50</span><span class="n">c4b9798ed1</span><span class="p">.</span><span class="n">metadata</span><span class="p">.</span><span class="n">json</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="mi">00002</span><span class="o">-</span><span class="mi">33330</span><span class="n">ca5</span><span class="o">-</span><span class="n">c55f</span><span class="o">-</span><span class="mi">439</span><span class="k">c</span><span class="o">-</span><span class="n">b24b</span><span class="o">-</span><span class="mi">00</span><span class="n">c613343376</span><span class="p">.</span><span class="n">metadata</span><span class="p">.</span><span class="n">json</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="n">snap</span><span class="o">-</span><span class="mi">1222093753720340072</span><span class="o">-</span><span class="mi">1</span><span class="o">-</span><span class="mi">01</span><span class="n">b8de06</span><span class="o">-</span><span class="n">fcdf</span><span class="o">-</span><span class="mi">415</span><span class="n">a</span><span class="o">-</span><span class="n">a276</span><span class="o">-</span><span class="n">be5c22b85175</span><span class="p">.</span><span class="n">avro</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="n">stage</span><span class="o">-</span><span class="mi">10</span><span class="o">-</span><span class="n">task</span><span class="o">-</span><span class="mi">406</span><span class="o">-</span><span class="n">manifest</span><span class="o">-</span><span class="mi">4</span><span class="n">fb6c376</span><span class="o">-</span><span class="n">f6f9</span><span class="o">-</span><span class="mi">42</span><span class="n">cb</span><span class="o">-</span><span class="n">aa1b</span><span class="o">-</span><span class="mi">66</span><span class="n">e1161c137a</span><span class="p">.</span><span class="n">avro</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>
+<h3 id="检验镜像表数据时间戳">检验镜像表数据时间戳
+</h3></li>
+</ol>
+<p>可以看到镜像表的数据文件没有被移动且也没有被修改过</p>
+<p><img src="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105438278.png"
+	width="619"
+	height="63"
+	srcset="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105438278_hu8061137642941216371.png 480w, /p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105438278_hu11079560412291229776.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250221105438278"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="982"
+		data-flex-basis="2358px"
+	
+></p>
+<p><img src="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105454565.png"
+	width="728"
+	height="209"
+	srcset="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105454565_hu7198001433955334886.png 480w, /p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105454565_hu10200644563812919792.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250221105454565"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="348"
+		data-flex-basis="835px"
+	
+></p>
+<ol>
+<li>
+<h3 id="分析iceberg正式表的清单数据">分析Iceberg正式表的清单数据
+</h3></li>
+</ol>
+<p>通过avro-tools工具进行编译成json文件方便查看</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="n">avro</span><span class="o">-</span><span class="n">tools</span><span class="w"> </span><span class="n">tojson</span><span class="w"> </span><span class="o">~/</span><span class="n">Downloads</span><span class="o">/</span><span class="n">stage</span><span class="o">-</span><span class="mi">10</span><span class="o">-</span><span class="n">task</span><span class="o">-</span><span class="mi">406</span><span class="o">-</span><span class="n">manifest</span><span class="o">-</span><span class="mi">4</span><span class="n">fb6c376</span><span class="o">-</span><span class="n">f6f9</span><span class="o">-</span><span class="mi">42</span><span class="n">cb</span><span class="o">-</span><span class="n">aa1b</span><span class="o">-</span><span class="mi">66</span><span class="n">e1161c137a</span><span class="p">.</span><span class="n">avro</span><span class="w"> 
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>文件内容如下</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="err">{</span><span class="s2">&#34;status&#34;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">&#34;snapshot_id&#34;</span><span class="p">:</span><span class="k">null</span><span class="p">,</span><span class="s2">&#34;data_file&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;file_path&#34;</span><span class="p">:</span><span class="s2">&#34;hdfs://localhost:9000/user/hive/warehouse/test_add_files_src/data/category=now/00000-3-9b80e070-0c5a-4b73-a874-b3bead890332-0-00002.parquet&#34;</span><span class="p">,</span><span class="s2">&#34;file_format&#34;</span><span class="p">:</span><span class="s2">&#34;PARQUET&#34;</span><span class="p">,</span><span class="s2">&#34;partition&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;category&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;string&#34;</span><span class="p">:</span><span class="s2">&#34;now&#34;</span><span class="err">}}</span><span class="p">,</span><span class="s2">&#34;record_count&#34;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">&#34;file_size_in_bytes&#34;</span><span class="p">:</span><span class="mi">860</span><span class="p">,</span><span class="s2">&#34;block_size_in_bytes&#34;</span><span class="p">:</span><span class="mi">67108864</span><span class="p">,</span><span class="s2">&#34;column_sizes&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;array&#34;</span><span class="p">:[</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">40</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">37</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">39</span><span class="err">}</span><span class="p">]</span><span class="err">}</span><span class="p">,</span><span class="s2">&#34;value_counts&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;array&#34;</span><span class="p">:[</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">1</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">1</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">1</span><span class="err">}</span><span class="p">]</span><span class="err">}</span><span class="p">,</span><span class="s2">&#34;null_value_counts&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;array&#34;</span><span class="p">:[</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">0</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">0</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">0</span><span class="err">}</span><span class="p">]</span><span class="err">}</span><span class="p">,</span><span class="s2">&#34;nan_value_counts&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;array&#34;</span><span class="p">:[]</span><span class="err">}</span><span class="p">,</span><span class="s2">&#34;lower_bounds&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;array&#34;</span><span class="p">:[</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="s2">&#34;\u0003\u0000\u0000\u0000\u0000\u0000\u0000\u0000&#34;</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="s2">&#34;c&#34;</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="s2">&#34;now&#34;</span><span class="err">}</span><span class="p">]</span><span class="err">}</span><span class="p">,</span><span class="s2">&#34;upper_bounds&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;array&#34;</span><span class="p">:[</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="s2">&#34;\u0003\u0000\u0000\u0000\u0000\u0000\u0000\u0000&#34;</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="s2">&#34;c&#34;</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="s2">&#34;now&#34;</span><span class="err">}</span><span class="p">]</span><span class="err">}</span><span class="p">,</span><span class="s2">&#34;key_metadata&#34;</span><span class="p">:</span><span class="k">null</span><span class="p">,</span><span class="s2">&#34;split_offsets&#34;</span><span class="p">:</span><span class="k">null</span><span class="p">,</span><span class="s2">&#34;sort_order_id&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;int&#34;</span><span class="p">:</span><span class="mi">0</span><span class="err">}}}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">{</span><span class="s2">&#34;status&#34;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">&#34;snapshot_id&#34;</span><span class="p">:</span><span class="k">null</span><span class="p">,</span><span class="s2">&#34;data_file&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;file_path&#34;</span><span class="p">:</span><span class="s2">&#34;hdfs://localhost:9000/user/hive/warehouse/test_add_files_src/data/category=test/00000-3-9b80e070-0c5a-4b73-a874-b3bead890332-0-00001.parquet&#34;</span><span class="p">,</span><span class="s2">&#34;file_format&#34;</span><span class="p">:</span><span class="s2">&#34;PARQUET&#34;</span><span class="p">,</span><span class="s2">&#34;partition&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;category&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;string&#34;</span><span class="p">:</span><span class="s2">&#34;test&#34;</span><span class="err">}}</span><span class="p">,</span><span class="s2">&#34;record_count&#34;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="s2">&#34;file_size_in_bytes&#34;</span><span class="p">:</span><span class="mi">915</span><span class="p">,</span><span class="s2">&#34;block_size_in_bytes&#34;</span><span class="p">:</span><span class="mi">67108864</span><span class="p">,</span><span class="s2">&#34;column_sizes&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;array&#34;</span><span class="p">:[</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">48</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">42</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">70</span><span class="err">}</span><span class="p">]</span><span class="err">}</span><span class="p">,</span><span class="s2">&#34;value_counts&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;array&#34;</span><span class="p">:[</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">2</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">2</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">2</span><span class="err">}</span><span class="p">]</span><span class="err">}</span><span class="p">,</span><span class="s2">&#34;null_value_counts&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;array&#34;</span><span class="p">:[</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">0</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">0</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="mi">0</span><span class="err">}</span><span class="p">]</span><span class="err">}</span><span class="p">,</span><span class="s2">&#34;nan_value_counts&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;array&#34;</span><span class="p">:[]</span><span class="err">}</span><span class="p">,</span><span class="s2">&#34;lower_bounds&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;array&#34;</span><span class="p">:[</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="s2">&#34;\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000&#34;</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="s2">&#34;a&#34;</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="s2">&#34;test&#34;</span><span class="err">}</span><span class="p">]</span><span class="err">}</span><span class="p">,</span><span class="s2">&#34;upper_bounds&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;array&#34;</span><span class="p">:[</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="s2">&#34;\u0002\u0000\u0000\u0000\u0000\u0000\u0000\u0000&#34;</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="s2">&#34;b&#34;</span><span class="err">}</span><span class="p">,</span><span class="err">{</span><span class="s2">&#34;key&#34;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="s2">&#34;value&#34;</span><span class="p">:</span><span class="s2">&#34;test&#34;</span><span class="err">}</span><span class="p">]</span><span class="err">}</span><span class="p">,</span><span class="s2">&#34;key_metadata&#34;</span><span class="p">:</span><span class="k">null</span><span class="p">,</span><span class="s2">&#34;split_offsets&#34;</span><span class="p">:</span><span class="k">null</span><span class="p">,</span><span class="s2">&#34;sort_order_id&#34;</span><span class="p">:</span><span class="err">{</span><span class="s2">&#34;int&#34;</span><span class="p">:</span><span class="mi">0</span><span class="err">}}}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过查看可以明确的看到，正式表的清单文件是指向的镜像表的data目录的数据文件</p>
+<p><img src="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105544885.png"
+	width="1771"
+	height="129"
+	srcset="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105544885_hu14808176172850100725.png 480w, /p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105544885_hu11724769840733725255.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250221105544885"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1372"
+		data-flex-basis="3294px"
+	
+></p>
+<h2 id="五验证场景二移动data数据文件并add_files方式">五、验证场景二（移动data数据文件并add_files方式）
+</h2><ol>
+<li>
+<h3 id="启动sparksql-1">启动SparkSQL
+</h3></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="n">spark</span><span class="o">-</span><span class="k">sql</span><span class="w"> </span><span class="c1">--conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="w">    </span><span class="c1">--conf spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkSessionCatalog \
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="w">    </span><span class="c1">--conf spark.sql.catalog.spark_catalog.type=hive \
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="w">    </span><span class="c1">--conf spark.sql.catalog.hive=org.apache.iceberg.spark.SparkCatalog \
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="w">    </span><span class="c1">--conf spark.sql.catalog.hive.type=hive \
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="w">    </span><span class="c1">--conf spark.sql.catalog.hive.uri=thrift://127.0.0.1:9083 \
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="w">    </span><span class="c1">--conf spark.sql.catalog.hive.warehouse=hdfs://warehouse
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>
+<h3 id="创建镜像表a并写入数据-1">创建镜像表A并写入数据
+</h3></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="n">use</span><span class="w"> </span><span class="n">hive_prod</span><span class="p">.</span><span class="k">default</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">test_add_files_move_src</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="k">data</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="n">category</span><span class="w"> </span><span class="n">string</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">USING</span><span class="w"> </span><span class="n">iceberg</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="n">PARTITIONED</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="p">(</span><span class="n">category</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">test_add_files_move_src</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;a&#39;</span><span class="p">,</span><span class="s1">&#39;test&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;b&#39;</span><span class="p">,</span><span class="s1">&#39;test&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;c&#39;</span><span class="p">,</span><span class="s1">&#39;now&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;d&#39;</span><span class="p">,</span><span class="s1">&#39;last&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;e&#39;</span><span class="p">,</span><span class="s1">&#39;now&#39;</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">desc</span><span class="w"> </span><span class="n">formatted</span><span class="w"> </span><span class="n">test_add_files_move_src</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><img src="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105651329.png"
+	width="857"
+	height="169"
+	srcset="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105651329_hu1338631877763051049.png 480w, /p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105651329_hu1473514435122067864.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250221105651329"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="507"
+		data-flex-basis="1217px"
+	
+></p>
+<ol>
+<li>
+<h3 id="查看镜像表a的结构信息以及hdfs布局信息-1">查看镜像表A的结构信息以及HDFS布局信息
+</h3></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="n">id</span><span class="w">                          </span><span class="nb">bigint</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">data</span><span class="w">                        </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">category</span><span class="w">                    </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Partition</span><span class="w"> </span><span class="n">Information</span><span class="w">                                                        
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">col_name</span><span class="w">                  </span><span class="n">data_type</span><span class="w">                   </span><span class="k">comment</span><span class="w">             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">category</span><span class="w">                    </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Metadata</span><span class="w"> </span><span class="n">Columns</span><span class="w">                                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_spec_id</span><span class="w">                    </span><span class="nb">int</span><span class="w">                                             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_partition</span><span class="w">                  </span><span class="n">struct</span><span class="o">&lt;</span><span class="n">category</span><span class="p">:</span><span class="n">string</span><span class="o">&gt;</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_file</span><span class="w">                       </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_pos</span><span class="w">                        </span><span class="nb">bigint</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_deleted</span><span class="w">                    </span><span class="nb">boolean</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Detailed</span><span class="w"> </span><span class="k">Table</span><span class="w"> </span><span class="n">Information</span><span class="w">                                                        
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Name</span><span class="w">                        </span><span class="n">hive_prod</span><span class="p">.</span><span class="k">default</span><span class="p">.</span><span class="n">test_add_files_move_src</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Type</span><span class="w">                        </span><span class="n">MANAGED</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Location</span><span class="w">                    </span><span class="n">hdfs</span><span class="p">:</span><span class="o">//</span><span class="n">localhost</span><span class="p">:</span><span class="mi">9000</span><span class="o">/</span><span class="k">user</span><span class="o">/</span><span class="n">hive</span><span class="o">/</span><span class="n">warehouse</span><span class="o">/</span><span class="n">test_add_files_move_src</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Provider</span><span class="w">                    </span><span class="n">iceberg</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Owner</span><span class="w">                       </span><span class="n">lin</span><span class="w">                                             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Table</span><span class="w"> </span><span class="n">Properties</span><span class="w">            </span><span class="p">[</span><span class="k">current</span><span class="o">-</span><span class="n">snapshot</span><span class="o">-</span><span class="n">id</span><span class="o">=</span><span class="mi">8190726940251932496</span><span class="p">,</span><span class="n">format</span><span class="o">=</span><span class="n">iceberg</span><span class="o">/</span><span class="n">parquet</span><span class="p">,</span><span class="n">format</span><span class="o">-</span><span class="k">version</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="k">write</span><span class="p">.</span><span class="n">parquet</span><span class="p">.</span><span class="n">compression</span><span class="o">-</span><span class="n">codec</span><span class="o">=</span><span class="n">zstd</span><span class="p">]</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Time</span><span class="w"> </span><span class="n">taken</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">221</span><span class="w"> </span><span class="n">seconds</span><span class="p">,</span><span class="w"> </span><span class="n">Fetched</span><span class="w"> </span><span class="mi">21</span><span class="w"> </span><span class="k">row</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">├──</span><span class="w"> </span><span class="n">test_add_files_move_src</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="k">data</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">category</span><span class="o">=</span><span class="k">last</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="mi">5</span><span class="o">-</span><span class="mi">55</span><span class="n">be80b4</span><span class="o">-</span><span class="n">c335</span><span class="o">-</span><span class="mi">4</span><span class="n">eb6</span><span class="o">-</span><span class="n">a014</span><span class="o">-</span><span class="n">b011fdae1787</span><span class="o">-</span><span class="mi">0</span><span class="o">-</span><span class="mi">00003</span><span class="p">.</span><span class="n">parquet</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">category</span><span class="o">=</span><span class="n">now</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="mi">5</span><span class="o">-</span><span class="mi">55</span><span class="n">be80b4</span><span class="o">-</span><span class="n">c335</span><span class="o">-</span><span class="mi">4</span><span class="n">eb6</span><span class="o">-</span><span class="n">a014</span><span class="o">-</span><span class="n">b011fdae1787</span><span class="o">-</span><span class="mi">0</span><span class="o">-</span><span class="mi">00002</span><span class="p">.</span><span class="n">parquet</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">category</span><span class="o">=</span><span class="n">test</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="mi">5</span><span class="o">-</span><span class="mi">55</span><span class="n">be80b4</span><span class="o">-</span><span class="n">c335</span><span class="o">-</span><span class="mi">4</span><span class="n">eb6</span><span class="o">-</span><span class="n">a014</span><span class="o">-</span><span class="n">b011fdae1787</span><span class="o">-</span><span class="mi">0</span><span class="o">-</span><span class="mi">00001</span><span class="p">.</span><span class="n">parquet</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">metadata</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="mi">5</span><span class="n">ebb08d6</span><span class="o">-</span><span class="mi">400</span><span class="k">c</span><span class="o">-</span><span class="mi">4</span><span class="n">c5c</span><span class="o">-</span><span class="mi">8459</span><span class="o">-</span><span class="n">e894a4e2223f</span><span class="p">.</span><span class="n">metadata</span><span class="p">.</span><span class="n">json</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="mi">00001</span><span class="o">-</span><span class="n">a81bf99d</span><span class="o">-</span><span class="mi">9</span><span class="n">a3c</span><span class="o">-</span><span class="mi">493</span><span class="n">d</span><span class="o">-</span><span class="mi">8300</span><span class="o">-</span><span class="n">f7ac664b396f</span><span class="p">.</span><span class="n">metadata</span><span class="p">.</span><span class="n">json</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="mi">6</span><span class="n">ef03522</span><span class="o">-</span><span class="n">ea3c</span><span class="o">-</span><span class="mi">4019</span><span class="o">-</span><span class="n">a6d2</span><span class="o">-</span><span class="mi">31356</span><span class="n">b523308</span><span class="o">-</span><span class="n">m0</span><span class="p">.</span><span class="n">avro</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="n">snap</span><span class="o">-</span><span class="mi">8190726940251932496</span><span class="o">-</span><span class="mi">1</span><span class="o">-</span><span class="mi">6</span><span class="n">ef03522</span><span class="o">-</span><span class="n">ea3c</span><span class="o">-</span><span class="mi">4019</span><span class="o">-</span><span class="n">a6d2</span><span class="o">-</span><span class="mi">31356</span><span class="n">b523308</span><span class="p">.</span><span class="n">avro</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>
+<h3 id="创建正式表b-1">创建正式表B
+</h3></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">test_add_files_move_target</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="k">data</span><span class="w"> </span><span class="n">string</span><span class="p">,</span><span class="n">category</span><span class="w"> </span><span class="n">string</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">USING</span><span class="w"> </span><span class="n">iceberg</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="n">PARTITIONED</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="p">(</span><span class="n">category</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">desc</span><span class="w"> </span><span class="n">formatted</span><span class="w"> </span><span class="n">test_add_files_move_target</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>
+<h3 id="查看表b的结构信息以及hdfs布局迁移前-1">查看表B的结构信息以及HDFS布局(迁移前)
+</h3></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="n">id</span><span class="w">                          </span><span class="nb">bigint</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">data</span><span class="w">                        </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">category</span><span class="w">                    </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Partition</span><span class="w"> </span><span class="n">Information</span><span class="w">                                                        
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">col_name</span><span class="w">                  </span><span class="n">data_type</span><span class="w">                   </span><span class="k">comment</span><span class="w">             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">category</span><span class="w">                    </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Metadata</span><span class="w"> </span><span class="n">Columns</span><span class="w">                                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_spec_id</span><span class="w">                    </span><span class="nb">int</span><span class="w">                                             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_partition</span><span class="w">                  </span><span class="n">struct</span><span class="o">&lt;</span><span class="n">category</span><span class="p">:</span><span class="n">string</span><span class="o">&gt;</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_file</span><span class="w">                       </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_pos</span><span class="w">                        </span><span class="nb">bigint</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_deleted</span><span class="w">                    </span><span class="nb">boolean</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Detailed</span><span class="w"> </span><span class="k">Table</span><span class="w"> </span><span class="n">Information</span><span class="w">                                                        
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Name</span><span class="w">                        </span><span class="n">hive_prod</span><span class="p">.</span><span class="k">default</span><span class="p">.</span><span class="n">test_add_files_move_target</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Type</span><span class="w">                        </span><span class="n">MANAGED</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Location</span><span class="w">                    </span><span class="n">hdfs</span><span class="p">:</span><span class="o">//</span><span class="n">localhost</span><span class="p">:</span><span class="mi">9000</span><span class="o">/</span><span class="k">user</span><span class="o">/</span><span class="n">hive</span><span class="o">/</span><span class="n">warehouse</span><span class="o">/</span><span class="n">test_add_files_move_target</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Provider</span><span class="w">                    </span><span class="n">iceberg</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Owner</span><span class="w">                       </span><span class="n">lin</span><span class="w">                                             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Table</span><span class="w"> </span><span class="n">Properties</span><span class="w">            </span><span class="p">[</span><span class="k">current</span><span class="o">-</span><span class="n">snapshot</span><span class="o">-</span><span class="n">id</span><span class="o">=</span><span class="k">none</span><span class="p">,</span><span class="n">format</span><span class="o">=</span><span class="n">iceberg</span><span class="o">/</span><span class="n">parquet</span><span class="p">,</span><span class="n">format</span><span class="o">-</span><span class="k">version</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="k">write</span><span class="p">.</span><span class="n">parquet</span><span class="p">.</span><span class="n">compression</span><span class="o">-</span><span class="n">codec</span><span class="o">=</span><span class="n">zstd</span><span class="p">]</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Time</span><span class="w"> </span><span class="n">taken</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">102</span><span class="w"> </span><span class="n">seconds</span><span class="p">,</span><span class="w"> </span><span class="n">Fetched</span><span class="w"> </span><span class="mi">21</span><span class="w"> </span><span class="k">row</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">├──</span><span class="w"> </span><span class="n">test_add_files_move_target</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">metadata</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="n">aee35392</span><span class="o">-</span><span class="mi">0</span><span class="n">abe</span><span class="o">-</span><span class="mi">4</span><span class="n">dfe</span><span class="o">-</span><span class="n">b4d1</span><span class="o">-</span><span class="mi">929</span><span class="n">ca6a429ad</span><span class="p">.</span><span class="n">metadata</span><span class="p">.</span><span class="n">json</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>
+<h3 id="移动镜像表a的数据文件到正式表b的目录下">移动镜像表A的数据文件到正式表B的目录下
+</h3></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="n">hadoop</span><span class="w"> </span><span class="n">fs</span><span class="w"> </span><span class="o">-</span><span class="n">mv</span><span class="w"> </span><span class="o">/</span><span class="k">user</span><span class="o">/</span><span class="n">hive</span><span class="o">/</span><span class="n">warehouse</span><span class="o">/</span><span class="n">test_add_files_move_src</span><span class="o">/</span><span class="k">data</span><span class="w">  </span><span class="o">/</span><span class="k">user</span><span class="o">/</span><span class="n">hive</span><span class="o">/</span><span class="n">warehouse</span><span class="o">/</span><span class="n">test_add_files_move_target</span><span class="o">/</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>移动后的目录结构如下</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="err">├──</span><span class="w"> </span><span class="n">test_add_files_move_src</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">metadata</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="mi">5</span><span class="n">ebb08d6</span><span class="o">-</span><span class="mi">400</span><span class="k">c</span><span class="o">-</span><span class="mi">4</span><span class="n">c5c</span><span class="o">-</span><span class="mi">8459</span><span class="o">-</span><span class="n">e894a4e2223f</span><span class="p">.</span><span class="n">metadata</span><span class="p">.</span><span class="n">json</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="mi">00001</span><span class="o">-</span><span class="n">a81bf99d</span><span class="o">-</span><span class="mi">9</span><span class="n">a3c</span><span class="o">-</span><span class="mi">493</span><span class="n">d</span><span class="o">-</span><span class="mi">8300</span><span class="o">-</span><span class="n">f7ac664b396f</span><span class="p">.</span><span class="n">metadata</span><span class="p">.</span><span class="n">json</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="mi">6</span><span class="n">ef03522</span><span class="o">-</span><span class="n">ea3c</span><span class="o">-</span><span class="mi">4019</span><span class="o">-</span><span class="n">a6d2</span><span class="o">-</span><span class="mi">31356</span><span class="n">b523308</span><span class="o">-</span><span class="n">m0</span><span class="p">.</span><span class="n">avro</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="n">snap</span><span class="o">-</span><span class="mi">8190726940251932496</span><span class="o">-</span><span class="mi">1</span><span class="o">-</span><span class="mi">6</span><span class="n">ef03522</span><span class="o">-</span><span class="n">ea3c</span><span class="o">-</span><span class="mi">4019</span><span class="o">-</span><span class="n">a6d2</span><span class="o">-</span><span class="mi">31356</span><span class="n">b523308</span><span class="p">.</span><span class="n">avro</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">├──</span><span class="w"> </span><span class="n">test_add_files_move_target</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="k">data</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">category</span><span class="o">=</span><span class="k">last</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="mi">5</span><span class="o">-</span><span class="mi">55</span><span class="n">be80b4</span><span class="o">-</span><span class="n">c335</span><span class="o">-</span><span class="mi">4</span><span class="n">eb6</span><span class="o">-</span><span class="n">a014</span><span class="o">-</span><span class="n">b011fdae1787</span><span class="o">-</span><span class="mi">0</span><span class="o">-</span><span class="mi">00003</span><span class="p">.</span><span class="n">parquet</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">category</span><span class="o">=</span><span class="n">now</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="mi">5</span><span class="o">-</span><span class="mi">55</span><span class="n">be80b4</span><span class="o">-</span><span class="n">c335</span><span class="o">-</span><span class="mi">4</span><span class="n">eb6</span><span class="o">-</span><span class="n">a014</span><span class="o">-</span><span class="n">b011fdae1787</span><span class="o">-</span><span class="mi">0</span><span class="o">-</span><span class="mi">00002</span><span class="p">.</span><span class="n">parquet</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">category</span><span class="o">=</span><span class="n">test</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="mi">5</span><span class="o">-</span><span class="mi">55</span><span class="n">be80b4</span><span class="o">-</span><span class="n">c335</span><span class="o">-</span><span class="mi">4</span><span class="n">eb6</span><span class="o">-</span><span class="n">a014</span><span class="o">-</span><span class="n">b011fdae1787</span><span class="o">-</span><span class="mi">0</span><span class="o">-</span><span class="mi">00001</span><span class="p">.</span><span class="n">parquet</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">metadata</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="mi">00000</span><span class="o">-</span><span class="n">aee35392</span><span class="o">-</span><span class="mi">0</span><span class="n">abe</span><span class="o">-</span><span class="mi">4</span><span class="n">dfe</span><span class="o">-</span><span class="n">b4d1</span><span class="o">-</span><span class="mi">929</span><span class="n">ca6a429ad</span><span class="p">.</span><span class="n">metadata</span><span class="p">.</span><span class="n">json</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>
+<h3 id="迁移前验证查表操作">迁移前验证(查表操作)
+</h3></li>
+</ol>
+<p>查询test_add_files_move_target表未显示数据，符合预期</p>
+<p><img src="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105725173.png"
+	width="1160"
+	height="55"
+	srcset="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105725173_hu11400037636825076541.png 480w, /p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105725173_hu2614085544551706950.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250221105725173"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="2109"
+		data-flex-basis="5061px"
+	
+></p>
+<p>查询test_add_files_move_src表报错，符合预期</p>
+<p><img src="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105817426.png"
+	width="1772"
+	height="884"
+	srcset="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105817426_hu3761510895567292792.png 480w, /p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105817426_hu9539740622088176535.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250221105817426"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="200"
+		data-flex-basis="481px"
+	
+></p>
+<ol>
+<li>
+<h3 id="执行迁移存储过程add_files-1">执行迁移存储过程add_files
+</h3></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="k">call</span><span class="w"> </span><span class="n">spark_catalog</span><span class="p">.</span><span class="k">system</span><span class="p">.</span><span class="n">add_files</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="s1">&#39;default.test_add_files_move_target&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">source_table</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="s1">&#39;`parquet`.`hdfs://localhost:9000/user/hive/warehouse/test_add_files_move_target/data`&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">);</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><img src="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105845428.png"
+	width="1774"
+	height="238"
+	srcset="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105845428_hu18037565220616120273.png 480w, /p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105845428_hu4106564840674300222.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250221105845428"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="745"
+		data-flex-basis="1788px"
+	
+></p>
+<ol>
+<li>
+<h3 id="验证数据-1">验证数据
+</h3></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">test_add_files_move_target</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过查询可看到数据已经成功迁移到正式表B</p>
+<p><img src="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105921511.png"
+	width="973"
+	height="193"
+	srcset="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105921511_hu1686647328676776430.png 480w, /p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105921511_hu4134095906811500549.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250221105921511"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="504"
+		data-flex-basis="1209px"
+	
+></p>
+<ol>
+<li>
+<h3 id="分析迁移后的两张表结构信息-1">分析迁移后的两张表结构信息
+</h3></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="k">desc</span><span class="w"> </span><span class="n">formatted</span><span class="w"> </span><span class="n">test_add_files_move_src</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">desc</span><span class="w"> </span><span class="n">formatted</span><span class="w"> </span><span class="n">test_add_files_move_target</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>镜像表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="n">spark</span><span class="o">-</span><span class="k">sql</span><span class="w"> </span><span class="p">(</span><span class="k">default</span><span class="p">)</span><span class="o">&gt;</span><span class="w"> </span><span class="k">desc</span><span class="w"> </span><span class="n">formatted</span><span class="w"> </span><span class="n">test_add_files_move_src</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">id</span><span class="w">                          </span><span class="nb">bigint</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">data</span><span class="w">                        </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">category</span><span class="w">                    </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Partition</span><span class="w"> </span><span class="n">Information</span><span class="w">                                                        
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">col_name</span><span class="w">                  </span><span class="n">data_type</span><span class="w">                   </span><span class="k">comment</span><span class="w">             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">category</span><span class="w">                    </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Metadata</span><span class="w"> </span><span class="n">Columns</span><span class="w">                                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_spec_id</span><span class="w">                    </span><span class="nb">int</span><span class="w">                                             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_partition</span><span class="w">                  </span><span class="n">struct</span><span class="o">&lt;</span><span class="n">category</span><span class="p">:</span><span class="n">string</span><span class="o">&gt;</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_file</span><span class="w">                       </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_pos</span><span class="w">                        </span><span class="nb">bigint</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_deleted</span><span class="w">                    </span><span class="nb">boolean</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Detailed</span><span class="w"> </span><span class="k">Table</span><span class="w"> </span><span class="n">Information</span><span class="w">                                                        
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Name</span><span class="w">                        </span><span class="n">hive_prod</span><span class="p">.</span><span class="k">default</span><span class="p">.</span><span class="n">test_add_files_move_src</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Type</span><span class="w">                        </span><span class="n">MANAGED</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Location</span><span class="w">                    </span><span class="n">hdfs</span><span class="p">:</span><span class="o">//</span><span class="n">localhost</span><span class="p">:</span><span class="mi">9000</span><span class="o">/</span><span class="k">user</span><span class="o">/</span><span class="n">hive</span><span class="o">/</span><span class="n">warehouse</span><span class="o">/</span><span class="n">test_add_files_move_src</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Provider</span><span class="w">                    </span><span class="n">iceberg</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Owner</span><span class="w">                       </span><span class="n">lin</span><span class="w">                                             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Table</span><span class="w"> </span><span class="n">Properties</span><span class="w">            </span><span class="p">[</span><span class="k">current</span><span class="o">-</span><span class="n">snapshot</span><span class="o">-</span><span class="n">id</span><span class="o">=</span><span class="mi">8190726940251932496</span><span class="p">,</span><span class="n">format</span><span class="o">=</span><span class="n">iceberg</span><span class="o">/</span><span class="n">parquet</span><span class="p">,</span><span class="n">format</span><span class="o">-</span><span class="k">version</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="k">write</span><span class="p">.</span><span class="n">parquet</span><span class="p">.</span><span class="n">compression</span><span class="o">-</span><span class="n">codec</span><span class="o">=</span><span class="n">zstd</span><span class="p">]</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Time</span><span class="w"> </span><span class="n">taken</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">165</span><span class="w"> </span><span class="n">seconds</span><span class="p">,</span><span class="w"> </span><span class="n">Fetched</span><span class="w"> </span><span class="mi">21</span><span class="w"> </span><span class="k">row</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>正式表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="line"><span class="cl"><span class="n">spark</span><span class="o">-</span><span class="k">sql</span><span class="w"> </span><span class="p">(</span><span class="k">default</span><span class="p">)</span><span class="o">&gt;</span><span class="w"> </span><span class="k">desc</span><span class="w"> </span><span class="n">formatted</span><span class="w"> </span><span class="n">test_add_files_move_target</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">id</span><span class="w">                          </span><span class="nb">bigint</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">data</span><span class="w">                        </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">category</span><span class="w">                    </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Partition</span><span class="w"> </span><span class="n">Information</span><span class="w">                                                        
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">col_name</span><span class="w">                  </span><span class="n">data_type</span><span class="w">                   </span><span class="k">comment</span><span class="w">             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">category</span><span class="w">                    </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Metadata</span><span class="w"> </span><span class="n">Columns</span><span class="w">                                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_spec_id</span><span class="w">                    </span><span class="nb">int</span><span class="w">                                             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_partition</span><span class="w">                  </span><span class="n">struct</span><span class="o">&lt;</span><span class="n">category</span><span class="p">:</span><span class="n">string</span><span class="o">&gt;</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_file</span><span class="w">                       </span><span class="n">string</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_pos</span><span class="w">                        </span><span class="nb">bigint</span><span class="w">                                          
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">_deleted</span><span class="w">                    </span><span class="nb">boolean</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w">                                                                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">Detailed</span><span class="w"> </span><span class="k">Table</span><span class="w"> </span><span class="n">Information</span><span class="w">                                                        
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Name</span><span class="w">                        </span><span class="n">hive_prod</span><span class="p">.</span><span class="k">default</span><span class="p">.</span><span class="n">test_add_files_move_target</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Type</span><span class="w">                        </span><span class="n">MANAGED</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Location</span><span class="w">                    </span><span class="n">hdfs</span><span class="p">:</span><span class="o">//</span><span class="n">localhost</span><span class="p">:</span><span class="mi">9000</span><span class="o">/</span><span class="k">user</span><span class="o">/</span><span class="n">hive</span><span class="o">/</span><span class="n">warehouse</span><span class="o">/</span><span class="n">test_add_files_move_target</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Provider</span><span class="w">                    </span><span class="n">iceberg</span><span class="w">                                         
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Owner</span><span class="w">                       </span><span class="n">lin</span><span class="w">                                             
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">Table</span><span class="w"> </span><span class="n">Properties</span><span class="w">            </span><span class="p">[</span><span class="k">current</span><span class="o">-</span><span class="n">snapshot</span><span class="o">-</span><span class="n">id</span><span class="o">=</span><span class="mi">6170566202764885842</span><span class="p">,</span><span class="n">format</span><span class="o">=</span><span class="n">iceberg</span><span class="o">/</span><span class="n">parquet</span><span class="p">,</span><span class="n">format</span><span class="o">-</span><span class="k">version</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="k">schema</span><span class="p">.</span><span class="n">name</span><span class="o">-</span><span class="n">mapping</span><span class="p">.</span><span class="k">default</span><span class="o">=</span><span class="p">[</span><span class="w"> </span><span class="err">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="s2">&#34;field-id&#34;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="s2">&#34;names&#34;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&#34;id&#34;</span><span class="w"> </span><span class="p">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">}</span><span class="p">,</span><span class="w"> </span><span class="err">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="s2">&#34;field-id&#34;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="s2">&#34;names&#34;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&#34;data&#34;</span><span class="w"> </span><span class="p">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">}</span><span class="p">,</span><span class="w"> </span><span class="err">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="s2">&#34;field-id&#34;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="s2">&#34;names&#34;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&#34;category&#34;</span><span class="w"> </span><span class="p">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="err">}</span><span class="w"> </span><span class="p">],</span><span class="k">write</span><span class="p">.</span><span class="n">parquet</span><span class="p">.</span><span class="n">compression</span><span class="o">-</span><span class="n">codec</span><span class="o">=</span><span class="n">zstd</span><span class="p">]</span><span class="w">                            
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">Time</span><span class="w"> </span><span class="n">taken</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">169</span><span class="w"> </span><span class="n">seconds</span><span class="p">,</span><span class="w"> </span><span class="n">Fetched</span><span class="w"> </span><span class="mi">21</span><span class="w"> </span><span class="k">row</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>
+<h3 id="检验正式表数据文件时间戳">检验正式表数据文件时间戳
+</h3></li>
+</ol>
+<p>可以看到镜像表的数据文件没有被移动且也没有被修改过</p>
+<p><img src="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105951184.png"
+	width="1467"
+	height="522"
+	srcset="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105951184_hu15632161441136407662.png 480w, /p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221105951184_hu1999397489600842096.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250221105951184"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="281"
+		data-flex-basis="674px"
+	
+></p>
+<p><img src="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221110006666.png"
+	width="1204"
+	height="463"
+	srcset="/p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221110006666_hu17744447114299089412.png 480w, /p/iceberg%E9%95%9C%E5%83%8F%E8%A1%A8%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB%E6%96%B9%E6%A1%88%E9%AA%8C%E8%AF%81/image-20250221110006666_hu5751953400192773877.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250221110006666"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="260"
+		data-flex-basis="624px"
+	
+></p>
+<ol>
+<li>
+<h3 id="分析iceberg正式表的清单数据-1">分析Iceberg正式表的清单数据
+</h3></li>
+<li>
+<h3 id="分析iceberg正式表的stage数据">分析Iceberg正式表的stage数据
+</h3></li>
+</ol>
+<h2 id="六验证场景三iceberg分支方式">六、验证场景三（Iceberg分支方式）
+</h2><p>待验证</p>
+<h2 id="七结论">七、结论
+</h2><ol>
+<li>通过验证发现通过Iceberg原生提供的add_files存储过程能够完成数据迁移的逻辑，底层是给正式表创建元数据文件，并通过元数据文件维护表数据的地址，地址指向的还是镜像表的地址。因此这个过程速度会比较快并且不会造成额外的资源损耗(计算资源以及存储资源)。</li>
+</ol>
+<h2 id="额外思考">额外思考
+</h2><p>通过add_files方式，底层相当于正式表的清单文件指向镜像表data目录下的数据文件，</p>
+<ol>
+<li>在完成迁移动作后此处是否增加后期的维护成本？</li>
+<li>如果迁移后的数据存在数据变更，那么Iceberg是在正式表目录下还是镜像表目录下新增数据文件？</li>
+</ol>
+<p>结合上述两个疑问，是否可以考虑在镜像表的质量验收通过之后，通过hdfs mv指令将镜像表下的数据移动到正式表的data目录下，再通过add_files进行加载</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%AF%A6%E8%A7%A3spark%E7%9A%84shuffle%E6%BC%94%E5%8F%98/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%AF%A6%E8%A7%A3spark%E7%9A%84shuffle%E6%BC%94%E5%8F%98/lizard-8007238_1280.99221b6ddc6adbd3b3d4b2a2ff222b99_hu9270167774858500963.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 详解Spark的shuffle演变"
+                        
+                        data-hash="md5-mSIbbdxq29Oz1LKi/yIrmQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">详解Spark的shuffle演变</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/">
+        
+        
+            <div class="article-image">
+                <img src="/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/gull-8151932_1280.2050c59bb0284804503603eb8e507404_hu6399228128241274359.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Spark实战02_RDD算子基本操作"
+                        
+                        data-hash="md5-IFDFm7AoSARQNgPrjlB0BA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Spark实战02_RDD算子基本操作</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%A7%A3%E6%9E%90iceberg%E6%96%87%E4%BB%B6%E5%B8%83%E5%B1%80/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%A7%A3%E6%9E%90iceberg%E6%96%87%E4%BB%B6%E5%B8%83%E5%B1%80/image-20241204180525798.de933deee4261707f0c97a5baaa068b6_hu14123869769676742353.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 解析Iceberg文件布局"
+                        
+                        data-hash="md5-3pM97uQmFwfwyXpbqqBotg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">解析Iceberg文件布局</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/">
+        
+        
+            <div class="article-image">
+                <img src="/p/spark%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E8%AF%A6%E8%A7%A3/trees-8136806_1280.357dd549ed51f498bcbf5425f76e0416_hu9173719500181869714.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Spark调度系统详解"
+                        
+                        data-hash="md5-NX3VSe1R9Ji8v1Ql924EFg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Spark调度系统详解</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%A7%A3%E6%9E%90metadata.json%E6%96%87%E4%BB%B6/the-creative-exchange-d2zvqp3fpro-unsplash.60116b1ccfc8632e9a65f7d51df3efc2_hu2042364712198079406.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 解析metadata.json文件"
+                        
+                        data-hash="md5-YBFrHM/IYy6aZffVHfPvwg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">解析metadata.json文件</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2025 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
