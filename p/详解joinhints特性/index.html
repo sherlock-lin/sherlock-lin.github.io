@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="概述 在数据分析领域，数据关联可以说是最常见的计算场景了。因为使用的频率很高，所以Spark为我们准备了非常丰富的关联形式，包括Inner Join、Left Join、Right Join、Anti Join、Semi Join等等。\n">
+<title>详解JoinHints特性</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="详解JoinHints特性">
+<meta property='og:description' content="概述 在数据分析领域，数据关联可以说是最常见的计算场景了。因为使用的频率很高，所以Spark为我们准备了非常丰富的关联形式，包括Inner Join、Left Join、Right Join、Anti Join、Semi Join等等。\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2025-02-21T14:15:39&#43;08:00'/><meta property='article:modified_time' content='2025-02-21T14:15:39&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/pawel-czerwinski-8uZPynIu-rQ-unsplash.jpg' />
+<meta name="twitter:title" content="详解JoinHints特性">
+<meta name="twitter:description" content="概述 在数据分析领域，数据关联可以说是最常见的计算场景了。因为使用的频率很高，所以Spark为我们准备了非常丰富的关联形式，包括Inner Join、Left Join、Right Join、Anti Join、Semi Join等等。\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/pawel-czerwinski-8uZPynIu-rQ-unsplash.jpg' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/cs_hu10005534405353342465.jpg" width="300"
+                            height="294" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">🥳</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#概述">概述</a></li>
+    <li><a href="#join的实现方式详解">Join的实现方式详解</a>
+      <ol>
+        <li><a href="#nlj的工作原理">NLJ的工作原理</a></li>
+        <li><a href="#smj的工作原理">SMJ的工作原理</a></li>
+        <li><a href="#hj的工作原理">HJ的工作原理</a></li>
+      </ol>
+    </li>
+    <li><a href="#分布式环境下的join">分布式环境下的Join</a></li>
+    <li><a href="#spark如何选择join策略">Spark如何选择Join策略？</a>
+      <ol>
+        <li><a href="#等值join下spark如何选择join策略">等值Join下，Spark如何选择Join策略？</a></li>
+        <li><a href="#不等值join下spark如何选择join策略">不等值Join下，Spark如何选择Join策略？</a></li>
+      </ol>
+    </li>
+    <li><a href="#开发者能做些什么">开发者能做些什么？</a></li>
+    <li><a href="#小结">小结</a></li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/">
+                <img src="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/pawel-czerwinski-8uZPynIu-rQ-unsplash_hu13459586684579990428.jpg"
+                        srcset="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/pawel-czerwinski-8uZPynIu-rQ-unsplash_hu13459586684579990428.jpg 800w, /p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/pawel-czerwinski-8uZPynIu-rQ-unsplash_hu3425483315149503896.jpg 1600w"
+                        width="800" 
+                        height="534" 
+                        loading="lazy"
+                        alt="Featured image of post 详解JoinHints特性" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/spark/" style="background-color: #2a9d8f; color: #fff;">
+                Spark
+            </a>
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/">详解JoinHints特性</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2025-02-21</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 13 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="概述">概述
+</h2><p>在数据分析领域，数据关联可以说是最常见的计算场景了。因为使用的频率很高，所以Spark为我们准备了非常丰富的关联形式，包括Inner Join、Left Join、Right Join、Anti Join、Semi Join等等。</p>
+<p>搞懂不同关联形式的区别与作用，可以让我们快速地实现业务逻辑。不过，这只是基础，要想提高数据关联场景下Spark应用的执行性能，更为关键的是我们要能够深入理解Join的实现原理。</p>
+<p>所以今天这一讲，我们先来说说，单机环境中Join都有哪几种实现方式，它们的优劣势分别是什么。理解了这些实现方式，我们再结合它们一起探讨，分布式计算环境中Spark都支持哪些Join策略。对于不同的Join策略，Spark是怎么做取舍的。</p>
+<h2 id="join的实现方式详解">Join的实现方式详解
+</h2><p>到目前为止，数据关联总共有3种Join实现方式。按照出现的时间顺序，分别是嵌套循环连接（NLJ，Nested Loop Join ）、排序归并连接（SMJ，Shuffle Sort Merge Join）和哈希连接（HJ，Hash Join）。接下来，我们就借助一个数据关联的场景，来分别说一说这3种Join实现方式的工作原理。</p>
+<p>假设，现在有事实表orders和维度表users。其中，users表存储用户属性信息，orders记录着用户的每一笔交易。两张表的Schema如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-kotlin" data-lang="kotlin"><span class="line"><span class="cl"><span class="c1">// 订单表orders关键字段
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">userId</span><span class="p">,</span> <span class="n">Int</span>
+</span></span><span class="line"><span class="cl"><span class="n">itemId</span><span class="p">,</span> <span class="n">Int</span>
+</span></span><span class="line"><span class="cl"><span class="n">price</span><span class="p">,</span> <span class="n">Float</span>
+</span></span><span class="line"><span class="cl"><span class="n">quantity</span><span class="p">,</span> <span class="n">Int</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"><span class="c1">// 用户表users关键字段
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">id</span><span class="p">,</span> <span class="n">Int</span>
+</span></span><span class="line"><span class="cl"><span class="n">name</span><span class="p">,</span> <span class="n">String</span>
+</span></span><span class="line"><span class="cl"><span class="n">type</span><span class="p">,</span> <span class="n">String</span> <span class="c1">//枚举值，分为头部用户和长尾用户
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们的任务是要基于这两张表做内关联（Inner Join），同时把用户名、单价、交易额等字段投影出来。具体的SQL查询语句如下表：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-csharp" data-lang="csharp"><span class="line"><span class="cl"><span class="c1">//SQL查询语句</span>
+</span></span><span class="line"><span class="cl"><span class="k">select</span> <span class="n">orders</span><span class="p">.</span><span class="n">quantity</span><span class="p">,</span> <span class="n">orders</span><span class="p">.</span><span class="n">price</span><span class="p">,</span> <span class="n">orders</span><span class="p">.</span><span class="n">userId</span><span class="p">,</span> <span class="n">users</span><span class="p">.</span><span class="n">id</span><span class="p">,</span> <span class="n">users</span><span class="p">.</span><span class="n">name</span>
+</span></span><span class="line"><span class="cl"><span class="k">from</span> <span class="n">orders</span> <span class="n">inner</span> <span class="k">join</span> <span class="n">users</span> <span class="k">on</span> <span class="n">orders</span><span class="p">.</span><span class="n">userId</span> <span class="p">=</span> <span class="n">users</span><span class="p">.</span><span class="n">id</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>那么，对于这样一个关联查询，在3种不同的Join实现方式下，它是如何完成计算的呢？</p>
+<h3 id="nlj的工作原理">NLJ的工作原理
+</h3><p>对于参与关联的两张数据表，我们通常会根据它们扮演的角色来做区分。其中，体量较大、主动扫描数据的表，我们把它称作外表或是驱动表；体量较小、被动参与数据扫描的表，我们管它叫做内表或是基表。那么，NLJ是如何关联这两张数据表的呢？</p>
+<p>**NLJ是采用“嵌套循环”的方式来实现关联的。**也就是说，NLJ会使用内、外两个嵌套的for循环依次扫描外表和内表中的数据记录，判断关联条件是否满足，比如例子中的orders.userId = users.id，如果满足就把两边的记录拼接在一起，然后对外输出。</p>
+<p><img src="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/image-20250221141044609.png"
+	width="845"
+	height="431"
+	srcset="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/image-20250221141044609_hu17795138770600649030.png 480w, /p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/image-20250221141044609_hu1032374414742928361.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250221141044609"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="196"
+		data-flex-basis="470px"
+	
+></p>
+<p>在这个过程中，外层的for循环负责遍历外表中的每一条数据，如图中的步骤1所示。而对于外表中的每一条数据记录，内层的for循环会逐条扫描内表的所有记录，依次判断记录的Join Key是否满足关联条件，如步骤2所示。假设，外表有M行数据，内表有N行数据，那么<strong>NLJ算法的计算复杂度是O(M * N)</strong>。不得不说，尽管NLJ实现方式简单而又直接，但它的执行效率实在让人不敢恭维。</p>
+<h3 id="smj的工作原理">SMJ的工作原理
+</h3><p>正是因为NLJ极低的执行效率，所以在它推出之后没多久之后，就有人用排序、归并的算法代替NLJ实现了数据关联，这种算法就是SMJ。**SMJ的思路是先排序、再归并。**具体来说，就是参与Join的两张表先分别按照Join Key做升序排序。然后，SMJ会使用两个独立的游标对排好序的两张表完成归并关联。</p>
+<p><img src="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/image-20250221141121272.png"
+	width="820"
+	height="726"
+	srcset="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/image-20250221141121272_hu10361639131354039287.png 480w, /p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/image-20250221141121272_hu10170070654429629108.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250221141121272"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="112"
+		data-flex-basis="271px"
+	
+></p>
+<p>SMJ刚开始工作的时候，内外表的游标都会先锚定在两张表的第一条记录上，然后再对比游标所在记录的Join Key。对比结果以及后续操作主要分为3种情况：</p>
+<ol>
+<li>外表Join Key等于内表Join Key，满足关联条件，把两边的数据记录拼接并输出，然后把外表的游标滑动到下一条记录</li>
+<li>外表Join Key小于内表Join Key，不满足关联条件，把外表的游标滑动到下一条记录</li>
+<li>外表Join Key大于内表Join Key，不满足关联条件，把内表的游标滑动到下一条记录</li>
+</ol>
+<p>SMJ正是基于这3种情况，不停地向下滑动游标，直到某张表的游标滑到头，即宣告关联结束。对于SMJ中外表的每一条记录，由于内表按Join Key升序排序，且扫描的起始位置为游标所在位置，因此<strong>SMJ算法的计算复杂度为O(M + N)</strong>。</p>
+<p>不过，SMJ计算复杂度的降低，仰仗的是两张表已经事先排好序。要知道，排序本身就是一项非常耗时的操作，更何况，为了完成归并关联，参与Join的两张表都需要排序。因此，SMJ的计算过程我们可以用“先苦后甜”来形容。苦的是要先花费时间给两张表做排序，甜的是有序表的归并关联能够享受到线性的计算复杂度。</p>
+<h3 id="hj的工作原理">HJ的工作原理
+</h3><p>考虑到SMJ对排序的要求比较苛刻，所以后来又有人提出了效率更高的关联算法：HJ。HJ的设计初衷非常明确：<strong>把内表扫描的计算复杂度降低至O(1)</strong>。把一个数据集合的访问效率提升至O(1)，也只有Hash Map能做到了。也正因为Join的关联过程引入了Hash计算，所以它叫HJ。</p>
+<p><img src="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/image-20250221141159560.png"
+	width="816"
+	height="362"
+	srcset="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/image-20250221141159560_hu4532903620275811058.png 480w, /p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/image-20250221141159560_hu9815606297636777800.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250221141159560"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="225"
+		data-flex-basis="540px"
+	
+></p>
+<p>HJ的计算分为两个阶段，分别是Build阶段和Probe阶段。在Build阶段，基于内表，算法使用既定的哈希函数构建哈希表，如上图的步骤1所示。哈希表中的Key是Join Key应用（Apply）哈希函数之后的哈希值，表中的Value同时包含了原始的Join Key和Payload。</p>
+<p>在Probe阶段，算法遍历每一条数据记录，先是使用同样的哈希函数，以动态的方式（On The Fly）计算Join Key的哈希值。然后，用计算得到的哈希值去查询刚刚在Build阶段创建好的哈希表。如果查询失败，说明该条记录与维度表中的数据不存在关联关系；如果查询成功，则继续对比两边的Join Key。如果Join Key一致，就把两边的记录进行拼接并输出，从而完成数据关联。</p>
+<h2 id="分布式环境下的join">分布式环境下的Join
+</h2><p>掌握了这3种最主要的数据关联实现方式的工作原理之后，在单机环境中，无论是面对常见的Inner Join、Left Join、Right Join，还是不常露面的Anti Join、Semi Join，你都能对数据关联的性能调优做到游刃有余了。</p>
+<p>不过，你也可能会说：“Spark毕竟是个分布式系统，光学单机实现有什么用呀？”</p>
+<p>所谓万变不离其宗，实际上，<strong>相比单机环境，分布式环境中的数据关联在计算环节依然遵循着NLJ、SMJ和HJ这3种实现方式，只不过是增加了网络分发这一变数</strong>。在Spark的分布式计算环境中，数据在网络中的分发主要有两种方式，分别是Shuffle和广播。那么，不同的网络分发方式，对于数据关联的计算又都有哪些影响呢？</p>
+<p>如果采用Shuffle的分发方式来完成数据关联，那么外表和内表都需要按照Join Key在集群中做全量的数据分发。因为只有这样，两个数据表中Join Key相同的数据记录才能分配到同一个Executor进程，从而完成关联计算，如下图所示。</p>
+<p><img src="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/080fe1bbff904fcea3f7a02bc1923003.jpg"
+	width="5124"
+	height="1599"
+	srcset="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/080fe1bbff904fcea3f7a02bc1923003_hu5715093155089873214.jpg 480w, /p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/080fe1bbff904fcea3f7a02bc1923003_hu10476116169690413827.jpg 1024w"
+	loading="lazy"
+	
+		alt="img"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="320"
+		data-flex-basis="769px"
+	
+></p>
+<p>如果采用广播机制的话，情况会大有不同。在这种情况下，Spark只需要把内表（基表）封装到广播变量，然后在全网进行分发。由于广播变量中包含了内表的<strong>全量数据</strong>，因此体量较大的外表只要“待在原地、保持不动”，就能轻松地完成关联计算，如下图所示。</p>
+<p><img src="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/d2de0b219eeb4895b43b8d5e78f4242b.jpg"
+	width="5094"
+	height="1695"
+	srcset="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/d2de0b219eeb4895b43b8d5e78f4242b_hu3145173832480432481.jpg 480w, /p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/d2de0b219eeb4895b43b8d5e78f4242b_hu13434288913652520101.jpg 1024w"
+	loading="lazy"
+	
+		alt="img"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="300"
+		data-flex-basis="721px"
+	
+></p>
+<p>不难发现，结合Shuffle、广播这两种网络分发方式和NLJ、SMJ、HJ这3种计算方式，对于分布式环境下的数据关联，我们就能组合出6种Join策略，如下图所示。</p>
+<p><img src="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/cd7e0e29fff94df1a22685580a941196.jpg"
+	width="1989"
+	height="1149"
+	srcset="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/cd7e0e29fff94df1a22685580a941196_hu1837379204319269149.jpg 480w, /p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/cd7e0e29fff94df1a22685580a941196_hu6583098255990473927.jpg 1024w"
+	loading="lazy"
+	
+		alt="img"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="173"
+		data-flex-basis="415px"
+	
+></p>
+<p>这6种Join策略，对应图中6个青色圆角矩形，从上到下颜色依次变浅，它们分别是Cartesian Product Join、Shuffle Sort Merge Join和Shuffle Hash Join。也就是采用Shuffle机制实现的NLJ、SMJ和HJ，以及Broadcast Nested Loop Join、Broadcast Sort Merge Join和Broadcast Hash Join。</p>
+<p>**从执行性能来说，6种策略从上到下由弱变强。**相比之下，CPJ的执行效率是所有实现方式当中最差的，网络开销、计算开销都很大，因而在图中的颜色也是最深的。BHJ是最好的分布式数据关联机制，网络开销和计算开销都是最小的，因而颜色也最浅。此外，你可能也注意到了，Broadcast Sort Merge Join被标记成了灰色，这是因为Spark并没有选择支持Broadcast + Sort Merge Join这种组合方式。</p>
+<p>那么问题来了，明明是6种组合策略，为什么Spark偏偏没有支持这一种呢？要回答这个问题，我们就要回过头来对比SMJ与HJ实现方式的差异与优劣势。</p>
+<p>相比SMJ，HJ并不要求参与Join的两张表有序，也不需要维护两个游标来判断当前的记录位置，只要基表在Build阶段构建的哈希表可以放进内存，HJ算法就可以在Probe阶段遍历外表，依次与哈希表进行关联。</p>
+<p>当数据能以广播的形式在网络中进行分发时，说明被分发的数据，也就是基表的数据足够小，完全可以放到内存中去。这个时候，相比NLJ、SMJ，HJ的执行效率是最高的。因此，在可以采用HJ的情况下，Spark自然就没有必要再去用SMJ这种前置开销比较大的方式去完成数据关联。</p>
+<h2 id="spark如何选择join策略">Spark如何选择Join策略？
+</h2><p>那么，在不同的数据关联场景中，对于这5种Join策略来说，也就是CPJ、BNLJ、SHJ、SMJ以及BHJ，Spark会基于什么逻辑取舍呢？我们来分两种情况进行讨论，分别是等值Join，和不等值Join。</p>
+<h3 id="等值join下spark如何选择join策略">等值Join下，Spark如何选择Join策略？
+</h3><p>等值Join是指两张表的Join Key是通过等值条件连接在一起的。在日常的开发中，这种Join形式是最常见的，如t1 inner join t2 on <strong>t1.id = t2.id</strong>。</p>
+<p>**在等值数据关联中，Spark会尝试按照BHJ &gt; SMJ &gt; SHJ的顺序依次选择Join策略。**在这三种策略中，执行效率最高的是BHJ，其次是SHJ，再次是SMJ。其中，SMJ和SHJ策略支持所有连接类型，如全连接、Anti Join等等。BHJ尽管效率最高，但是有两个前提条件：一是连接类型不能是全连接（Full Outer Join）；二是基表要足够小，可以放到广播变量里面去。</p>
+<p>那为什么SHJ比SMJ执行效率高，排名却不如SMJ靠前呢？这是个非常好的问题。我们先来说结论，相比SHJ，Spark优先选择SMJ的原因在于，SMJ的实现方式更加稳定，更不容易OOM。</p>
+<p>回顾HJ的实现机制，在Build阶段，算法根据内表创建哈希表。在Probe阶段，为了让外表能够成功“探测”（Probe）到每一个Hash Key，哈希表要全部放进内存才行。坦白说，这个前提还是蛮苛刻的，仅这一点要求就足以让Spark对其望而却步。要知道，在不同的计算场景中，数据分布的多样性很难保证内表一定能全部放进内存。</p>
+<p>而且在Spark中，SHJ策略要想被选中必须要满足两个先决条件，这两个条件都是对数据尺寸的要求。**首先，外表大小至少是内表的3倍。其次，内表数据分片的平均大小要小于广播变量阈值。**第一个条件的动机很好理解，只有当内外表的尺寸悬殊到一定程度时，HJ的优势才会比SMJ更显著。第二个限制的目的是，确保内表的每一个数据分片都能全部放进内存。</p>
+<p>和SHJ相比，SMJ没有这么多的附加条件，无论是单表排序，还是两表做归并关联，都可以借助磁盘来完成。内存中放不下的数据，可以临时溢出到磁盘。单表排序的过程，我们可以参考Shuffle Map阶段生成中间文件的过程。在做归并关联的时候，算法可以把磁盘中的有序数据用合理的粒度，依次加载进内存完成计算。这个粒度可大可小，大到以数据分片为单位，小到逐条扫描。</p>
+<p>正是考虑到这些因素，相比SHJ，Spark SQL会优先选择SMJ。事实上，在配置项spark.sql.join.preferSortMergeJoin默认为True的情况下，Spark SQL会用SMJ策略来兜底，确保作业执行的稳定性，压根就不会打算去尝试SHJ。开发者如果想通过配置项来调整Join策略，需要把这个参数改为False，这样Spark SQL才有可能去尝试SHJ。</p>
+<h3 id="不等值join下spark如何选择join策略">不等值Join下，Spark如何选择Join策略？
+</h3><p>接下来，我们再来说说不等值Join，它指的是两张表的Join Key是通过不等值条件连接在一起的。不等值Join其实我们在以前的例子中也见过，比如像查询语句t1 inner join t2 on <strong>t1.date &gt; t2.beginDate and t1.date &lt;= t2.endDate</strong>，其中的关联关系是依靠不等式连接在一起的。</p>
+<p>**由于不等值Join只能使用NLJ来实现，因此Spark SQL可选的Join策略只剩下BNLJ和CPJ。**在同一种计算模式下，相比Shuffle，广播的网络开销更小。显然，在两种策略的选择上，Spark SQL一定会按照BNLJ &gt; CPJ的顺序进行尝试。当然，BNLJ生效的前提自然是内表小到可以放进广播变量。如果这个条件不成立，那么Spark SQL只好委曲求全，使用笨重的CPJ策略去完成关联计算。</p>
+<h2 id="开发者能做些什么">开发者能做些什么？
+</h2><p>最后，我们再来聊聊，面对上述的5种Join策略，开发者还能做些什么呢？通过上面的分析，我们不难发现，Spark SQL对于这些策略的取舍也基于一些既定的规则。所谓计划赶不上变化，预置的规则自然很难覆盖多样且变化无常的计算场景。因此，当我们掌握了不同Join策略的工作原理，结合我们对于业务和数据的深刻理解，完全可以自行决定应该选择哪种Join策略。</p>
+<p><img src="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/f8a3469e5a734c4c89a8b61b95908e82.jpg"
+	width="1920"
+	height="1080"
+	srcset="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/f8a3469e5a734c4c89a8b61b95908e82_hu14105565653143880708.jpg 480w, /p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/f8a3469e5a734c4c89a8b61b95908e82_hu16520810228212277085.jpg 1024w"
+	loading="lazy"
+	
+		alt="img"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="177"
+		data-flex-basis="426px"
+	
+></p>
+<p>在最新发布的3.0版本中，Spark为开发者提供了多样化的Join Hints，允许你把专家经验凌驾于Spark SQL的选择逻辑之上。**在满足前提条件的情况下，如等值条件、连接类型、表大小等等，Spark会优先尊重开发者的意愿，去选取开发者通过Join Hints指定的Join策略。**关于Spark 3.0支持的Join Hints关键字，以及对应的适用场景，我把它们总结到了如上的表格中，你可以直接拿来参考。</p>
+<p>简单来说，你可以使用两种方式来指定Join Hints，一种是通过SQL结构化查询语句，另一种是使用DataFrame的DSL语言，都很方便。至于更全面的讲解，你可以去<a class="link" href="https://time.geekbang.org/column/article/360837"  target="_blank" rel="noopener"
+    >第13讲</a>看看，这里我就不多说了。</p>
+<h2 id="小结">小结
+</h2><p>这一讲，我们从数据关联的实现原理，到Spark SQL不同Join策略的适用场景，掌握这些关键知识点，对于数据关联场景中的性能调优至关重要。</p>
+<p>首先，你需要掌握3种Join实现机制的工作原理。为了方便你对比，我把它们总结在了下面的表格里。</p>
+<p><img src="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/7be97a8098864fed89a5ebfcfa46e94f.jpg"
+	width="1920"
+	height="864"
+	srcset="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/7be97a8098864fed89a5ebfcfa46e94f_hu9478324700069850768.jpg 480w, /p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/7be97a8098864fed89a5ebfcfa46e94f_hu9542392247991227253.jpg 1024w"
+	loading="lazy"
+	
+		alt="img"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="222"
+		data-flex-basis="533px"
+	
+></p>
+<p>掌握了3种关联机制的实现原理，你就能更好地理解Spark SQL的Join策略。结合数据的网络分发方式（Shuffle和广播），Spark SQL支持5种Join策略，按照执行效率排序就是BHJ &gt; SHJ &gt; SMJ &gt; BNLJ &gt; CPJ。同样，为了方便对比，你也可以直接看下面的表格。</p>
+<p><img src="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/28962ec953b347f6b0c27b668d7533a2.jpg"
+	width="1920"
+	height="716"
+	srcset="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/28962ec953b347f6b0c27b668d7533a2_hu14630738701154477742.jpg 480w, /p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/28962ec953b347f6b0c27b668d7533a2_hu9701422358183416208.jpg 1024w"
+	loading="lazy"
+	
+		alt="img"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="268"
+		data-flex-basis="643px"
+	
+></p>
+<p>最后，当你掌握了不同Join策略的工作原理，结合对于业务和数据的深刻理解，实际上你可以自行决定应该选择哪种Join策略，不必完全依赖Spark SQL的判断。</p>
+<p>Spark为开发者提供了多样化的Join Hints，允许你把专家经验凌驾于Spark SQL的选择逻辑之上。比如，当你确信外表比内表大得多，而且内表数据分布均匀，使用SHJ远比默认的SMJ效率高得多的时候，你就可以通过指定Join Hints来强制Spark SQL按照你的意愿去选择Join策略。</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/">
+        
+        
+            <div class="article-image">
+                <img src="/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/trees-8136806_1280.357dd549ed51f498bcbf5425f76e0416_hu9173719500181869714.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post RDD和DataFrame和DataSet三者间的区别"
+                        
+                        data-hash="md5-NX3VSe1R9Ji8v1Ql924EFg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">RDD和DataFrame和DataSet三者间的区别</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/paddle-boat-8253274_1280.f75fabdedeae0941d378faac2224d26d_hu17172630445701689797.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 详解AQE三大特性"
+                        
+                        data-hash="md5-91&#43;r3t6uCUHTePqsIiTSbQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">详解AQE三大特性</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%AF%A6%E8%A7%A3dpp%E7%89%B9%E6%80%A7/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%AF%A6%E8%A7%A3dpp%E7%89%B9%E6%80%A7/mountains-8585535_1280.56d4c40673b260df8ed14227d7af25f7_hu2786413640161431340.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 详解DPP特性"
+                        
+                        data-hash="md5-VtTEBnOyYN&#43;O0UIn168l9w==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">详解DPP特性</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%AF%A6%E8%A7%A3spark%E7%9A%84shuffle%E6%BC%94%E5%8F%98/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%AF%A6%E8%A7%A3spark%E7%9A%84shuffle%E6%BC%94%E5%8F%98/lizard-8007238_1280.99221b6ddc6adbd3b3d4b2a2ff222b99_hu9270167774858500963.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 详解Spark的shuffle演变"
+                        
+                        data-hash="md5-mSIbbdxq29Oz1LKi/yIrmQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">详解Spark的shuffle演变</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/">
+        
+        
+            <div class="article-image">
+                <img src="/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/gull-8151932_1280.2050c59bb0284804503603eb8e507404_hu6399228128241274359.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Spark实战02_RDD算子基本操作"
+                        
+                        data-hash="md5-IFDFm7AoSARQNgPrjlB0BA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Spark实战02_RDD算子基本操作</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2025 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>

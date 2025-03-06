@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="概述 RDD (Spark1.0) —&gt; Dataframe(Spark1.3) —&gt; Dataset(Spark1.6)，如果同样的数据都给到这三个数据结构，他们分别计算之后，都会给出相同的结果。不同是的他们的执行效率和执行方式。在后期的Spark版本中，DataSet会逐步取代RDD和DataFrame成为唯一的API接口。\n">
+<title>RDD和DataFrame和DataSet三者间的区别</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="RDD和DataFrame和DataSet三者间的区别">
+<meta property='og:description' content="概述 RDD (Spark1.0) —&gt; Dataframe(Spark1.3) —&gt; Dataset(Spark1.6)，如果同样的数据都给到这三个数据结构，他们分别计算之后，都会给出相同的结果。不同是的他们的执行效率和执行方式。在后期的Spark版本中，DataSet会逐步取代RDD和DataFrame成为唯一的API接口。\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2025-02-25T14:40:07&#43;08:00'/><meta property='article:modified_time' content='2025-02-25T14:40:07&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/trees-8136806_1280.png' />
+<meta name="twitter:title" content="RDD和DataFrame和DataSet三者间的区别">
+<meta name="twitter:description" content="概述 RDD (Spark1.0) —&gt; Dataframe(Spark1.3) —&gt; Dataset(Spark1.6)，如果同样的数据都给到这三个数据结构，他们分别计算之后，都会给出相同的结果。不同是的他们的执行效率和执行方式。在后期的Spark版本中，DataSet会逐步取代RDD和DataFrame成为唯一的API接口。\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/trees-8136806_1280.png' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/cs_hu10005534405353342465.jpg" width="300"
+                            height="294" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">🥳</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#概述">概述</a></li>
+    <li><a href="#是什么">是什么</a>
+      <ol>
+        <li><a href="#rdd">RDD</a></li>
+        <li><a href="#dataframe">DataFrame</a></li>
+        <li><a href="#dataset">DataSet</a></li>
+      </ol>
+    </li>
+    <li><a href="#三者共性和差异">三者共性和差异</a>
+      <ol>
+        <li><a href="#共性">共性</a></li>
+        <li><a href="#差异">差异</a></li>
+      </ol>
+    </li>
+    <li><a href="#三者之间转换方式">三者之间转换方式</a></li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/">
+                <img src="/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/trees-8136806_1280_hu8854782184935210420.png"
+                        srcset="/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/trees-8136806_1280_hu8854782184935210420.png 800w, /p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/trees-8136806_1280_hu3353683797597004090.png 1600w"
+                        width="800" 
+                        height="566" 
+                        loading="lazy"
+                        alt="Featured image of post RDD和DataFrame和DataSet三者间的区别" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/spark/" style="background-color: #2a9d8f; color: #fff;">
+                Spark
+            </a>
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/">RDD和DataFrame和DataSet三者间的区别</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2025-02-25</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 6 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="概述">概述
+</h2><p>RDD (Spark1.0) —&gt; Dataframe(Spark1.3) —&gt; Dataset(Spark1.6)，如果同样的数据都给到这三个数据结构，他们分别计算之后，都会给出相同的结果。不同是的他们的执行效率和执行方式。在后期的Spark版本中，DataSet会逐步取代RDD和DataFrame成为唯一的API接口。</p>
+<p>这三者之间的关系如下图</p>
+<p><img src="/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/image-20250225103012336.png"
+	width="580"
+	height="267"
+	srcset="/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/image-20250225103012336_hu10179197902248437540.png 480w, /p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/image-20250225103012336_hu3874953934423702464.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250225103012336"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="217"
+		data-flex-basis="521px"
+	
+></p>
+<h2 id="是什么">是什么
+</h2><h3 id="rdd">RDD
+</h3><p>RDD叫做弹性分布式数据集，是Spark中最基本的数据处理模型。代码中是一个抽象类，它代表了一个弹性的、不可变的、可分区、里面的元素可进行计算的集合。</p>
+<ol>
+<li>RDD是一个懒执行的不可变的可以支持Lambda表达式的并行数据集合。</li>
+<li>RDD的最大好处就是简单，API的人性化程度很高。</li>
+<li>RDD的劣势是性能限制，它是一个JVM驻内存对象，这也就决定了存在GC的限制和数据增加时Java序列化成本的升高。</li>
+</ol>
+<h3 id="dataframe">DataFrame
+</h3><p>与RDD类似，DataFrame也是一个分布式数据容器。然而DataFrame更像传统数据库的二维表格，除了数据以外，还记录数据的结构信息，即schema。同时，与Hive类似，DataFrame也支持嵌套数据类型（struct、array和map）。从API易用性的角度上看，DataFrame API提供的是一套高层的关系操作，比函数式的RDD API要更加友好，门槛更低。DataFrame多了数据的结构信息，即schema。RDD是分布式的Java对象的集合。DataFrame是分布式的Row对象的集合。DataFrame除了提供了比RDD更丰富的算子以外，更重要的特点是提升执行效率、减少数据读取以及执行计划的优化，比如filter下推、裁剪等。DataFrame是为数据提供了Schema的视图。可以把它当做数据库中的一张表来对待，DataFrame也是懒执行的。</p>
+<p><img src="/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/image-20250225105252954.png"
+	width="559"
+	height="291"
+	srcset="/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/image-20250225105252954_hu17580053359799726565.png 480w, /p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/image-20250225105252954_hu17000058119840433975.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250225105252954"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="192"
+		data-flex-basis="461px"
+	
+></p>
+<p>上图直观地体现了DataFrame和RDD的区别。左侧的RDD[Person]虽然以Person为类型参数，但Spark框架本身不了解Person类的内部结构。而右侧的DataFrame却提供了详细的结构信息，使得Spark SQL可以清楚地知道该数据集中包含哪些列，每列的名称和类型各是什么。DataFrame多了数据的结构信息，即schema。RDD是分布式的Java对象的集合。DataFrame是分布式的Row对象的集合。DataFrame除了提供了比RDD更丰富的算子以外，更重要的特点是提升执行效率、减少数据读取以及执行计划的优化，比如filter下推、裁剪等。</p>
+<p>DataFrame性能上比RDD要高，主要有两方面原因：</p>
+<ol>
+<li>
+<p>定制化内存管理：数据以二进制的方式存在于非堆内存，节省了大量空间之外，还摆脱了GC的限制</p>
+</li>
+<li>
+<p>优化的执行计划：查询计划通过Spark catalyst optimiser进行优化，为了说明查询优化，我们来看上图展示的人口数据分析的示例。图中构造了两个DataFrame，将它们join之后又做了一次filter操作。如果原封不动地执行这个执行计划，最终的执行效率是不高的。因为join是一个代价较大的操作，也可能会产生一个较大的数据集。如果我们能将filter下推到 join下方，先对DataFrame进行过滤，再join过滤后的较小的结果集，便可以有效缩短执行时间。而Spark SQL的查询优化器正是这样做的。简而言之，逻辑查询计划优化就是一个利用基于关系代数的等价变换，将高成本的操作替换为低成本操作的过程。得到的优化执行计划在转换成物 理执行计划的过程中，还可以根据具体的数据源的特性将过滤条件下推至数据源内。最右侧的物理执行计划中Filter之所以消失不见，就是因为溶入了用于执行最终的读取操作的表扫描节点内。对于普通开发者而言，查询优化器的意义在于，即便是经验并不丰富的程序员写出的次优的查询，也可以被尽量转换为高效的形式予以执行。Dataframe的劣势在于在编译期缺少类型安全检查，导致运行时出错.</p>
+</li>
+</ol>
+<ul>
+<li><strong>DataFrame</strong>
+<ul>
+<li>带有schema元信息，即 DataFrame 所表示的二维表数据集的每一列都带有名称和类型，便于Spark SQL的操作</li>
+<li>支持嵌套数据类型（struct、array和Map），从易用性来说，DataFrame提供的是一套高层的关系操作，比函数式的RDD API更加友好</li>
+<li>因为优化的查询执行计划，导致DataFrame执行效率优于RDD</li>
+</ul>
+</li>
+<li><strong>RDD</strong>
+<ul>
+<li>无法得到所存数据元素的具体结构，SparkCore只能在Stage层面进行简单、通用的流水线优化</li>
+<li>操作门槛高</li>
+</ul>
+</li>
+</ul>
+<h3 id="dataset">DataSet
+</h3><ol>
+<li>是Dataframe API的一个扩展，是Spark最新的数据抽象</li>
+<li>用户友好的API风格，既具有类型安全检查也具有Dataframe的查询优化特性。</li>
+<li>Dataset支持编解码器，当需要访问非堆上的数据时可以避免反序列化整个对象，提高了效率。</li>
+<li>样例类被用来在Dataset中定义数据的结构信息，样例类中每个属性的名称直接映射到DataSet中的字段名称。</li>
+<li>Dataframe是Dataset的特列，DataFrame=Dataset[Row] ，所以可以通过as方法将Dataframe转换为</li>
+<li>Dataset。Row是一个类型，跟Car、Person这些的类型一样，所有的表结构信息我都用Row来表示。</li>
+<li>DataSet是强类型的。比如可以有Dataset[Car]，Dataset[Person].</li>
+</ol>
+<p>DataFrame只是知道字段，但是不知道字段的类型，所以在执行这些操作的时候是没办法在编译的时候检查是否类型失败的，比如你可以对一个String进行减法操作，在执行的时候才报错，而DataSet不仅仅知道字段，而且知道字段类型，所以有更严格的错误检查。就跟JSON对象和类对象之间的类比。</p>
+<h2 id="三者共性和差异">三者共性和差异
+</h2><h3 id="共性">共性
+</h3><p>1、RDD、DataFrame、Dataset全都是spark平台下的分布式弹性数据集，为处理超大型数据提供便利
+2、三者都有惰性机制，在进行创建、转换，如map方法时，不会立即执行，只有在遇到Action如foreach时，三者才会开始遍历运算，极端情况下，如果代码里面有创建、转换，但是后面没有在Action中使用对应的结果，在执行时会被直接跳过.
+3、三者都会根据spark的内存情况自动缓存运算，这样即使数据量很大，也不用担心会内存溢出
+4、三者都有partition的概念
+5、三者有许多共同的函数，如filter，排序等
+6、在对DataFrame和Dataset进行操作许多操作都需要这个包进行支持
+import spark.implicits._
+7、DataFrame和Dataset均可使用模式匹配获取各个字段的值和类型</p>
+<h3 id="差异">差异
+</h3><p>1、RDD一般和spark mlib同时使用
+2、RDD不支持sparksql操作
+3、与RDD和Dataset不同，DataFrame每一行的类型固定为Row，只有通过解析才能获取各个字段的值
+4、DataFrame与Dataset一般不与spark ml同时使用
+5、DataFrame与Dataset均支持sparksql的操作，比如select，groupby之类，还能注册临时表/视窗，进行sql语句操作
+6、DataFrame与Dataset支持一些特别方便的保存方式，比如保存成csv，可以带上表头，这样每一列的字段名一目了然</p>
+<h2 id="三者之间转换方式">三者之间转换方式
+</h2><p><img src="/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/image-20250225103520265.png"
+	width="535"
+	height="316"
+	srcset="/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/image-20250225103520265_hu6176695167027748375.png 480w, /p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/image-20250225103520265_hu5447462818775126553.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250225103520265"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="169"
+		data-flex-basis="406px"
+	
+></p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/pawel-czerwinski-8uZPynIu-rQ-unsplash.c514d916917173a48a42e0114b469961_hu7626638945853200361.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 详解JoinHints特性"
+                        
+                        data-hash="md5-xRTZFpFxc6SKQuARS0aZYQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">详解JoinHints特性</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/paddle-boat-8253274_1280.f75fabdedeae0941d378faac2224d26d_hu17172630445701689797.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 详解AQE三大特性"
+                        
+                        data-hash="md5-91&#43;r3t6uCUHTePqsIiTSbQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">详解AQE三大特性</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%AF%A6%E8%A7%A3dpp%E7%89%B9%E6%80%A7/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%AF%A6%E8%A7%A3dpp%E7%89%B9%E6%80%A7/mountains-8585535_1280.56d4c40673b260df8ed14227d7af25f7_hu2786413640161431340.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 详解DPP特性"
+                        
+                        data-hash="md5-VtTEBnOyYN&#43;O0UIn168l9w==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">详解DPP特性</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%AF%A6%E8%A7%A3spark%E7%9A%84shuffle%E6%BC%94%E5%8F%98/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%AF%A6%E8%A7%A3spark%E7%9A%84shuffle%E6%BC%94%E5%8F%98/lizard-8007238_1280.99221b6ddc6adbd3b3d4b2a2ff222b99_hu9270167774858500963.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 详解Spark的shuffle演变"
+                        
+                        data-hash="md5-mSIbbdxq29Oz1LKi/yIrmQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">详解Spark的shuffle演变</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/">
+        
+        
+            <div class="article-image">
+                <img src="/p/spark%E5%AE%9E%E6%88%9802_rdd%E7%AE%97%E5%AD%90%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/gull-8151932_1280.2050c59bb0284804503603eb8e507404_hu6399228128241274359.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Spark实战02_RDD算子基本操作"
+                        
+                        data-hash="md5-IFDFm7AoSARQNgPrjlB0BA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Spark实战02_RDD算子基本操作</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2025 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
