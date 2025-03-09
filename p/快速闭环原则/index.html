@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html lang="zh-cn" dir="ltr">
     <head><meta charset='utf-8'>
-<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="一、概述 如今技术层出不穷，组件更是百花齐放，那么如何快速去掌握一门技术/组件呢，可以从以下四个步骤进行\n基础(20%) 实战(40%) 原理(30%) 源码实现(10%) 二、基础 官方文档是一定要去看的，通过官网我们能获得以下明确的信息\n">
-<title>如何快速掌握一门技术组件</title>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="概述 从小我们就被教育，学习做事要踏踏实实的，要有三十年磨一剑的匠心精神，因此在面对一些重大项目或者学习一些毕竟经典的知识时，可能会下意识的想去放慢步伐，担心学太快无法消化，但最后几个月过去了项目、学习还没有什么进展，最后事情、学习都有些不上不下的，最后成本也投入了不少但是收益几乎为零，因此在这里提出&quot;快速闭环原则&quot;来解决这个棘手的问题。\n">
+<title>快速闭环原则</title>
 
-<link rel='canonical' href='https://sherlock-lin.github.io/p/%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E6%8E%8C%E6%8F%A1%E4%B8%80%E9%97%A8%E6%8A%80%E6%9C%AF%E7%BB%84%E4%BB%B6/'>
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E5%BF%AB%E9%80%9F%E9%97%AD%E7%8E%AF%E5%8E%9F%E5%88%99/'>
 
-<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="如何快速掌握一门技术组件">
-<meta property='og:description' content="一、概述 如今技术层出不穷，组件更是百花齐放，那么如何快速去掌握一门技术/组件呢，可以从以下四个步骤进行\n基础(20%) 实战(40%) 原理(30%) 源码实现(10%) 二、基础 官方文档是一定要去看的，通过官网我们能获得以下明确的信息\n">
-<meta property='og:url' content='https://sherlock-lin.github.io/p/%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E6%8E%8C%E6%8F%A1%E4%B8%80%E9%97%A8%E6%8A%80%E6%9C%AF%E7%BB%84%E4%BB%B6/'>
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="快速闭环原则">
+<meta property='og:description' content="概述 从小我们就被教育，学习做事要踏踏实实的，要有三十年磨一剑的匠心精神，因此在面对一些重大项目或者学习一些毕竟经典的知识时，可能会下意识的想去放慢步伐，担心学太快无法消化，但最后几个月过去了项目、学习还没有什么进展，最后事情、学习都有些不上不下的，最后成本也投入了不少但是收益几乎为零，因此在这里提出&quot;快速闭环原则&quot;来解决这个棘手的问题。\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E5%BF%AB%E9%80%9F%E9%97%AD%E7%8E%AF%E5%8E%9F%E5%88%99/'>
 <meta property='og:site_name' content='夏洛克-林'>
-<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2024-11-06T11:13:21&#43;08:00'/><meta property='article:modified_time' content='2024-11-06T11:13:21&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E6%8E%8C%E6%8F%A1%E4%B8%80%E9%97%A8%E6%8A%80%E6%9C%AF%E7%BB%84%E4%BB%B6/matt-le-SJSpo9hQf7s-unsplash.jpg' />
-<meta name="twitter:title" content="如何快速掌握一门技术组件">
-<meta name="twitter:description" content="一、概述 如今技术层出不穷，组件更是百花齐放，那么如何快速去掌握一门技术/组件呢，可以从以下四个步骤进行\n基础(20%) 实战(40%) 原理(30%) 源码实现(10%) 二、基础 官方文档是一定要去看的，通过官网我们能获得以下明确的信息\n"><meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E6%8E%8C%E6%8F%A1%E4%B8%80%E9%97%A8%E6%8A%80%E6%9C%AF%E7%BB%84%E4%BB%B6/matt-le-SJSpo9hQf7s-unsplash.jpg' />
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2025-03-09T13:38:13&#43;08:00'/><meta property='article:modified_time' content='2025-03-09T13:38:13&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E5%BF%AB%E9%80%9F%E9%97%AD%E7%8E%AF%E5%8E%9F%E5%88%99/lizard-8007238_1280.jpg' />
+<meta name="twitter:title" content="快速闭环原则">
+<meta name="twitter:description" content="概述 从小我们就被教育，学习做事要踏踏实实的，要有三十年磨一剑的匠心精神，因此在面对一些重大项目或者学习一些毕竟经典的知识时，可能会下意识的想去放慢步伐，担心学太快无法消化，但最后几个月过去了项目、学习还没有什么进展，最后事情、学习都有些不上不下的，最后成本也投入了不少但是收益几乎为零，因此在这里提出&quot;快速闭环原则&quot;来解决这个棘手的问题。\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E5%BF%AB%E9%80%9F%E9%97%AD%E7%8E%AF%E5%8E%9F%E5%88%99/lizard-8007238_1280.jpg' />
     </head>
     <body class="
     article-page
@@ -266,22 +266,9 @@
         <div class="widget--toc">
             <nav id="TableOfContents">
   <ol>
-    <li><a href="#一概述">一、概述</a></li>
-    <li><a href="#二基础">二、基础</a></li>
-    <li><a href="#三实战">三、实战</a>
-      <ol>
-        <li><a href="#1-使用角度">1. 使用角度</a></li>
-        <li><a href="#2-维护角度">2. 维护角度</a></li>
-      </ol>
-    </li>
-    <li><a href="#四原理">四、原理</a>
-      <ol>
-        <li><a href="#1-使用角度-1">1. 使用角度</a></li>
-        <li><a href="#2-维护角度-1">2. 维护角度</a></li>
-      </ol>
-    </li>
-    <li><a href="#五源码">五、源码</a></li>
-    <li><a href="#六总结">六、总结</a></li>
+    <li><a href="#概述">概述</a></li>
+    <li><a href="#快速闭环原则">快速闭环原则</a></li>
+    <li><a href="#总结">总结</a></li>
   </ol>
 </nav>
         </div>
@@ -296,13 +283,13 @@
     <article class="has-image main-article">
     <header class="article-header">
         <div class="article-image">
-            <a href="/p/%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E6%8E%8C%E6%8F%A1%E4%B8%80%E9%97%A8%E6%8A%80%E6%9C%AF%E7%BB%84%E4%BB%B6/">
-                <img src="/p/%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E6%8E%8C%E6%8F%A1%E4%B8%80%E9%97%A8%E6%8A%80%E6%9C%AF%E7%BB%84%E4%BB%B6/matt-le-SJSpo9hQf7s-unsplash_hu2018237820240201481.jpg"
-                        srcset="/p/%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E6%8E%8C%E6%8F%A1%E4%B8%80%E9%97%A8%E6%8A%80%E6%9C%AF%E7%BB%84%E4%BB%B6/matt-le-SJSpo9hQf7s-unsplash_hu2018237820240201481.jpg 800w, /p/%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E6%8E%8C%E6%8F%A1%E4%B8%80%E9%97%A8%E6%8A%80%E6%9C%AF%E7%BB%84%E4%BB%B6/matt-le-SJSpo9hQf7s-unsplash_hu8283485329313927682.jpg 1600w"
+            <a href="/p/%E5%BF%AB%E9%80%9F%E9%97%AD%E7%8E%AF%E5%8E%9F%E5%88%99/">
+                <img src="/p/%E5%BF%AB%E9%80%9F%E9%97%AD%E7%8E%AF%E5%8E%9F%E5%88%99/lizard-8007238_1280_hu5417393534990166681.jpg"
+                        srcset="/p/%E5%BF%AB%E9%80%9F%E9%97%AD%E7%8E%AF%E5%8E%9F%E5%88%99/lizard-8007238_1280_hu5417393534990166681.jpg 800w, /p/%E5%BF%AB%E9%80%9F%E9%97%AD%E7%8E%AF%E5%8E%9F%E5%88%99/lizard-8007238_1280_hu1539845558952584090.jpg 1600w"
                         width="800" 
-                        height="533" 
+                        height="534" 
                         loading="lazy"
-                        alt="Featured image of post 如何快速掌握一门技术组件" />
+                        alt="Featured image of post 快速闭环原则" />
                 
             </a>
         </div>
@@ -321,7 +308,7 @@
 
     <div class="article-title-wrapper">
         <h2 class="article-title">
-            <a href="/p/%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E6%8E%8C%E6%8F%A1%E4%B8%80%E9%97%A8%E6%8A%80%E6%9C%AF%E7%BB%84%E4%BB%B6/">如何快速掌握一门技术组件</a>
+            <a href="/p/%E5%BF%AB%E9%80%9F%E9%97%AD%E7%8E%AF%E5%8E%9F%E5%88%99/">快速闭环原则</a>
         </h2>
     
         
@@ -343,7 +330,7 @@
   <path d="M3 11h16" />
   <path d="M18 16.496v1.504l1 1" />
 </svg>
-                <time class="article-time--published">2024-11-06</time>
+                <time class="article-time--published">2025-03-09</time>
             </div>
         
 
@@ -358,7 +345,7 @@
 
 
                 <time class="article-time--reading">
-                    阅读时长: 3 分钟
+                    阅读时长: 2 分钟
                 </time>
             </div>
         
@@ -373,72 +360,18 @@
     <section class="article-content">
     
     
-    <h2 id="一概述">一、概述
-</h2><p>如今技术层出不穷，组件更是百花齐放，那么如何快速去掌握一门技术/组件呢，可以从以下四个步骤进行</p>
-<ul>
-<li>基础(20%)</li>
-<li>实战(40%)</li>
-<li>原理(30%)</li>
-<li>源码实现(10%)</li>
-</ul>
-<h2 id="二基础">二、基础
-</h2><p>官方文档是一定要去看的，通过官网我们能获得以下明确的信息</p>
-<ul>
-<li>这个组件出现的背景，也就是要用来解决什么场景的问题的</li>
-<li>这个组件是通过哪些特性进行解决的</li>
-<li>这个组件的概念、以及特定名词的官方定义</li>
-<li>这个组件的角色、架构，处理服务的调用流程</li>
-</ul>
-<p>以上这些问题要先搞清楚，这些不明确的话在学后面容易云里雾里。这也是为什么建议一开始要从官网入手，因为其他资料像个人博客这种质量参差不齐，容易误导一些概念影响后面的学习</p>
-<h2 id="三实战">三、实战
-</h2><p>想掌握一个东西最好的方式就是上手用它，前面学习基础也是为了更好、更快的实战
-一般官方文档也会引导用户如何下载、安装以及启动，这个过程有两个地方值得注意</p>
-<ul>
-<li>配置
-通过观察配置可以看到这个组件的依赖，假如要配置连接mysql的信息，那么就可以推测这个组件是用mysql来存某些数据，例如配置里面有netty相关的信息，那么也可以推测这个组件是用Netty来进行的网络通信
-除此之外可以结合官网看下这个组件的核心配置，一般也能了解到这个组件哪些核心功能支持怎样的配置，不同配置之间的差异</li>
-<li>管理指令
-一般在解压后的bin/sbin目录下，可以结合help指令来看看都支持哪些操作，同是也可以直接打开管理的脚本进去看，通过这个角度能够看到这个组件日常维护的相关工作，这对学习一个新的组件非常有用</li>
-</ul>
-<p>在启动服务后，可以结合官方提供的案例进行操作，其中可以从以下几点进行操作</p>
-<h3 id="1-使用角度">1. 使用角度
-</h3><ul>
-<li>数据写操作，都支持哪几种操作，不同操作有什么不同，写操作有什么核心的优化参数</li>
-<li>数据读操作，都支持哪几种操作，不同操作之间有什么不同</li>
-<li>官网提供的特性，都玩一下</li>
-</ul>
-<h3 id="2-维护角度">2. 维护角度
-</h3><ul>
-<li>查看这个组件的文件布局方式，常见的操作会导致这些文件如何变化等</li>
-<li>官方提供的管理指令都可以执行看看效果</li>
-</ul>
-<h2 id="四原理">四、原理
-</h2><p>在有基础以及实战的经历后，你对这个组件已经有一个认知了。当这个认知还是一个黑盒的，就像是你会用遥控器操纵电视机了，但这背后发生什么你并不清楚，因此咱们需要知道常见操作背后的流程</p>
-<h3 id="1-使用角度-1">1. 使用角度
-</h3><ul>
-<li>数据读写操作背后流程是怎么样的</li>
-<li>在使用一些特性功能时背后的流程是怎么样的</li>
-</ul>
-<h3 id="2-维护角度-1">2. 维护角度
-</h3><ul>
-<li>通过“实战阶段”使用的高频管理指令，背后的工作原理</li>
-<li>组件自身提供的优化策略，例如定期清理、合并文件等是如何实现的</li>
-</ul>
-<p>这个过程中除了官网，还可以通过官网查看一些精品博客、经典书籍等来完善对这块的了解</p>
-<h2 id="五源码">五、源码
-</h2><p>在理解原理后，如果还想知道具体是如何实现，这个时候就可以下载源码进行阅读，这个时候一定要遵循以下口诀“先整体，再局部；先抽象，再具体”，简单来说就是先看处理请求的脉络，等梳理清后再去看具体某个点的实现，先看api接口的定义，
-通过api接口的定义将整个处理流程关联起来，有需要或者有时间时候再去看具体的实现。</p>
-<p>以下有几个可以参考的阅读思路</p>
-<ul>
-<li>
-<p>单元测试</p>
-</li>
-<li>
-<p>场景驱动</p>
-</li>
-</ul>
-<h2 id="六总结">六、总结
-</h2><p>以上就是掌握一个组件的流程，这个过程一定要谨记两点，一个是快，另一个是坚持。这个指的是学某个知识点的时候不用追求一次性全部啃透，理解得差不多就可以下一步了，只要你不停的啃，你需要掌握的知识会不停的出现在你的面前，如果在你学习的过程中过去的某个知识点会不停的阻塞你的进度，此时再多花时间去彻底啃透它也来得及，除此之外更重要的就是坚持，只要不停的花时间钻研某一个组件，总有一天你会将它吃透的。</p>
+    <h2 id="概述">概述
+</h2><p>从小我们就被教育，学习做事要踏踏实实的，要有三十年磨一剑的匠心精神，因此在面对一些重大项目或者学习一些毕竟经典的知识时，可能会下意识的想去放慢步伐，担心学太快无法消化，但最后几个月过去了项目、学习还没有什么进展，最后事情、学习都有些不上不下的，最后成本也投入了不少但是收益几乎为零，因此在这里提出&quot;快速闭环原则&quot;来解决这个棘手的问题。</p>
+<h2 id="快速闭环原则">快速闭环原则
+</h2><p>快速闭环原则的本质就是，通过合理的对庞大的任务进行拆分，拆分成多个最小可执行任务，通过不断快速执行完这些小任务来达到推动大任务进度的效果，这个过程有以下几个优点</p>
+<ol>
+<li>灵活性：完成小任务的过程中，你会接触到更多的信息，这些信息可以反过来验证大目标的合理性并作出相对应的调整，避免一次性憋大招，最终做出一个跟预期不匹配的结果，从而浪费时间跟精力</li>
+<li>动力：如果长期盯着一个目标去做，那么由于长时间得不到反馈，身心都容易疲惫；而通过将大任务拆解成多个小任务，通过二十分钟迅速完成，来得到即时的正面反馈，也就是多巴胺，从而能让身心都得到小阶段的满足，从而有更大的动力去迎接下一个小任务</li>
+<li>番茄闹钟：通过搭配番茄闹钟，可以将每天的时间拆分成多个25分钟的番茄闹钟，番茄闹钟之间都提供五分钟的休息时间，这跟人注意力集中时间刚好对应得上。每个人注意力集中时间差不多就是25分钟，那么通过每个番茄闹钟去完成一个小任务，是比较合理的一个方式。如果有些小任务无法在25分钟内完成，那么说明这个小任务拆解得还不够细粒度，应该再进一步拆分，当然如果有少个别特殊情况，可以通过多个番茄闹钟完成，但是一定要注意，即便是通过多个闹钟完成，每个闹钟结束时，一定要有阶段性的成果</li>
+<li>结果导向：每个小任务一定要是奔着结果去的，这个结果一定要是实质上的东西，代码、博客、笔记、一些验证性的数据都可以，但一定要有实质的东西来支撑着</li>
+</ol>
+<h2 id="总结">总结
+</h2><p>本篇文章也是通过一个番茄闹钟来完成的，虽然粗糙但是核心思想已经表达出来了，有句话很适合整体的思想，“先快速做出一堆屎，然后再去优化它”，本质上也是一样的，至少这个过程中是不断围绕着最终产品去做的，无论哪个阶段这个产品都有一个实质上的形态，让自己以及别人都能够看得见，从而有更多的信心以及动力去将它完成。</p>
 
 </section>
 
@@ -463,30 +396,6 @@
             
                 
 <article class="has-image">
-    <a href="/p/%E5%BF%AB%E9%80%9F%E9%97%AD%E7%8E%AF%E5%8E%9F%E5%88%99/">
-        
-        
-            <div class="article-image">
-                <img src="/p/%E5%BF%AB%E9%80%9F%E9%97%AD%E7%8E%AF%E5%8E%9F%E5%88%99/lizard-8007238_1280.99221b6ddc6adbd3b3d4b2a2ff222b99_hu9270167774858500963.jpg" 
-                        width="250" 
-                        height="150" 
-                        loading="lazy"
-                        alt="Featured image of post 快速闭环原则"
-                        
-                        data-hash="md5-mSIbbdxq29Oz1LKi/yIrmQ==">
-                
-            </div>
-        
-
-        <div class="article-details">
-            <h2 class="article-title">快速闭环原则</h2>
-        </div>
-    </a>
-</article>
-
-            
-                
-<article class="has-image">
     <a href="/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/">
         
         
@@ -504,6 +413,30 @@
 
         <div class="article-details">
             <h2 class="article-title">软件设计之道</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E6%8E%8C%E6%8F%A1%E4%B8%80%E9%97%A8%E6%8A%80%E6%9C%AF%E7%BB%84%E4%BB%B6/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E6%8E%8C%E6%8F%A1%E4%B8%80%E9%97%A8%E6%8A%80%E6%9C%AF%E7%BB%84%E4%BB%B6/matt-le-SJSpo9hQf7s-unsplash.8eae06664ddfb3e8dc6e000756cb703b_hu13612953062116952428.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 如何快速掌握一门技术组件"
+                        
+                        data-hash="md5-jq4GZk3fs&#43;jcbgAHVstwOw==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">如何快速掌握一门技术组件</h2>
         </div>
     </a>
 </article>
