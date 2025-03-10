@@ -7,7 +7,236 @@
         <generator>Hugo -- gohugo.io</generator>
         <language>zh-cn</language>
         <copyright>sherlock-lin</copyright>
-        <lastBuildDate>Mon, 10 Mar 2025 20:26:31 +0800</lastBuildDate><atom:link href="https://sherlock-lin.github.io/index.xml" rel="self" type="application/rss+xml" /><item>
+        <lastBuildDate>Mon, 10 Mar 2025 21:16:22 +0800</lastBuildDate><atom:link href="https://sherlock-lin.github.io/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>动态规划一文通</title>
+        <link>https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/</link>
+        <pubDate>Mon, 10 Mar 2025 21:16:22 +0800</pubDate>
+        
+        <guid>https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/</guid>
+        <description>&lt;img src="https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/matt-le-SJSpo9hQf7s-unsplash.jpg" alt="Featured image of post 动态规划一文通" /&gt;&lt;h2 id=&#34;概述&#34;&gt;概述
+&lt;/h2&gt;&lt;ol&gt;
+&lt;li&gt;识别问题是否使用DP
+&lt;ul&gt;
+&lt;li&gt;最优子结构：问题的最优解可以由子问题的最优解推导得出。&lt;/li&gt;
+&lt;li&gt;重叠子问题：相同子问题被重复计算，适合用DP进行优化。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;定义状态变量：找到递归关系，明确DP数组的含义&lt;/li&gt;
+&lt;li&gt;确定状态转移方程：通过归纳法找到状态转移公式。&lt;/li&gt;
+&lt;li&gt;确定初始条件：找出边界情况的最优解。&lt;/li&gt;
+&lt;li&gt;选择计算顺序：
+&lt;ul&gt;
+&lt;li&gt;自顶向下 递归+记忆化搜索&lt;/li&gt;
+&lt;li&gt;自底向上 迭代+DP数组&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;优化空间复杂度(可选)：通过滚动数组或状态压缩减少内存占用。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&#34;动态规划的代码框架&#34;&gt;动态规划的代码框架
+&lt;/h2&gt;&lt;h3 id=&#34;递归记忆化搜索&#34;&gt;递归+记忆化搜索
+&lt;/h3&gt;&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205052882.png&#34;
+	width=&#34;716&#34;
+	height=&#34;99&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205052882_hu5934824231042538306.png 480w, https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205052882_hu11432602868091199649.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250310205052882&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;723&#34;
+		data-flex-basis=&#34;1735px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h3 id=&#34;迭代动态规划数组&#34;&gt;迭代+动态规划数组
+&lt;/h3&gt;&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205126328.png&#34;
+	width=&#34;714&#34;
+	height=&#34;84&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205126328_hu1991909774726941175.png 480w, https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205126328_hu15139416279087126449.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250310205126328&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;850&#34;
+		data-flex-basis=&#34;2040px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h3 id=&#34;滚动数组优化空间优化&#34;&gt;滚动数组优化(空间优化)
+&lt;/h3&gt;&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205157486.png&#34;
+	width=&#34;715&#34;
+	height=&#34;85&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205157486_hu4720699164412332506.png 480w, https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205157486_hu9797880545772395768.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250310205157486&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;841&#34;
+		data-flex-basis=&#34;2018px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h2 id=&#34;题型分析&#34;&gt;题型分析
+&lt;/h2&gt;&lt;h3 id=&#34;线性动态规划&#34;&gt;线性动态规划
+&lt;/h3&gt;&lt;p&gt;线性动态规划指的是状态按照一维顺序递推的动态规划问题，通常适用于数组或序列问题。&lt;/p&gt;
+&lt;p&gt;常见的线性DP主要包括：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;前缀型DP(如最大数组和)&lt;/li&gt;
+&lt;li&gt;计数型DP(如爬楼梯、不同路径)&lt;/li&gt;
+&lt;li&gt;最优子结构型DP(如最小路径和)&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;strong&gt;线性DP通用解题步骤&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205635235.png&#34;
+	width=&#34;714&#34;
+	height=&#34;125&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205635235_hu6542867915689308554.png 480w, https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205635235_hu4772405633196359405.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250310205635235&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;571&#34;
+		data-flex-basis=&#34;1370px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/maximum-subarray/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;53. 最大子数组和&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/climbing-stairs/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;70. 爬楼梯&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/minimum-path-sum/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;64. 最小路径和&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/unique-paths/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;62. 不同路径&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/integer-break/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;343. 整数拆分&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/longest-increasing-subsequence/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;300. 最长递增子序列&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;121. 买卖股票的最佳时机&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/house-robber/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;198. 打家劫舍&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/house-robber-ii/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;213. 打家劫舍 II&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/house-robber-iii/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;337. 打家劫舍 III&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/house-robber-iv/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;2560. 打家劫舍 IV&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;区间动态规划&#34;&gt;区间动态规划
+&lt;/h3&gt;&lt;p&gt;区间动态规划是一类用于处理序列或区间的最优划分问题的动态规划，区间DP的特点有：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;适用于求解子区间的最优解，然后通过合并子区间推导出更大区间的最优解。&lt;/li&gt;
+&lt;li&gt;采用双层循环遍历区间长度，通常使用三层循环遍历区间端点。&lt;/li&gt;
+&lt;li&gt;适用于合并问题、切割问题等。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;区间DP通用解题步骤&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310210813224.png&#34;
+	width=&#34;713&#34;
+	height=&#34;208&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310210813224_hu18062878116606498398.png 480w, https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310210813224_hu7150818696458090507.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250310210813224&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;342&#34;
+		data-flex-basis=&#34;822px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/minimum-cost-to-merge-stones/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;1000. 合并石头的最低成本&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/burst-balloons/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;312. 戳气球&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/minimum-insertions-to-balance-a-parentheses-string/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;1541. 平衡括号字符串的最少插入次数&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;背包问题&#34;&gt;背包问题
+&lt;/h3&gt;&lt;p&gt;背包问题是一类组合优化问题，核心在于如何在有限容量的情况下选择物品，使得总价值最大或者总方法数最多。&lt;/p&gt;
+&lt;p&gt;根据不同约束条件，背包问题可以分为以下几类：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;0-1背包：每个物品只能选0或1次&lt;/li&gt;
+&lt;li&gt;完全背包：每个物品可以选无限次&lt;/li&gt;
+&lt;li&gt;多重背包：每个物品最多选有限次&lt;/li&gt;
+&lt;li&gt;多组背包：物品被分为多个组，每个组最多选一个&lt;/li&gt;
+&lt;li&gt;多维背包：物品有多个属性限制，如重量、体积等&lt;/li&gt;
+&lt;li&gt;变种背包：如零钱兑换、目标和、子集和问题等&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;子序列类动态规划&#34;&gt;子序列类动态规划
+&lt;/h3&gt;&lt;p&gt;子序列问题问题通常涉及序列的部分元素组合，通用解题思路如下&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310213629857.png&#34;
+	width=&#34;714&#34;
+	height=&#34;397&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310213629857_hu10570889716551248700.png 480w, https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310213629857_hu14061002162027216239.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250310213629857&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;179&#34;
+		data-flex-basis=&#34;431px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/longest-increasing-subsequence/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;300. 最长递增子序列&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/longest-common-subsequence/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;1143. 最长公共子序列&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/edit-distance/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;72. 编辑距离&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/longest-palindromic-subsequence/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;516. 最长回文子序列&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/russian-doll-envelopes/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;354. 俄罗斯套娃信封问题&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;划分类动态规划&#34;&gt;划分类动态规划
+&lt;/h3&gt;&lt;p&gt;划分类动态规划是一种将问题拆分为多个子区间或子短的动态规划方法，通常用于求解&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310213943061.png&#34;
+	width=&#34;713&#34;
+	height=&#34;137&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310213943061_hu17818768326174186851.png 480w, https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310213943061_hu17388558263998042785.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250310213943061&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;520&#34;
+		data-flex-basis=&#34;1249px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;解题思路如下&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310214005874.png&#34;
+	width=&#34;711&#34;
+	height=&#34;191&#34;
+	srcset=&#34;https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310214005874_hu10484318383186128679.png 480w, https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310214005874_hu17977911975156758131.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20250310214005874&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;372&#34;
+		data-flex-basis=&#34;893px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/palindrome-partitioning-ii/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;132. 分割回文串 II&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/split-array-largest-sum/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;410. 分割数组的最大值&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode.cn/problems/partition-to-k-equal-sum-subsets/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;698. 划分为k个相等的子集&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+        </item>
+        <item>
         <title>双指针一文通</title>
         <link>https://sherlock-lin.github.io/p/%E5%8F%8C%E6%8C%87%E9%92%88%E4%B8%80%E6%96%87%E9%80%9A/</link>
         <pubDate>Mon, 10 Mar 2025 20:26:31 +0800</pubDate>

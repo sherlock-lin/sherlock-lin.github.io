@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="概述 识别问题是否使用DP 最优子结构：问题的最优解可以由子问题的最优解推导得出。 重叠子问题：相同子问题被重复计算，适合用DP进行优化。 定义状态变量：找到递归关系，明确DP数组的含义 确定状态转移方程：通过归纳法找到状态转移公式。 确定初始条件：找出边界情况的最优解。 选择计算顺序： 自顶向下 递归+记忆化搜索 自底向上 迭代+DP数组 优化空间复杂度(可选)：通过滚动数组或状态压缩减少内存占用。 动态规划的代码框架 递归+记忆化搜索 ">
+<title>动态规划一文通</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="动态规划一文通">
+<meta property='og:description' content="概述 识别问题是否使用DP 最优子结构：问题的最优解可以由子问题的最优解推导得出。 重叠子问题：相同子问题被重复计算，适合用DP进行优化。 定义状态变量：找到递归关系，明确DP数组的含义 确定状态转移方程：通过归纳法找到状态转移公式。 确定初始条件：找出边界情况的最优解。 选择计算顺序： 自顶向下 递归+记忆化搜索 自底向上 迭代+DP数组 优化空间复杂度(可选)：通过滚动数组或状态压缩减少内存占用。 动态规划的代码框架 递归+记忆化搜索 ">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2025-03-10T21:16:22&#43;08:00'/><meta property='article:modified_time' content='2025-03-10T21:16:22&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/matt-le-SJSpo9hQf7s-unsplash.jpg' />
+<meta name="twitter:title" content="动态规划一文通">
+<meta name="twitter:description" content="概述 识别问题是否使用DP 最优子结构：问题的最优解可以由子问题的最优解推导得出。 重叠子问题：相同子问题被重复计算，适合用DP进行优化。 定义状态变量：找到递归关系，明确DP数组的含义 确定状态转移方程：通过归纳法找到状态转移公式。 确定初始条件：找出边界情况的最优解。 选择计算顺序： 自顶向下 递归+记忆化搜索 自底向上 迭代+DP数组 优化空间复杂度(可选)：通过滚动数组或状态压缩减少内存占用。 动态规划的代码框架 递归+记忆化搜索 "><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/matt-le-SJSpo9hQf7s-unsplash.jpg' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/cs_hu10005534405353342465.jpg" width="300"
+                            height="294" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">🥳</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#概述">概述</a></li>
+    <li><a href="#动态规划的代码框架">动态规划的代码框架</a>
+      <ol>
+        <li><a href="#递归记忆化搜索">递归+记忆化搜索</a></li>
+        <li><a href="#迭代动态规划数组">迭代+动态规划数组</a></li>
+        <li><a href="#滚动数组优化空间优化">滚动数组优化(空间优化)</a></li>
+      </ol>
+    </li>
+    <li><a href="#题型分析">题型分析</a>
+      <ol>
+        <li><a href="#线性动态规划">线性动态规划</a></li>
+        <li><a href="#区间动态规划">区间动态规划</a></li>
+        <li><a href="#背包问题">背包问题</a></li>
+        <li><a href="#子序列类动态规划">子序列类动态规划</a></li>
+        <li><a href="#划分类动态规划">划分类动态规划</a></li>
+      </ol>
+    </li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/">
+                <img src="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/matt-le-SJSpo9hQf7s-unsplash_hu2018237820240201481.jpg"
+                        srcset="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/matt-le-SJSpo9hQf7s-unsplash_hu2018237820240201481.jpg 800w, /p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/matt-le-SJSpo9hQf7s-unsplash_hu8283485329313927682.jpg 1600w"
+                        width="800" 
+                        height="533" 
+                        loading="lazy"
+                        alt="Featured image of post 动态规划一文通" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/%E8%81%8C%E4%B8%9A%E7%94%9F%E6%B6%AF/" style="background-color: #2a9d8f; color: #fff;">
+                职业生涯
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/">动态规划一文通</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2025-03-10</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 2 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="概述">概述
+</h2><ol>
+<li>识别问题是否使用DP
+<ul>
+<li>最优子结构：问题的最优解可以由子问题的最优解推导得出。</li>
+<li>重叠子问题：相同子问题被重复计算，适合用DP进行优化。</li>
+</ul>
+</li>
+<li>定义状态变量：找到递归关系，明确DP数组的含义</li>
+<li>确定状态转移方程：通过归纳法找到状态转移公式。</li>
+<li>确定初始条件：找出边界情况的最优解。</li>
+<li>选择计算顺序：
+<ul>
+<li>自顶向下 递归+记忆化搜索</li>
+<li>自底向上 迭代+DP数组</li>
+</ul>
+</li>
+<li>优化空间复杂度(可选)：通过滚动数组或状态压缩减少内存占用。</li>
+</ol>
+<h2 id="动态规划的代码框架">动态规划的代码框架
+</h2><h3 id="递归记忆化搜索">递归+记忆化搜索
+</h3><p><img src="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205052882.png"
+	width="716"
+	height="99"
+	srcset="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205052882_hu5934824231042538306.png 480w, /p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205052882_hu11432602868091199649.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250310205052882"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="723"
+		data-flex-basis="1735px"
+	
+></p>
+<h3 id="迭代动态规划数组">迭代+动态规划数组
+</h3><p><img src="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205126328.png"
+	width="714"
+	height="84"
+	srcset="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205126328_hu1991909774726941175.png 480w, /p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205126328_hu15139416279087126449.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250310205126328"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="850"
+		data-flex-basis="2040px"
+	
+></p>
+<h3 id="滚动数组优化空间优化">滚动数组优化(空间优化)
+</h3><p><img src="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205157486.png"
+	width="715"
+	height="85"
+	srcset="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205157486_hu4720699164412332506.png 480w, /p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205157486_hu9797880545772395768.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250310205157486"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="841"
+		data-flex-basis="2018px"
+	
+></p>
+<h2 id="题型分析">题型分析
+</h2><h3 id="线性动态规划">线性动态规划
+</h3><p>线性动态规划指的是状态按照一维顺序递推的动态规划问题，通常适用于数组或序列问题。</p>
+<p>常见的线性DP主要包括：</p>
+<ol>
+<li>前缀型DP(如最大数组和)</li>
+<li>计数型DP(如爬楼梯、不同路径)</li>
+<li>最优子结构型DP(如最小路径和)</li>
+</ol>
+<p><strong>线性DP通用解题步骤</strong></p>
+<p><img src="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205635235.png"
+	width="714"
+	height="125"
+	srcset="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205635235_hu6542867915689308554.png 480w, /p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310205635235_hu4772405633196359405.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250310205635235"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="571"
+		data-flex-basis="1370px"
+	
+></p>
+<ul>
+<li><a class="link" href="https://leetcode.cn/problems/maximum-subarray/"  target="_blank" rel="noopener"
+    >53. 最大子数组和</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/climbing-stairs/"  target="_blank" rel="noopener"
+    >70. 爬楼梯</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/minimum-path-sum/"  target="_blank" rel="noopener"
+    >64. 最小路径和</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/unique-paths/"  target="_blank" rel="noopener"
+    >62. 不同路径</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/integer-break/"  target="_blank" rel="noopener"
+    >343. 整数拆分</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/longest-increasing-subsequence/"  target="_blank" rel="noopener"
+    >300. 最长递增子序列</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/"  target="_blank" rel="noopener"
+    >121. 买卖股票的最佳时机</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/house-robber/"  target="_blank" rel="noopener"
+    >198. 打家劫舍</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/house-robber-ii/"  target="_blank" rel="noopener"
+    >213. 打家劫舍 II</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/house-robber-iii/"  target="_blank" rel="noopener"
+    >337. 打家劫舍 III</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/house-robber-iv/"  target="_blank" rel="noopener"
+    >2560. 打家劫舍 IV</a></li>
+</ul>
+<h3 id="区间动态规划">区间动态规划
+</h3><p>区间动态规划是一类用于处理序列或区间的最优划分问题的动态规划，区间DP的特点有：</p>
+<ul>
+<li>适用于求解子区间的最优解，然后通过合并子区间推导出更大区间的最优解。</li>
+<li>采用双层循环遍历区间长度，通常使用三层循环遍历区间端点。</li>
+<li>适用于合并问题、切割问题等。</li>
+</ul>
+<p><strong>区间DP通用解题步骤</strong></p>
+<p><img src="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310210813224.png"
+	width="713"
+	height="208"
+	srcset="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310210813224_hu18062878116606498398.png 480w, /p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310210813224_hu7150818696458090507.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250310210813224"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="342"
+		data-flex-basis="822px"
+	
+></p>
+<ul>
+<li><a class="link" href="https://leetcode.cn/problems/minimum-cost-to-merge-stones/"  target="_blank" rel="noopener"
+    >1000. 合并石头的最低成本</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/burst-balloons/"  target="_blank" rel="noopener"
+    >312. 戳气球</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/minimum-insertions-to-balance-a-parentheses-string/"  target="_blank" rel="noopener"
+    >1541. 平衡括号字符串的最少插入次数</a></li>
+</ul>
+<h3 id="背包问题">背包问题
+</h3><p>背包问题是一类组合优化问题，核心在于如何在有限容量的情况下选择物品，使得总价值最大或者总方法数最多。</p>
+<p>根据不同约束条件，背包问题可以分为以下几类：</p>
+<ul>
+<li>0-1背包：每个物品只能选0或1次</li>
+<li>完全背包：每个物品可以选无限次</li>
+<li>多重背包：每个物品最多选有限次</li>
+<li>多组背包：物品被分为多个组，每个组最多选一个</li>
+<li>多维背包：物品有多个属性限制，如重量、体积等</li>
+<li>变种背包：如零钱兑换、目标和、子集和问题等</li>
+</ul>
+<h3 id="子序列类动态规划">子序列类动态规划
+</h3><p>子序列问题问题通常涉及序列的部分元素组合，通用解题思路如下</p>
+<p><img src="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310213629857.png"
+	width="714"
+	height="397"
+	srcset="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310213629857_hu10570889716551248700.png 480w, /p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310213629857_hu14061002162027216239.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250310213629857"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="179"
+		data-flex-basis="431px"
+	
+></p>
+<ul>
+<li><a class="link" href="https://leetcode.cn/problems/longest-increasing-subsequence/"  target="_blank" rel="noopener"
+    >300. 最长递增子序列</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/longest-common-subsequence/"  target="_blank" rel="noopener"
+    >1143. 最长公共子序列</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/edit-distance/"  target="_blank" rel="noopener"
+    >72. 编辑距离</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/longest-palindromic-subsequence/"  target="_blank" rel="noopener"
+    >516. 最长回文子序列</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/russian-doll-envelopes/"  target="_blank" rel="noopener"
+    >354. 俄罗斯套娃信封问题</a></li>
+</ul>
+<h3 id="划分类动态规划">划分类动态规划
+</h3><p>划分类动态规划是一种将问题拆分为多个子区间或子短的动态规划方法，通常用于求解</p>
+<p><img src="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310213943061.png"
+	width="713"
+	height="137"
+	srcset="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310213943061_hu17818768326174186851.png 480w, /p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310213943061_hu17388558263998042785.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250310213943061"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="520"
+		data-flex-basis="1249px"
+	
+></p>
+<p>解题思路如下</p>
+<p><img src="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310214005874.png"
+	width="711"
+	height="191"
+	srcset="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310214005874_hu10484318383186128679.png 480w, /p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/image-20250310214005874_hu17977911975156758131.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250310214005874"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="372"
+		data-flex-basis="893px"
+	
+></p>
+<ul>
+<li><a class="link" href="https://leetcode.cn/problems/palindrome-partitioning-ii/"  target="_blank" rel="noopener"
+    >132. 分割回文串 II</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/split-array-largest-sum/"  target="_blank" rel="noopener"
+    >410. 分割数组的最大值</a></li>
+<li><a class="link" href="https://leetcode.cn/problems/partition-to-k-equal-sum-subsets/"  target="_blank" rel="noopener"
+    >698. 划分为k个相等的子集</a></li>
+</ul>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%8F%8C%E6%8C%87%E9%92%88%E4%B8%80%E6%96%87%E9%80%9A/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%8F%8C%E6%8C%87%E9%92%88%E4%B8%80%E6%96%87%E9%80%9A/the-creative-exchange-d2zvqp3fpro-unsplash.60116b1ccfc8632e9a65f7d51df3efc2_hu2042364712198079406.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 双指针一文通"
+                        
+                        data-hash="md5-YBFrHM/IYy6aZffVHfPvwg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">双指针一文通</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%9B%9E%E6%BA%AF%E7%AE%97%E6%B3%95%E4%B8%80%E6%96%87%E9%80%9A/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%9B%9E%E6%BA%AF%E7%AE%97%E6%B3%95%E4%B8%80%E6%96%87%E9%80%9A/gannet-9003524_1280.aa511a7310cfa3385af52b3a0fffbbde_hu3687632605550775934.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 回溯算法一文通"
+                        
+                        data-hash="md5-qlEacxDPozha9Ss6D/&#43;73g==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">回溯算法一文通</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%BF%AB%E9%80%9F%E9%97%AD%E7%8E%AF%E5%8E%9F%E5%88%99/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%BF%AB%E9%80%9F%E9%97%AD%E7%8E%AF%E5%8E%9F%E5%88%99/lizard-8007238_1280.99221b6ddc6adbd3b3d4b2a2ff222b99_hu9270167774858500963.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 快速闭环原则"
+                        
+                        data-hash="md5-mSIbbdxq29Oz1LKi/yIrmQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">快速闭环原则</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%BD%AF%E4%BB%B6%E8%AE%BE%E8%AE%A1%E4%B9%8B%E9%81%93/image-20241212112322120.c1a398715547423fa99aac13cb0745a7_hu11598180865956048249.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 软件设计之道"
+                        
+                        data-hash="md5-waOYcVVHQj&#43;pmqwTywdFpw==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">软件设计之道</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E6%8E%8C%E6%8F%A1%E4%B8%80%E9%97%A8%E6%8A%80%E6%9C%AF%E7%BB%84%E4%BB%B6/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E6%8E%8C%E6%8F%A1%E4%B8%80%E9%97%A8%E6%8A%80%E6%9C%AF%E7%BB%84%E4%BB%B6/matt-le-SJSpo9hQf7s-unsplash.8eae06664ddfb3e8dc6e000756cb703b_hu13612953062116952428.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 如何快速掌握一门技术组件"
+                        
+                        data-hash="md5-jq4GZk3fs&#43;jcbgAHVstwOw==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">如何快速掌握一门技术组件</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2025 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
