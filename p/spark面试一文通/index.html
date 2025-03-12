@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="高频 Spark 为什么比hive快 Spark 相对于 Hive 具有以下几个方面的优势：\nDAG计算模型：Spark 使用自己的DAG执行引擎，通过有向无环图（DAG）来表示任务，优化了任务的调度和执行，避免不必要的中间结果写入磁盘，也就是数据都存在内存中，直接通过算子处理，中间结果不落盘，从而大幅减少磁盘IO开销，而Hive默认使用 MapReduce 作为执行引擎，MapReduce计算模型比较简单，每个算子都会将中间结果写入磁盘，导致大量的磁盘 I/O 操作，所以速度较慢。 延迟计算: Spark 使用延迟计算机制，只有在遇到action操作如 collect、count时才会真正执行计算。这种机制允许 Spark 进行更多的优化，例如合并多个操作、减少数据 shuffle等并且内存分配更科学；而Hive 的查询通常是即时执行的，缺乏类似的优化机制。 数据分区和并行处理：Spark 支持更细粒度的数据分区和并行处理，可以更好地利用集群资源。Spark 的 RDD（弹性分布式数据集）和 DataFrame/Dataset API 提供了灵活的分区和并行处理机制。而Hive 的并行处理能力依赖于 MapReduce，MapReduce 的并行度受限于 Map 和 Reduce 任务的数量，且任务调度开销较大。 优化器：Spark 提供了 Catalyst 优化器，用于优化 SQL 查询的执行计划。Catalyst 优化器可以进行谓词下推、列剪裁、常量折叠等多种优化，显著提高查询性能。Hive 也有优化器，但其优化能力相对较弱，尤其是在处理复杂查询时，优化效果不如 Spark。 JVM 的优化 : Hive 每次 MapReduce 操作，启动一个 Task 便会启动一次 JVM，基于进程的操作。而 Spark 每次操作是基于线程的，只在启动 Executor 时候启动一次 JVM，内存的 Task 操作是线程复用的。每次启动 JVM 的时间可能就需要几秒甚至十几秒，那么当 Task 多了，mapreduce 不知道比 Spark 慢了多少。 总的来说Spark 之所以比 Hive 快，主要是因为 Spark 采用了DAG计算模型或者说内存计算、延迟计算、Catalyst 优化器等先进技术，减少了磁盘 I/O 和任务调度开销，提高了数据处理效率，因此Spark非常适合像批处理、机器学习这样的场景，当然对于一些传统的批处理场景，Mapreduce仍然是一种可靠的选择。\n">
+<title>Spark面试一文通</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/spark%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="Spark面试一文通">
+<meta property='og:description' content="高频 Spark 为什么比hive快 Spark 相对于 Hive 具有以下几个方面的优势：\nDAG计算模型：Spark 使用自己的DAG执行引擎，通过有向无环图（DAG）来表示任务，优化了任务的调度和执行，避免不必要的中间结果写入磁盘，也就是数据都存在内存中，直接通过算子处理，中间结果不落盘，从而大幅减少磁盘IO开销，而Hive默认使用 MapReduce 作为执行引擎，MapReduce计算模型比较简单，每个算子都会将中间结果写入磁盘，导致大量的磁盘 I/O 操作，所以速度较慢。 延迟计算: Spark 使用延迟计算机制，只有在遇到action操作如 collect、count时才会真正执行计算。这种机制允许 Spark 进行更多的优化，例如合并多个操作、减少数据 shuffle等并且内存分配更科学；而Hive 的查询通常是即时执行的，缺乏类似的优化机制。 数据分区和并行处理：Spark 支持更细粒度的数据分区和并行处理，可以更好地利用集群资源。Spark 的 RDD（弹性分布式数据集）和 DataFrame/Dataset API 提供了灵活的分区和并行处理机制。而Hive 的并行处理能力依赖于 MapReduce，MapReduce 的并行度受限于 Map 和 Reduce 任务的数量，且任务调度开销较大。 优化器：Spark 提供了 Catalyst 优化器，用于优化 SQL 查询的执行计划。Catalyst 优化器可以进行谓词下推、列剪裁、常量折叠等多种优化，显著提高查询性能。Hive 也有优化器，但其优化能力相对较弱，尤其是在处理复杂查询时，优化效果不如 Spark。 JVM 的优化 : Hive 每次 MapReduce 操作，启动一个 Task 便会启动一次 JVM，基于进程的操作。而 Spark 每次操作是基于线程的，只在启动 Executor 时候启动一次 JVM，内存的 Task 操作是线程复用的。每次启动 JVM 的时间可能就需要几秒甚至十几秒，那么当 Task 多了，mapreduce 不知道比 Spark 慢了多少。 总的来说Spark 之所以比 Hive 快，主要是因为 Spark 采用了DAG计算模型或者说内存计算、延迟计算、Catalyst 优化器等先进技术，减少了磁盘 I/O 和任务调度开销，提高了数据处理效率，因此Spark非常适合像批处理、机器学习这样的场景，当然对于一些传统的批处理场景，Mapreduce仍然是一种可靠的选择。\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/spark%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2025-03-12T11:53:11&#43;08:00'/><meta property='article:modified_time' content='2025-03-12T11:53:11&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/spark%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/nevada-8338929_1280.jpg' />
+<meta name="twitter:title" content="Spark面试一文通">
+<meta name="twitter:description" content="高频 Spark 为什么比hive快 Spark 相对于 Hive 具有以下几个方面的优势：\nDAG计算模型：Spark 使用自己的DAG执行引擎，通过有向无环图（DAG）来表示任务，优化了任务的调度和执行，避免不必要的中间结果写入磁盘，也就是数据都存在内存中，直接通过算子处理，中间结果不落盘，从而大幅减少磁盘IO开销，而Hive默认使用 MapReduce 作为执行引擎，MapReduce计算模型比较简单，每个算子都会将中间结果写入磁盘，导致大量的磁盘 I/O 操作，所以速度较慢。 延迟计算: Spark 使用延迟计算机制，只有在遇到action操作如 collect、count时才会真正执行计算。这种机制允许 Spark 进行更多的优化，例如合并多个操作、减少数据 shuffle等并且内存分配更科学；而Hive 的查询通常是即时执行的，缺乏类似的优化机制。 数据分区和并行处理：Spark 支持更细粒度的数据分区和并行处理，可以更好地利用集群资源。Spark 的 RDD（弹性分布式数据集）和 DataFrame/Dataset API 提供了灵活的分区和并行处理机制。而Hive 的并行处理能力依赖于 MapReduce，MapReduce 的并行度受限于 Map 和 Reduce 任务的数量，且任务调度开销较大。 优化器：Spark 提供了 Catalyst 优化器，用于优化 SQL 查询的执行计划。Catalyst 优化器可以进行谓词下推、列剪裁、常量折叠等多种优化，显著提高查询性能。Hive 也有优化器，但其优化能力相对较弱，尤其是在处理复杂查询时，优化效果不如 Spark。 JVM 的优化 : Hive 每次 MapReduce 操作，启动一个 Task 便会启动一次 JVM，基于进程的操作。而 Spark 每次操作是基于线程的，只在启动 Executor 时候启动一次 JVM，内存的 Task 操作是线程复用的。每次启动 JVM 的时间可能就需要几秒甚至十几秒，那么当 Task 多了，mapreduce 不知道比 Spark 慢了多少。 总的来说Spark 之所以比 Hive 快，主要是因为 Spark 采用了DAG计算模型或者说内存计算、延迟计算、Catalyst 优化器等先进技术，减少了磁盘 I/O 和任务调度开销，提高了数据处理效率，因此Spark非常适合像批处理、机器学习这样的场景，当然对于一些传统的批处理场景，Mapreduce仍然是一种可靠的选择。\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/spark%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/nevada-8338929_1280.jpg' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/cs_hu10005534405353342465.jpg" width="300"
+                            height="294" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">🥳</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#高频">高频</a>
+      <ol>
+        <li><a href="#spark-为什么比hive快">Spark 为什么比hive快</a></li>
+      </ol>
+    </li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/spark%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/">
+                <img src="/p/spark%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/nevada-8338929_1280_hu12942515254112204139.jpg"
+                        srcset="/p/spark%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/nevada-8338929_1280_hu12942515254112204139.jpg 800w, /p/spark%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/nevada-8338929_1280_hu2070711175736809333.jpg 1600w"
+                        width="800" 
+                        height="533" 
+                        loading="lazy"
+                        alt="Featured image of post Spark面试一文通" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/%E9%9D%A2%E8%AF%95%E4%B8%93%E9%A2%98/" style="background-color: #2a9d8f; color: #fff;">
+                面试专题
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/spark%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/">Spark面试一文通</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2025-03-12</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 2 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="高频">高频
+</h2><h3 id="spark-为什么比hive快">Spark 为什么比hive快
+</h3><p>Spark 相对于 Hive 具有以下几个方面的优势：</p>
+<ol>
+<li><strong>DAG计算模型</strong>：Spark 使用自己的DAG执行引擎，通过有向无环图（DAG）来表示任务，优化了任务的调度和执行，避免不必要的中间结果写入磁盘，也就是数据都存在内存中，直接通过算子处理，中间结果不落盘，从而大幅减少磁盘IO开销，而Hive默认使用 MapReduce 作为执行引擎，MapReduce计算模型比较简单，每个算子都会将中间结果写入磁盘，导致大量的磁盘 I/O 操作，所以速度较慢。</li>
+<li><strong>延迟计算</strong>: Spark 使用延迟计算机制，只有在遇到action操作如 collect、count时才会真正执行计算。这种机制允许 Spark 进行更多的优化，例如合并多个操作、减少数据 shuffle等并且内存分配更科学；而Hive 的查询通常是即时执行的，缺乏类似的优化机制。</li>
+<li><strong>数据分区和并行处理</strong>：Spark 支持更细粒度的数据分区和并行处理，可以更好地利用集群资源。Spark 的 RDD（弹性分布式数据集）和 DataFrame/Dataset API 提供了灵活的分区和并行处理机制。而Hive 的并行处理能力依赖于 MapReduce，MapReduce 的并行度受限于 Map 和 Reduce 任务的数量，且任务调度开销较大。</li>
+<li><strong>优化器</strong>：Spark 提供了 Catalyst 优化器，用于优化 SQL 查询的执行计划。Catalyst 优化器可以进行谓词下推、列剪裁、常量折叠等多种优化，显著提高查询性能。Hive 也有优化器，但其优化能力相对较弱，尤其是在处理复杂查询时，优化效果不如 Spark。</li>
+<li><strong>JVM 的优化</strong> : Hive 每次 MapReduce 操作，启动一个 Task 便会启动一次 JVM，基于进程的操作。而 Spark 每次操作是基于线程的，只在启动 Executor 时候启动一次 JVM，内存的 Task 操作是线程复用的。每次启动 JVM 的时间可能就需要几秒甚至十几秒，那么当 Task 多了，mapreduce 不知道比 Spark 慢了多少。</li>
+</ol>
+<p>总的来说Spark 之所以比 Hive 快，主要是因为 Spark 采用了DAG计算模型或者说内存计算、延迟计算、Catalyst 优化器等先进技术，减少了磁盘 I/O 和任务调度开销，提高了数据处理效率，因此Spark非常适合像批处理、机器学习这样的场景，当然对于一些传统的批处理场景，Mapreduce仍然是一种可靠的选择。</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/hive%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/">
+        
+        
+            <div class="article-image">
+                <img src="/p/hive%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/trees-8136806_1280.357dd549ed51f498bcbf5425f76e0416_hu9173719500181869714.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Hive面试一文通"
+                        
+                        data-hash="md5-NX3VSe1R9Ji8v1Ql924EFg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Hive面试一文通</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/flink%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/">
+        
+        
+            <div class="article-image">
+                <img src="/p/flink%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/leaf-8687801_1280.88b6b08dfc2ee2e24256c1491b57935f_hu14693269959298157630.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Flink面试一文通"
+                        
+                        data-hash="md5-iLawjfwu4uJCVsFJG1eTXw==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Flink面试一文通</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E4%BA%8C%E5%8F%89%E6%A0%91%E9%81%8D%E5%8E%86%E4%B8%80%E6%96%87%E9%80%9A/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E4%BA%8C%E5%8F%89%E6%A0%91%E9%81%8D%E5%8E%86%E4%B8%80%E6%96%87%E9%80%9A/grebe-7972183_1280.6dd8a2d7b8cf99148cf7a877d9459ae8_hu10399000877992530385.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 二叉树遍历一文通"
+                        
+                        data-hash="md5-bdii17jPmRSM96h32UWa6A==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">二叉树遍历一文通</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B8%80%E6%96%87%E9%80%9A/matt-le-SJSpo9hQf7s-unsplash.8eae06664ddfb3e8dc6e000756cb703b_hu13612953062116952428.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 动态规划一文通"
+                        
+                        data-hash="md5-jq4GZk3fs&#43;jcbgAHVstwOw==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">动态规划一文通</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%8F%8C%E6%8C%87%E9%92%88%E4%B8%80%E6%96%87%E9%80%9A/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%8F%8C%E6%8C%87%E9%92%88%E4%B8%80%E6%96%87%E9%80%9A/the-creative-exchange-d2zvqp3fpro-unsplash.60116b1ccfc8632e9a65f7d51df3efc2_hu2042364712198079406.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 双指针一文通"
+                        
+                        data-hash="md5-YBFrHM/IYy6aZffVHfPvwg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">双指针一文通</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2025 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
