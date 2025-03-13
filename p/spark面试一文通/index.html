@@ -269,9 +269,9 @@
     <li><a href="#高频">高频</a>
       <ol>
         <li><a href="#spark-为什么比hive快">Spark 为什么比hive快</a></li>
-        <li><a href="#spark中缓存机制与checkpoint机制的区别与联系">Spark中缓存机制与checkpoint机制的区别与联系</a></li>
+        <li><a href="#缓存机制与checkpoint机制的区别与联系">缓存机制与checkpoint机制的区别与联系</a></li>
         <li><a href="#说下spark-join的分类">说下Spark join的分类</a></li>
-        <li><a href="#spark的阶段划分">Spark的阶段划分</a></li>
+        <li><a href="#spark的stage划分">Spark的Stage划分</a></li>
         <li><a href="#spark处理数据的具体流程">Spark处理数据的具体流程</a></li>
         <li><a href="#spark-map-join的实现原理">Spark map join的实现原理</a></li>
         <li><a href="#介绍下spark-shuffle以及其优缺点">介绍下Spark Shuffle以及其优缺点</a></li>
@@ -486,7 +486,7 @@
 
 
                 <time class="article-time--reading">
-                    阅读时长: 84 分钟
+                    阅读时长: 87 分钟
                 </time>
             </div>
         
@@ -512,11 +512,8 @@
 <li><strong>JVM 的优化</strong> : Hive 每次 MapReduce 操作，启动一个 Task 便会启动一次 JVM，基于进程的操作。而 Spark 每次操作是基于线程的，只在启动 Executor 时候启动一次 JVM，内存的 Task 操作是线程复用的。每次启动 JVM 的时间可能就需要几秒甚至十几秒，那么当 Task 多了，mapreduce 不知道比 Spark 慢了多少。</li>
 </ol>
 <p>总的来说Spark 之所以比 Hive 快，主要是因为 Spark 采用了DAG计算模型或者说内存计算、延迟计算、Catalyst 优化器等先进技术，减少了磁盘 I/O 和任务调度开销，提高了数据处理效率，因此Spark非常适合像批处理、机器学习这样的场景，当然对于一些传统的批处理场景，Mapreduce仍然是一种可靠的选择。</p>
-<h3 id="spark中缓存机制与checkpoint机制的区别与联系">Spark中缓存机制与checkpoint机制的区别与联系
-</h3><p>两者都是做RDD持久化的</p>
-<p><strong>RDD的缓存机制</strong></p>
-<p>RDD通过cache方法或者persist方法可以将前面的计算结果缓存，但并不是立即缓存，而是在调用Action算子的时候，这个RDD会被缓存在计算节点的内存中，并供后面使用。缓存既不是transformation也不是action类的算子。</p>
-<p>注意：缓存结束后，不会产生新的RDD</p>
+<h3 id="缓存机制与checkpoint机制的区别与联系">缓存机制与checkpoint机制的区别与联系
+</h3><p>两者都是做RDD持久化的，RDD通过cache方法或者persist方法可以将前面的计算结果缓存，但并不是立即缓存，而是在调用Action算子的时候，这个RDD会被缓存在计算节点的内存中，并供后面使用。缓存既不是transformation也不是action类的算子，并且缓存结束后不会产生新的RDD。</p>
 <p>缓存有可能丢失，或者存储于内存的数据由于内存不足而被删除，RDD的缓存容错机制保证了即使缓存丢失也能保证计算的正确执行。通过基于RDD的一系列转换，丢失的数据会被重算，由于RDD的各个Partition是相对独立的，因此只需要计算丢失的部分即可，并不需要重算全部Partition。</p>
 <p>使用缓存的条件：（或者说什么时候进行缓存）</p>
 <ol>
@@ -526,17 +523,114 @@
 <li>先进行过滤，然后将缩小范围后的数据缓存到内存中</li>
 </ol>
 <p>在使用完数据之后，要释放缓存，否则会一直在内存中占用资源</p>
-<p><strong>CheckPoint机制（容错机制）</strong></p>
-<p>RDD的缓存容错机制能保证数据丢失也能正常的运行，是因为在每一个RDD中，都存有上一个RDD的信息，当RDD丢失以后，可以追溯到元数据，再进行计算</p>
-<p>CheckPoint(本质是通过将RDD写入高可用的地方（例如 hdfs）做检查点）是为了通过lineage（血统）做容错的辅助，lineage过长会造成容错成本过高，这样就不如在中间阶段做检查点容错，如果之后有节点出现问题而丢失分区，从做检查点的RDD开始重做Lineage，就会减少开销</p>
-<p>设置checkpoint的目录，可以是本地的文件夹、也可以是HDFS、S3。一般是在具有容错能力，高可靠的文件系统上设置一个检查点路径，用于保存检查点数据</p>
-<p>在设置检查点之后，该RDD之前的有依赖关系的父RDD都会被销毁，下次调用的时候直接从检查点开始计算。
-checkPoint和cache一样，都是通过调用一个Action类的算子才能运行</p>
-<p>checkPoint降低运行时间的原因：第一次调用检查点的时候，会产生两个executor，两个进程分别是从hdfs读文件和计算（调用的Action类的算子），在第二次调用的时候会发现，运行的时间大大减少，是由于第二次调用算子的时候，不会再从hdfs读源文件，而是直接从hdfs读取缓存到的数据</p>
+<p>RDD的缓存容错机制能保证数据丢失也能正常的运行，是因为在每一个RDD中，都存有上一个RDD的信息，当RDD丢失以后，可以追溯到元数据，再进行计算。</p>
+<p>CheckPoint(本质是通过将RDD写入高可用的地方（例如 hdfs）做检查点）是为了通过lineage（血统）做容错的辅助，lineage过长会造成容错成本过高，这样就不如在中间阶段做检查点容错，如果之后有节点出现问题而丢失分区，从做检查点的RDD开始重做Lineage，就会减少开销。</p>
+<p>设置checkpoint的目录，可以是本地的文件夹、也可以是HDFS、S3。一般是在具有容错能力，高可靠的文件系统上设置一个检查点路径，用于保存检查点数据。</p>
+<p>在设置检查点之后，该RDD之前的有依赖关系的父RDD都会被销毁，下次调用的时候直接从检查点开始计算。checkPoint和cache一样，都是通过调用一个Action类的算子才能运行。checkPoint降低运行时间的原因：第一次调用检查点的时候，会产生两个executor，两个进程分别是从hdfs读文件和计算（调用的Action类的算子），在第二次调用的时候会发现，运行的时间大大减少，是由于第二次调用算子的时候，不会再从hdfs读源文件，而是直接从hdfs读取缓存到的数据</p>
 <h3 id="说下spark-join的分类">说下Spark join的分类
-</h3><h3 id="spark的阶段划分">Spark的阶段划分
-</h3><h3 id="spark处理数据的具体流程">Spark处理数据的具体流程
-</h3><h3 id="spark-map-join的实现原理">Spark map join的实现原理
+</h3><p>根据数据分布的方式，可以分为Shuffle Join、Broadcast Join和Bucket Join。</p>
+<ul>
+<li>Shuffle Join：数据需要通过网络Shuffle到不同的节点，网络传输开销大，性能差。</li>
+<li>Broadcast Join：将小表广播到所有Executor节点，避免Shuffle，适用于一个大表和小表的JOIN，避免了Shuffle，性能较高。</li>
+<li>Bucket Join：两个表都按照JOIN Key进行分桶，且分桶数相同，避免了Shuffle，数据可以直接在本地JOIN。但需要两张表都进行分桶，且分桶规则匹配。</li>
+</ul>
+<p>根据执行的方式，可以分为SortMergeJoin、Hash Join和Nested Loop Join。</p>
+<ul>
+<li>Sort Merge Join：对JOIN Key进行排序后合并，是Spark中最常用的JOIN方式，适合大规模数据且性能稳定。</li>
+<li>Hash Join：对JOIN Key进行哈希分区后JOIN，适用于内存足够的情况也就是一张表可以完全放入内存，性能较高，适合小表JOIN大表。</li>
+<li>Nested Loop Join：通过嵌套循环的方式逐条匹配数据，性能较差，通常不推荐使用，适合两个小数据集的JOIN</li>
+</ul>
+<p>根据JOIN类型分类，有Inner Join、Left Join、Right Join、Full Outer Join、Cross Join、Left Semi Join和Left Anti Join</p>
+<ul>
+<li>
+<p>Inner Join：只返回两个表中匹配的记录。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">FROM</span><span class="w"> </span><span class="n">table1</span><span class="w"> </span><span class="n">INNER</span><span class="w"> </span><span class="n">JOIN</span><span class="w"> </span><span class="n">table2</span><span class="w"> </span><span class="n">ON</span><span class="w"> </span><span class="n">table1</span><span class="p">.</span><span class="na">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">table2</span><span class="p">.</span><span class="na">key</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>Left Join：返回左表的所有记录，以及右表中匹配的记录（不匹配的字段为 NULL）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">FROM</span><span class="w"> </span><span class="n">table1</span><span class="w"> </span><span class="n">LEFT</span><span class="w"> </span><span class="n">JOIN</span><span class="w"> </span><span class="n">table2</span><span class="w"> </span><span class="n">ON</span><span class="w"> </span><span class="n">table1</span><span class="p">.</span><span class="na">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">table2</span><span class="p">.</span><span class="na">key</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>Right Join：返回右表的所有记录，以及左表中匹配的记录（不匹配的字段为 NULL）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">FROM</span><span class="w"> </span><span class="n">table1</span><span class="w"> </span><span class="n">RIGHT</span><span class="w"> </span><span class="n">JOIN</span><span class="w"> </span><span class="n">table2</span><span class="w"> </span><span class="n">ON</span><span class="w"> </span><span class="n">table1</span><span class="p">.</span><span class="na">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">table2</span><span class="p">.</span><span class="na">key</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>Full Outer Join：返回两个表的所有记录，不匹配的字段为 NULL。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">FROM</span><span class="w"> </span><span class="n">table1</span><span class="w"> </span><span class="n">FULL</span><span class="w"> </span><span class="n">OUTER</span><span class="w"> </span><span class="n">JOIN</span><span class="w"> </span><span class="n">table2</span><span class="w"> </span><span class="n">ON</span><span class="w"> </span><span class="n">table1</span><span class="p">.</span><span class="na">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">table2</span><span class="p">.</span><span class="na">key</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>Cross Join：返回两个表的笛卡尔积。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">FROM</span><span class="w"> </span><span class="n">table1</span><span class="w"> </span><span class="n">CROSS</span><span class="w"> </span><span class="n">JOIN</span><span class="w"> </span><span class="n">table2</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>Left Semi Join：只返回左表中与右表匹配的记录。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">FROM</span><span class="w"> </span><span class="n">table1</span><span class="w"> </span><span class="n">LEFT</span><span class="w"> </span><span class="n">SEMI</span><span class="w"> </span><span class="n">JOIN</span><span class="w"> </span><span class="n">table2</span><span class="w"> </span><span class="n">ON</span><span class="w"> </span><span class="n">table1</span><span class="p">.</span><span class="na">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">table2</span><span class="p">.</span><span class="na">key</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>Left Anti Join：只返回左表中与右表不匹配的记录。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">FROM</span><span class="w"> </span><span class="n">table1</span><span class="w"> </span><span class="n">LEFT</span><span class="w"> </span><span class="n">ANTI</span><span class="w"> </span><span class="n">JOIN</span><span class="w"> </span><span class="n">table2</span><span class="w"> </span><span class="n">ON</span><span class="w"> </span><span class="n">table1</span><span class="p">.</span><span class="na">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">table2</span><span class="p">.</span><span class="na">key</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h3 id="spark的stage划分">Spark的Stage划分
+</h3><p>Spark会将Job作业根据宽依赖划分为多个Stage，每个Stage包含一组可以并行执行的Task任务。</p>
+<p>它的划分流程是这样，首先会从最终的RDD开始，逆向遍历RDD的血缘关系(Lineage)，遇到窄依赖时就继续向上遍历，遇到宽依赖时，将当前已经遍历过的RDD划分为一个Stage，并创建一个新的Stage重复上诉过程，直到遍历完所有的RDD。</p>
+<p>尽量避免使用 groupByKey 等宽依赖操作，改用 reduceByKey 等窄依赖操作。同时可以通过 Spark UI 查看作业的阶段划分和任务执行情况，以及查看 Driver 和 Executor 的日志，分析阶段划分和任务执行的性能瓶颈。</p>
+<h3 id="spark处理数据的具体流程">Spark处理数据的具体流程
+</h3><p>Spark处理数据的流程包括数据加载、任务调度、数据计算、结果输出，这个过程也涉及到资源干礼以及容错等操作。</p>
+<p>首先第一步是数据加载，Spark支持多种数据源像HDFS、S3、本地文件系统、Kafka、JDBC等，可以通过textFile、read、parallelize等方法来加载数据，数据加载后会被划分为多个分区，每个分区都是一个独立的数据块。</p>
+<p>第二步是任务的调度，Spark 根据 RDD 的血缘关系（Lineage）生成有向无环图（DAG），DAG 描述了数据处理的逻辑流程，包括转换操作（Transformation）和行动操作（Action）。然后Spark 会将 DAG 划分为多个阶段（Stage），每个阶段包含一组可以并行执行的任务（Task）。阶段划分的依据是宽依赖（Shuffle Dependency）和窄依赖（Narrow Dependency）。然后Spark 将任务分配给 Executor 执行，任务调度由 Driver 程序负责。</p>
+<p>第三步是任务计算，每个Task任务处理一个分区的数据，执行转换操作如map、filter等，任务在Executor中执行，Executor是运行在集群节点上的进程，在遇到宽依赖比如groupByKey、join的时候，Spark会进行Shuffle操作，Shuffle 操作涉及数据的跨节点传输和重新分区。如果数据需要多次使用，可以将其缓存到内存或磁盘中（如 persist、cache）。</p>
+<p>最后一步就是结果输出，对于行动操作（如 collect、count），Spark 会将结果返回给 Driver 程序，对于输出操作（如 saveAsTextFile、saveAsTable），Spark 会将结果存储到外部存储系统中。</p>
+<h3 id="spark-map-join的实现原理">Spark map join的实现原理
 </h3><h3 id="介绍下spark-shuffle以及其优缺点">介绍下Spark Shuffle以及其优缺点
 </h3><h3 id="什么情况下会产生spark-shuffle">什么情况下会产生Spark Shuffle
 </h3><h3 id="为什么要spark-shuffle">为什么要Spark Shuffle
