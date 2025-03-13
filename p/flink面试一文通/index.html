@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="zh-cn" dir="ltr">
     <head><meta charset='utf-8'>
-<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="高频 基本 简单介绍一下 Flink Flink 是一个框架和分布式处理引擎，用于对无界和有界数据流进行有状态计算。并且 Flink 提供了数据分布、容错机制以及资源管理等核心功能。Flink提供了诸多高抽象层的API以便用户编写分布式任务：\n">
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="高频 Flink架构 Flink的窗口都有哪些，什么区别，如何定义 说一说Flink的checkpoint机制 checkpoint底层如何实现的 checkpoint和savepoint的区别 Checkpoint工作流程 Checkpoint的作用 Flink中Checkpoint超时原因 Flink的Exactly Once语义怎么保证 Flink的端到端Exactly Once Flink的水印(Watermark)有哪几种 Flink的时间语义 Flink相比其他流式处理框架的优点 Flink和Spark的区别？什么情况下使用Flink？有什么优点？ Flink backPressure反压机制是什么样的，指标监控你是怎么做的 Flink如何保持一致性 Flink支持JobManager的HA吗？原理是怎么样的？ 如何确定Flink任务的合理并行度 Flink任务如何实现端到端一致 Flink如何处理背压 Flink解决数据延迟的问题 Flink消费kafka分区的数据室，Flink任务并行度之间的关系 使用Flink-client消费kafka数据还是使用flink-connector消费 如何动态修改Flink的配置，前提是Flink不能重启 Flink流批一体解释一下 说一下Flink的check和barrier 说一下Flink状态机制 Flink广播流 Flink实时topN Savepoint知道是什么吗 基本 简单介绍一下 Flink Flink 是一个框架和分布式处理引擎，用于对无界和有界数据流进行有状态计算。并且 Flink 提供了数据分布、容错机制以及资源管理等核心功能。Flink提供了诸多高抽象层的API以便用户编写分布式任务：\n">
 <title>Flink面试一文通</title>
 
 <link rel='canonical' href='https://sherlock-lin.github.io/p/flink%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/'>
 
 <link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="Flink面试一文通">
-<meta property='og:description' content="高频 基本 简单介绍一下 Flink Flink 是一个框架和分布式处理引擎，用于对无界和有界数据流进行有状态计算。并且 Flink 提供了数据分布、容错机制以及资源管理等核心功能。Flink提供了诸多高抽象层的API以便用户编写分布式任务：\n">
+<meta property='og:description' content="高频 Flink架构 Flink的窗口都有哪些，什么区别，如何定义 说一说Flink的checkpoint机制 checkpoint底层如何实现的 checkpoint和savepoint的区别 Checkpoint工作流程 Checkpoint的作用 Flink中Checkpoint超时原因 Flink的Exactly Once语义怎么保证 Flink的端到端Exactly Once Flink的水印(Watermark)有哪几种 Flink的时间语义 Flink相比其他流式处理框架的优点 Flink和Spark的区别？什么情况下使用Flink？有什么优点？ Flink backPressure反压机制是什么样的，指标监控你是怎么做的 Flink如何保持一致性 Flink支持JobManager的HA吗？原理是怎么样的？ 如何确定Flink任务的合理并行度 Flink任务如何实现端到端一致 Flink如何处理背压 Flink解决数据延迟的问题 Flink消费kafka分区的数据室，Flink任务并行度之间的关系 使用Flink-client消费kafka数据还是使用flink-connector消费 如何动态修改Flink的配置，前提是Flink不能重启 Flink流批一体解释一下 说一下Flink的check和barrier 说一下Flink状态机制 Flink广播流 Flink实时topN Savepoint知道是什么吗 基本 简单介绍一下 Flink Flink 是一个框架和分布式处理引擎，用于对无界和有界数据流进行有状态计算。并且 Flink 提供了数据分布、容错机制以及资源管理等核心功能。Flink提供了诸多高抽象层的API以便用户编写分布式任务：\n">
 <meta property='og:url' content='https://sherlock-lin.github.io/p/flink%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/'>
 <meta property='og:site_name' content='夏洛克-林'>
 <meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2025-03-12T11:52:29&#43;08:00'/><meta property='article:modified_time' content='2025-03-12T11:52:29&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/flink%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/leaf-8687801_1280.jpg' />
 <meta name="twitter:title" content="Flink面试一文通">
-<meta name="twitter:description" content="高频 基本 简单介绍一下 Flink Flink 是一个框架和分布式处理引擎，用于对无界和有界数据流进行有状态计算。并且 Flink 提供了数据分布、容错机制以及资源管理等核心功能。Flink提供了诸多高抽象层的API以便用户编写分布式任务：\n"><meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="高频 Flink架构 Flink的窗口都有哪些，什么区别，如何定义 说一说Flink的checkpoint机制 checkpoint底层如何实现的 checkpoint和savepoint的区别 Checkpoint工作流程 Checkpoint的作用 Flink中Checkpoint超时原因 Flink的Exactly Once语义怎么保证 Flink的端到端Exactly Once Flink的水印(Watermark)有哪几种 Flink的时间语义 Flink相比其他流式处理框架的优点 Flink和Spark的区别？什么情况下使用Flink？有什么优点？ Flink backPressure反压机制是什么样的，指标监控你是怎么做的 Flink如何保持一致性 Flink支持JobManager的HA吗？原理是怎么样的？ 如何确定Flink任务的合理并行度 Flink任务如何实现端到端一致 Flink如何处理背压 Flink解决数据延迟的问题 Flink消费kafka分区的数据室，Flink任务并行度之间的关系 使用Flink-client消费kafka数据还是使用flink-connector消费 如何动态修改Flink的配置，前提是Flink不能重启 Flink流批一体解释一下 说一下Flink的check和barrier 说一下Flink状态机制 Flink广播流 Flink实时topN Savepoint知道是什么吗 基本 简单介绍一下 Flink Flink 是一个框架和分布式处理引擎，用于对无界和有界数据流进行有状态计算。并且 Flink 提供了数据分布、容错机制以及资源管理等核心功能。Flink提供了诸多高抽象层的API以便用户编写分布式任务：\n"><meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content='https://sherlock-lin.github.io/p/flink%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/leaf-8687801_1280.jpg' />
     </head>
     <body class="
@@ -266,7 +266,40 @@
         <div class="widget--toc">
             <nav id="TableOfContents">
   <ol>
-    <li><a href="#高频">高频</a></li>
+    <li><a href="#高频">高频</a>
+      <ol>
+        <li><a href="#flink架构">Flink架构</a></li>
+        <li><a href="#flink的窗口都有哪些什么区别如何定义">Flink的窗口都有哪些，什么区别，如何定义</a></li>
+        <li><a href="#说一说flink的checkpoint机制">说一说Flink的checkpoint机制</a></li>
+        <li><a href="#checkpoint底层如何实现的">checkpoint底层如何实现的</a></li>
+        <li><a href="#checkpoint和savepoint的区别">checkpoint和savepoint的区别</a></li>
+        <li><a href="#checkpoint工作流程">Checkpoint工作流程</a></li>
+        <li><a href="#checkpoint的作用">Checkpoint的作用</a></li>
+        <li><a href="#flink中checkpoint超时原因">Flink中Checkpoint超时原因</a></li>
+        <li><a href="#flink的exactly-once语义怎么保证">Flink的Exactly Once语义怎么保证</a></li>
+        <li><a href="#flink的端到端exactly-once">Flink的端到端Exactly Once</a></li>
+        <li><a href="#flink的水印watermark有哪几种">Flink的水印(Watermark)有哪几种</a></li>
+        <li><a href="#flink的时间语义">Flink的时间语义</a></li>
+        <li><a href="#flink相比其他流式处理框架的优点">Flink相比其他流式处理框架的优点</a></li>
+        <li><a href="#flink和spark的区别什么情况下使用flink有什么优点">Flink和Spark的区别？什么情况下使用Flink？有什么优点？</a></li>
+        <li><a href="#flink-backpressure反压机制是什么样的指标监控你是怎么做的">Flink backPressure反压机制是什么样的，指标监控你是怎么做的</a></li>
+        <li><a href="#flink如何保持一致性">Flink如何保持一致性</a></li>
+        <li><a href="#flink支持jobmanager的ha吗原理是怎么样的">Flink支持JobManager的HA吗？原理是怎么样的？</a></li>
+        <li><a href="#如何确定flink任务的合理并行度">如何确定Flink任务的合理并行度</a></li>
+        <li><a href="#flink任务如何实现端到端一致">Flink任务如何实现端到端一致</a></li>
+        <li><a href="#flink如何处理背压">Flink如何处理背压</a></li>
+        <li><a href="#flink解决数据延迟的问题">Flink解决数据延迟的问题</a></li>
+        <li><a href="#flink消费kafka分区的数据室flink任务并行度之间的关系">Flink消费kafka分区的数据室，Flink任务并行度之间的关系</a></li>
+        <li><a href="#使用flink-client消费kafka数据还是使用flink-connector消费">使用Flink-client消费kafka数据还是使用flink-connector消费</a></li>
+        <li><a href="#如何动态修改flink的配置前提是flink不能重启">如何动态修改Flink的配置，前提是Flink不能重启</a></li>
+        <li><a href="#flink流批一体解释一下">Flink流批一体解释一下</a></li>
+        <li><a href="#说一下flink的check和barrier">说一下Flink的check和barrier</a></li>
+        <li><a href="#说一下flink状态机制">说一下Flink状态机制</a></li>
+        <li><a href="#flink广播流">Flink广播流</a></li>
+        <li><a href="#flink实时topn">Flink实时topN</a></li>
+        <li><a href="#savepoint知道是什么吗">Savepoint知道是什么吗</a></li>
+      </ol>
+    </li>
     <li><a href="#基本">基本</a>
       <ol>
         <li><a href="#简单介绍一下-flink">简单介绍一下 Flink</a></li>
@@ -417,7 +450,7 @@
 
 
                 <time class="article-time--reading">
-                    阅读时长: 48 分钟
+                    阅读时长: 49 分钟
                 </time>
             </div>
         
@@ -433,7 +466,37 @@
     
     
     <h2 id="高频">高频
-</h2><h2 id="基本">基本
+</h2><h3 id="flink架构">Flink架构
+</h3><h3 id="flink的窗口都有哪些什么区别如何定义">Flink的窗口都有哪些，什么区别，如何定义
+</h3><h3 id="说一说flink的checkpoint机制">说一说Flink的checkpoint机制
+</h3><h3 id="checkpoint底层如何实现的">checkpoint底层如何实现的
+</h3><h3 id="checkpoint和savepoint的区别">checkpoint和savepoint的区别
+</h3><h3 id="checkpoint工作流程">Checkpoint工作流程
+</h3><h3 id="checkpoint的作用">Checkpoint的作用
+</h3><h3 id="flink中checkpoint超时原因">Flink中Checkpoint超时原因
+</h3><h3 id="flink的exactly-once语义怎么保证">Flink的Exactly Once语义怎么保证
+</h3><h3 id="flink的端到端exactly-once">Flink的端到端Exactly Once
+</h3><h3 id="flink的水印watermark有哪几种">Flink的水印(Watermark)有哪几种
+</h3><h3 id="flink的时间语义">Flink的时间语义
+</h3><h3 id="flink相比其他流式处理框架的优点">Flink相比其他流式处理框架的优点
+</h3><h3 id="flink和spark的区别什么情况下使用flink有什么优点">Flink和Spark的区别？什么情况下使用Flink？有什么优点？
+</h3><h3 id="flink-backpressure反压机制是什么样的指标监控你是怎么做的">Flink backPressure反压机制是什么样的，指标监控你是怎么做的
+</h3><h3 id="flink如何保持一致性">Flink如何保持一致性
+</h3><h3 id="flink支持jobmanager的ha吗原理是怎么样的">Flink支持JobManager的HA吗？原理是怎么样的？
+</h3><h3 id="如何确定flink任务的合理并行度">如何确定Flink任务的合理并行度
+</h3><h3 id="flink任务如何实现端到端一致">Flink任务如何实现端到端一致
+</h3><h3 id="flink如何处理背压">Flink如何处理背压
+</h3><h3 id="flink解决数据延迟的问题">Flink解决数据延迟的问题
+</h3><h3 id="flink消费kafka分区的数据室flink任务并行度之间的关系">Flink消费kafka分区的数据室，Flink任务并行度之间的关系
+</h3><h3 id="使用flink-client消费kafka数据还是使用flink-connector消费">使用Flink-client消费kafka数据还是使用flink-connector消费
+</h3><h3 id="如何动态修改flink的配置前提是flink不能重启">如何动态修改Flink的配置，前提是Flink不能重启
+</h3><h3 id="flink流批一体解释一下">Flink流批一体解释一下
+</h3><h3 id="说一下flink的check和barrier">说一下Flink的check和barrier
+</h3><h3 id="说一下flink状态机制">说一下Flink状态机制
+</h3><h3 id="flink广播流">Flink广播流
+</h3><h3 id="flink实时topn">Flink实时topN
+</h3><h3 id="savepoint知道是什么吗">Savepoint知道是什么吗
+</h3><h2 id="基本">基本
 </h2><h3 id="简单介绍一下-flink">简单介绍一下 Flink
 </h3><p>Flink 是一个框架和分布式处理引擎，用于对无界和有界数据流进行有状态计算。并且 Flink 提供了数据分布、容错机制以及资源管理等核心功能。Flink提供了诸多高抽象层的API以便用户编写分布式任务：</p>
 <ul>
