@@ -269,17 +269,84 @@
     <li><a href="#高频">高频</a>
       <ol>
         <li><a href="#spark-为什么比hive快">Spark 为什么比hive快</a></li>
-        <li><a href="#缓存机制与checkpoint机制的区别与联系">缓存机制与checkpoint机制的区别与联系</a></li>
+        <li><a href="#缓存机制与checkpoint机制的区别">缓存机制与checkpoint机制的区别</a></li>
         <li><a href="#说下spark-join的分类">说下Spark join的分类</a></li>
         <li><a href="#spark的stage划分">Spark的Stage划分</a></li>
         <li><a href="#spark处理数据的具体流程">Spark处理数据的具体流程</a></li>
         <li><a href="#spark-map-join的实现原理">Spark map join的实现原理</a></li>
+        <li><a href="#spark应用程序执行流程">Spark应用程序执行流程</a></li>
         <li><a href="#介绍下spark-shuffle以及其优缺点">介绍下Spark Shuffle以及其优缺点</a></li>
         <li><a href="#什么情况下会产生spark-shuffle">什么情况下会产生Spark Shuffle</a></li>
         <li><a href="#为什么要spark-shuffle">为什么要Spark Shuffle</a></li>
-        <li><a href="#spark的stage如何划分在源码中是怎么判断属于shufflemap-stage或result-stage的">Spark的Stage如何划分？在源码中是怎么判断属于ShuffleMap Stage或Result Stage的？</a></li>
-        <li><a href="#spark-join在什么情况下会变成窄依赖">Spark join在什么情况下会变成窄依赖</a></li>
+        <li><a href="#说明yarn-cluster模式作业提交流程yarn-cluster与yarn-client的区别">说明yarn-cluster模式作业提交流程，yarn-cluster与yarn-client的区别</a></li>
         <li><a href="#spark的内存模型">Spark的内存模型</a></li>
+        <li><a href="#说说rdddataframedataset三者的区别与联系">说说RDD、DataFrame、DataSet三者的区别与联系</a></li>
+        <li><a href="#介绍一下spark-sql解析过程">介绍一下Spark SQL解析过程</a></li>
+        <li><a href="#说说spark的动态资源分配">说说Spark的动态资源分配</a></li>
+        <li><a href="#简述广播变量和累加器的基本原理和用途">简述广播变量和累加器的基本原理和用途</a></li>
+        <li><a href="#spark的优化怎么做spark做过哪些优化原理是什么">Spark的优化怎么做？Spark做过哪些优化？原理是什么</a></li>
+        <li><a href="#spark中lineage的基本原理">Spark中Lineage的基本原理</a></li>
+        <li><a href="#谈一谈spark中的容错机制">谈一谈Spark中的容错机制</a></li>
+        <li><a href="#说说spark数据倾斜">说说Spark数据倾斜</a></li>
+      </ol>
+    </li>
+    <li><a href="#基本">基本</a>
+      <ol>
+        <li><a href="#在源码中是怎么判断属于shufflemap-stage或result-stage的">在源码中是怎么判断属于ShuffleMap Stage或Result Stage的</a></li>
+        <li><a href="#spark-join在什么情况下会变成窄依赖">Spark join在什么情况下会变成窄依赖</a></li>
+        <li><a href="#数据本地性是在哪个环节确定的">数据本地性是在哪个环节确定的</a></li>
+        <li><a href="#spark的数据本地性有哪几种">Spark的数据本地性有哪几种</a></li>
+        <li><a href="#说说spark提交作业参数">说说Spark提交作业参数</a></li>
+        <li><a href="#spark的宽窄依赖以及spark如何划分stage如何确定每个stage中task个数">Spark的宽窄依赖，以及Spark如何划分Stage，如何确定每个Stage中Task个数</a></li>
+        <li><a href="#aqe是什么">AQE是什么</a></li>
+        <li><a href="#spark累加器有哪些特点">Spark累加器有哪些特点</a></li>
+        <li><a href="#spark使用parquet文件存储格式能带来哪些好处">Spark使用parquet文件存储格式能带来哪些好处</a></li>
+        <li><a href="#sparksql常用哪些算子">SparkSQL常用哪些算子</a></li>
+        <li><a href="#spark有哪两种算子">Spark有哪两种算子</a></li>
+        <li><a href="#对于spark中的数据倾斜问题你有什么好的方案">对于Spark中的数据倾斜问题你有什么好的方案</a></li>
+        <li><a href="#spark技术栈有哪些组件每个组件都有什么功能适合什么应用场景">Spark技术栈有哪些组件，每个组件都有什么功能，适合什么应用场景</a></li>
+        <li><a href="#描述以下算子的区别与联系">描述以下算子的区别与联系</a></li>
+        <li><a href="#spark算子可分为两类算子区别是什么分别举例">Spark算子可分为两类算子，区别是什么，分别举例</a></li>
+        <li><a href="#说说你对spark分区器的理解">说说你对Spark分区器的理解</a></li>
+        <li><a href="#spark-streaming-中有哪些消费kafka数据的方式它们之间的区别是什么">Spark Streaming 中有哪些消费Kafka数据的方式，它们之间的区别是什么</a></li>
+        <li><a href="#说说对spark-shuffle的理解">说说对Spark Shuffle的理解</a></li>
+        <li><a href="#说说spark的优化">说说Spark的优化</a></li>
+        <li><a href="#说说spark工作机制">说说Spark工作机制</a></li>
+        <li><a href="#说说spark-job执行流程spark的执行流程简要描述spark写数据的流程">说说Spark Job执行流程？spark的执行流程？简要描述Spark写数据的流程？</a></li>
+        <li><a href="#说说spark的运行模式简单描述wc">说说Spark的运行模式，简单描述WC</a></li>
+        <li><a href="#如何理解standalone模式下spark资源分配是粗粒度的">如何理解Standalone模式下，Spark资源分配是粗粒度的？</a></li>
+        <li><a href="#spark中standalone模式特点有哪些优点和缺点">Spark中standalone模式特点，有哪些优点和缺点？</a></li>
+        <li><a href="#简要描述spark分布式集群搭建的步骤">简要描述Spark分布式集群搭建的步骤</a></li>
+        <li><a href="#spark-streaming中如何实现精准一次消费">Spark Streaming中如何实现精准一次消费</a></li>
+        <li><a href="#spark中master-实现ha有哪些方式">Spark中Master 实现HA有哪些方式</a></li>
+        <li><a href="#spark-master使用zookeeper进行ha有哪些元数据保存在zookeeper">Spark master使用zookeeper进行HA，有哪些元数据保存在Zookeeper?</a></li>
+        <li><a href="#spark-master-ha-主从切换过程不会影响集群已有的作业运行为什么">Spark master HA 主从切换过程不会影响集群已有的作业运行，为什么？</a></li>
+        <li><a href="#spark-master如何通过zookeeper做ha">Spark master如何通过Zookeeper做HA？</a></li>
+        <li><a href="#说说spark-hashparitioner的弊端是什么">说说spark hashParitioner的弊端是什么</a></li>
+        <li><a href="#spark读取数据是几个partition呢">Spark读取数据，是几个Partition呢</a></li>
+        <li><a href="#rangepartitioner分区的原理">RangePartitioner分区的原理</a></li>
+        <li><a href="#rangepartioner分区器特点">RangePartioner分区器特点</a></li>
+        <li><a href="#介绍parition和block有什么关联关系">介绍parition和block有什么关联关系</a></li>
+        <li><a href="#什么是二次排序你是如何用spark实现二次排序的互联网公司常面">什么是二次排序，你是如何用spark实现二次排序的？（互联网公司常面）</a></li>
+        <li><a href="#如何使用spark解决topn问题互联网公司常面">如何使用Spark解决TopN问题？（互联网公司常面）</a></li>
+        <li><a href="#如何使用spark解决分组排序问题互联网公司常面">如何使用Spark解决分组排序问题？（互联网公司常面）</a></li>
+        <li><a href="#hadoop中mapreduce操作的mapper和reducer阶段相当于spark中的哪几个算子">Hadoop中，Mapreduce操作的mapper和reducer阶段相当于spark中的哪几个算子？</a></li>
+        <li><a href="#spark-shell启动时会启动derby">Spark shell启动时会启动derby</a></li>
+        <li><a href="#介绍一下你对unified-memory-management内存管理模型的理解">介绍一下你对Unified Memory Management内存管理模型的理解</a></li>
+        <li><a href="#hbase预分区个数和spark过程中的reduce个数相同么">HBase预分区个数和Spark过程中的reduce个数相同么</a></li>
+        <li><a href="#简要介绍下spark的内存管理">简要介绍下Spark的内存管理</a></li>
+        <li><a href="#spark读取hdfs上的文件然后count有多少行的操作你可以说说过程吗那这个count是在内存中还是磁盘中计算的呢">Spark读取hdfs上的文件，然后count有多少行的操作，你可以说说过程吗。那这个count是在内存中，还是磁盘中计算的呢</a></li>
+        <li><a href="#hbase-region多大会分区spark读取hbase数据是如何划分partition的">hbase region多大会分区，spark读取hbase数据是如何划分partition的</a></li>
+        <li><a href="#说说blockmanager怎么管理硬盘和内存的">说说BlockManager怎么管理硬盘和内存的</a></li>
+        <li><a href="#列举spark中常见的端口分别有什么功能">列举Spark中常见的端口，分别有什么功能</a></li>
+        <li><a href="#集群上nodemanager和resourcemanager的数量关系">集群上nodemanager和ResourceManager的数量关系</a></li>
+        <li><a href="#spark-如何防止内存溢出">Spark 如何防止内存溢出</a></li>
+        <li><a href="#spark的通信方式">Spark的通信方式</a></li>
+        <li><a href="#spark如何处理结构化数据spark如何处理非结构话数据">Spark如何处理结构化数据，Spark如何处理非结构话数据？</a></li>
+        <li><a href="#对于spark你觉得他对于现有大数据的现状的优势和劣势在哪里">对于Spark你觉得他对于现有大数据的现状的优势和劣势在哪里</a></li>
+        <li><a href="#简要描述你了解的一些数据挖掘算法与内容">简要描述你了解的一些数据挖掘算法与内容</a></li>
+        <li><a href="#spark-streaming中对接的socket的缓存策略是什么">Spark Streaming中对接的socket的缓存策略是什么</a></li>
+        <li><a href="#mapreduce和spark的相同和区别">Mapreduce和Spark的相同和区别</a></li>
         <li><a href="#对rdddag和task的理解">对RDD、DAG和Task的理解</a></li>
         <li><a href="#dag为什么适合spark">DAG为什么适合Spark</a></li>
         <li><a href="#介绍下spark的dag以及它的生成过程">介绍下Spark的DAG以及它的生成过程</a></li>
@@ -327,72 +394,6 @@
         <li><a href="#spark的rdd和partition的联系">Spark的RDD和partition的联系</a></li>
         <li><a href="#spark3的特性">Spark3的特性</a></li>
         <li><a href="#spakr计算的灵活性提现在哪里">Spakr计算的灵活性提现在哪里</a></li>
-        <li><a href="#说说rdddataframedataset三者的区别与联系">说说RDD、DataFrame、DataSet三者的区别与联系</a></li>
-        <li><a href="#介绍一下spark-sql解析过程">介绍一下Spark SQL解析过程</a></li>
-        <li><a href="#说说spark的动态资源分配">说说Spark的动态资源分配</a></li>
-        <li><a href="#简述广播变量和累加器的基本原理和用途">简述广播变量和累加器的基本原理和用途</a></li>
-      </ol>
-    </li>
-    <li><a href="#基本">基本</a>
-      <ol>
-        <li><a href="#说说spark提交作业参数">说说Spark提交作业参数</a></li>
-        <li><a href="#spark的宽窄依赖以及spark如何划分stage如何确定每个stage中task个数">Spark的宽窄依赖，以及Spark如何划分Stage，如何确定每个Stage中Task个数</a></li>
-        <li><a href="#如何理解spark中lineage">如何理解Spark中Lineage</a></li>
-        <li><a href="#aqe是什么">AQE是什么</a></li>
-        <li><a href="#说明yarn-cluster模式作业提交流程yarn-cluster与yarn-client的区别">说明yarn-cluster模式作业提交流程，yarn-cluster与yarn-client的区别</a></li>
-        <li><a href="#spark应用程序的执行过程是什么spark的执行流程">Spark应用程序的执行过程是什么？spark的执行流程</a></li>
-        <li><a href="#spark的优化怎么做spark做过哪些优化原理是什么">Spark的优化怎么做？Spark做过哪些优化？原理是什么</a></li>
-        <li><a href="#spark中lineage的基本原理">Spark中Lineage的基本原理</a></li>
-        <li><a href="#spark累加器有哪些特点">Spark累加器有哪些特点</a></li>
-        <li><a href="#spark使用parquet文件存储格式能带来哪些好处">Spark使用parquet文件存储格式能带来哪些好处</a></li>
-        <li><a href="#sparksql常用哪些算子">SparkSQL常用哪些算子</a></li>
-        <li><a href="#spark有哪两种算子">Spark有哪两种算子</a></li>
-        <li><a href="#对于spark中的数据倾斜问题你有什么好的方案">对于Spark中的数据倾斜问题你有什么好的方案</a></li>
-        <li><a href="#spark技术栈有哪些组件每个组件都有什么功能适合什么应用场景">Spark技术栈有哪些组件，每个组件都有什么功能，适合什么应用场景</a></li>
-        <li><a href="#描述以下算子的区别与联系">描述以下算子的区别与联系</a></li>
-        <li><a href="#spark算子可分为两类算子区别是什么分别举例">Spark算子可分为两类算子，区别是什么，分别举例</a></li>
-        <li><a href="#说说你对spark分区器的理解">说说你对Spark分区器的理解</a></li>
-        <li><a href="#spark-streaming-中有哪些消费kafka数据的方式它们之间的区别是什么">Spark Streaming 中有哪些消费Kafka数据的方式，它们之间的区别是什么</a></li>
-        <li><a href="#简要介绍下spark的内存管理">简要介绍下Spark的内存管理</a></li>
-        <li><a href="#说说对spark-shuffle的理解">说说对Spark Shuffle的理解</a></li>
-        <li><a href="#谈一谈spark中的容错机制">谈一谈Spark中的容错机制</a></li>
-        <li><a href="#说说spark数据倾斜">说说Spark数据倾斜</a></li>
-        <li><a href="#说说spark的优化">说说Spark的优化</a></li>
-        <li><a href="#说说spark工作机制">说说Spark工作机制</a></li>
-        <li><a href="#说说spark-job执行流程spark的执行流程简要描述spark写数据的流程">说说Spark Job执行流程？spark的执行流程？简要描述Spark写数据的流程？</a></li>
-        <li><a href="#说说spark的运行模式简单描述wc">说说Spark的运行模式，简单描述WC</a></li>
-        <li><a href="#如何理解standalone模式下spark资源分配是粗粒度的">如何理解Standalone模式下，Spark资源分配是粗粒度的？</a></li>
-        <li><a href="#spark中standalone模式特点有哪些优点和缺点">Spark中standalone模式特点，有哪些优点和缺点？</a></li>
-        <li><a href="#简要描述spark分布式集群搭建的步骤">简要描述Spark分布式集群搭建的步骤</a></li>
-        <li><a href="#spark-streaming中如何实现精准一次消费">Spark Streaming中如何实现精准一次消费</a></li>
-        <li><a href="#spark中master-实现ha有哪些方式">Spark中Master 实现HA有哪些方式</a></li>
-        <li><a href="#spark-master使用zookeeper进行ha有哪些元数据保存在zookeeper">Spark master使用zookeeper进行HA，有哪些元数据保存在Zookeeper?</a></li>
-        <li><a href="#spark-master-ha-主从切换过程不会影响集群已有的作业运行为什么">Spark master HA 主从切换过程不会影响集群已有的作业运行，为什么？</a></li>
-        <li><a href="#spark-master如何通过zookeeper做ha">Spark master如何通过Zookeeper做HA？</a></li>
-        <li><a href="#说说spark-hashparitioner的弊端是什么">说说spark hashParitioner的弊端是什么</a></li>
-        <li><a href="#spark读取数据是几个partition呢">Spark读取数据，是几个Partition呢</a></li>
-        <li><a href="#rangepartitioner分区的原理">RangePartitioner分区的原理</a></li>
-        <li><a href="#rangepartioner分区器特点">RangePartioner分区器特点</a></li>
-        <li><a href="#介绍parition和block有什么关联关系">介绍parition和block有什么关联关系</a></li>
-        <li><a href="#什么是二次排序你是如何用spark实现二次排序的互联网公司常面">什么是二次排序，你是如何用spark实现二次排序的？（互联网公司常面）</a></li>
-        <li><a href="#如何使用spark解决topn问题互联网公司常面">如何使用Spark解决TopN问题？（互联网公司常面）</a></li>
-        <li><a href="#如何使用spark解决分组排序问题互联网公司常面">如何使用Spark解决分组排序问题？（互联网公司常面）</a></li>
-        <li><a href="#hadoop中mapreduce操作的mapper和reducer阶段相当于spark中的哪几个算子">Hadoop中，Mapreduce操作的mapper和reducer阶段相当于spark中的哪几个算子？</a></li>
-        <li><a href="#spark-shell启动时会启动derby">Spark shell启动时会启动derby</a></li>
-        <li><a href="#介绍一下你对unified-memory-management内存管理模型的理解">介绍一下你对Unified Memory Management内存管理模型的理解</a></li>
-        <li><a href="#hbase预分区个数和spark过程中的reduce个数相同么">HBase预分区个数和Spark过程中的reduce个数相同么</a></li>
-        <li><a href="#spark读取hdfs上的文件然后count有多少行的操作你可以说说过程吗那这个count是在内存中还是磁盘中计算的呢">Spark读取hdfs上的文件，然后count有多少行的操作，你可以说说过程吗。那这个count是在内存中，还是磁盘中计算的呢</a></li>
-        <li><a href="#hbase-region多大会分区spark读取hbase数据是如何划分partition的">hbase region多大会分区，spark读取hbase数据是如何划分partition的</a></li>
-        <li><a href="#说说blockmanager怎么管理硬盘和内存的">说说BlockManager怎么管理硬盘和内存的</a></li>
-        <li><a href="#列举spark中常见的端口分别有什么功能">列举Spark中常见的端口，分别有什么功能</a></li>
-        <li><a href="#集群上nodemanager和resourcemanager的数量关系">集群上nodemanager和ResourceManager的数量关系</a></li>
-        <li><a href="#spark-如何防止内存溢出">Spark 如何防止内存溢出</a></li>
-        <li><a href="#spark的通信方式">Spark的通信方式</a></li>
-        <li><a href="#spark如何处理结构化数据spark如何处理非结构话数据">Spark如何处理结构化数据，Spark如何处理非结构话数据？</a></li>
-        <li><a href="#对于spark你觉得他对于现有大数据的现状的优势和劣势在哪里">对于Spark你觉得他对于现有大数据的现状的优势和劣势在哪里</a></li>
-        <li><a href="#简要描述你了解的一些数据挖掘算法与内容">简要描述你了解的一些数据挖掘算法与内容</a></li>
-        <li><a href="#spark-streaming中对接的socket的缓存策略是什么">Spark Streaming中对接的socket的缓存策略是什么</a></li>
-        <li><a href="#mapreduce和spark的相同和区别">Mapreduce和Spark的相同和区别</a></li>
       </ol>
     </li>
     <li><a href="#实战">实战</a>
@@ -486,7 +487,7 @@
 
 
                 <time class="article-time--reading">
-                    阅读时长: 87 分钟
+                    阅读时长: 94 分钟
                 </time>
             </div>
         
@@ -512,7 +513,7 @@
 <li><strong>JVM 的优化</strong> : Hive 每次 MapReduce 操作，启动一个 Task 便会启动一次 JVM，基于进程的操作。而 Spark 每次操作是基于线程的，只在启动 Executor 时候启动一次 JVM，内存的 Task 操作是线程复用的。每次启动 JVM 的时间可能就需要几秒甚至十几秒，那么当 Task 多了，mapreduce 不知道比 Spark 慢了多少。</li>
 </ol>
 <p>总的来说Spark 之所以比 Hive 快，主要是因为 Spark 采用了DAG计算模型或者说内存计算、延迟计算、Catalyst 优化器等先进技术，减少了磁盘 I/O 和任务调度开销，提高了数据处理效率，因此Spark非常适合像批处理、机器学习这样的场景，当然对于一些传统的批处理场景，Mapreduce仍然是一种可靠的选择。</p>
-<h3 id="缓存机制与checkpoint机制的区别与联系">缓存机制与checkpoint机制的区别与联系
+<h3 id="缓存机制与checkpoint机制的区别">缓存机制与checkpoint机制的区别
 </h3><p>两者都是做RDD持久化的，RDD通过cache方法或者persist方法可以将前面的计算结果缓存，但并不是立即缓存，而是在调用Action算子的时候，这个RDD会被缓存在计算节点的内存中，并供后面使用。缓存既不是transformation也不是action类的算子，并且缓存结束后不会产生新的RDD。</p>
 <p>缓存有可能丢失，或者存储于内存的数据由于内存不足而被删除，RDD的缓存容错机制保证了即使缓存丢失也能保证计算的正确执行。通过基于RDD的一系列转换，丢失的数据会被重算，由于RDD的各个Partition是相对独立的，因此只需要计算丢失的部分即可，并不需要重算全部Partition。</p>
 <p>使用缓存的条件：（或者说什么时候进行缓存）</p>
@@ -631,60 +632,93 @@
 <p>第三步是任务计算，每个Task任务处理一个分区的数据，执行转换操作如map、filter等，任务在Executor中执行，Executor是运行在集群节点上的进程，在遇到宽依赖比如groupByKey、join的时候，Spark会进行Shuffle操作，Shuffle 操作涉及数据的跨节点传输和重新分区。如果数据需要多次使用，可以将其缓存到内存或磁盘中（如 persist、cache）。</p>
 <p>最后一步就是结果输出，对于行动操作（如 collect、count），Spark 会将结果返回给 Driver 程序，对于输出操作（如 saveAsTextFile、saveAsTable），Spark 会将结果存储到外部存储系统中。</p>
 <h3 id="spark-map-join的实现原理">Spark map join的实现原理
-</h3><h3 id="介绍下spark-shuffle以及其优缺点">介绍下Spark Shuffle以及其优缺点
-</h3><h3 id="什么情况下会产生spark-shuffle">什么情况下会产生Spark Shuffle
-</h3><h3 id="为什么要spark-shuffle">为什么要Spark Shuffle
-</h3><h3 id="spark的stage如何划分在源码中是怎么判断属于shufflemap-stage或result-stage的">Spark的Stage如何划分？在源码中是怎么判断属于ShuffleMap Stage或Result Stage的？
-</h3><h3 id="spark-join在什么情况下会变成窄依赖">Spark join在什么情况下会变成窄依赖
-</h3><h3 id="spark的内存模型">Spark的内存模型
-</h3><h3 id="对rdddag和task的理解">对RDD、DAG和Task的理解
-</h3><h3 id="dag为什么适合spark">DAG为什么适合Spark
-</h3><h3 id="介绍下spark的dag以及它的生成过程">介绍下Spark的DAG以及它的生成过程
-</h3><h3 id="dagscheduler如何划分干了什么活">DAGScheduler如何划分？干了什么活
-</h3><h3 id="spark的容错机制">Spark的容错机制
-</h3><h3 id="rdd的容错">RDD的容错
-</h3><h3 id="executor内存分配">Executor内存分配
-</h3><h3 id="spark的batchsize怎么解决小文件合并问题">Spark的batchsize，怎么解决小文件合并问题
-</h3><h3 id="spark参数性能调优">Spark参数(性能)调优
-</h3><h3 id="介绍一下spark是怎么基于内存计算的">介绍一下Spark是怎么基于内存计算的
-</h3><h3 id="说下什么是rdd对rdd的理解rdd有哪些特点说下知道的rdd算子">说下什么是RDD(对RDD的理解)，RDD有哪些特点？说下知道的RDD算子
-</h3><h3 id="rdd底层原理">RDD底层原理
-</h3><h3 id="rdd属性">RDD属性
-</h3><h3 id="rdd的缓存级别">RDD的缓存级别
-</h3><h3 id="spark广播变量的实现和原理">Spark广播变量的实现和原理
-</h3><h3 id="reducebykey和groupbykey的区别和作用">reduceByKey和groupByKey的区别和作用
-</h3><h3 id="reducebykey和reduce的区别">reduceByKey和reduce的区别
-</h3><h3 id="使用reducebykey出现数据倾斜怎么办">使用reduceByKey出现数据倾斜怎么办
-</h3><h3 id="sparksql的执行原理">SparkSQL的执行原理
-</h3><h3 id="sparksql的优化">SparkSQL的优化
-</h3><h3 id="说下spark-checkpoint">说下Spark checkpoint
-</h3><h3 id="sparksql自定义函数怎么创建dataframe">Sparksql自定义函数？怎么创建DataFrame
-</h3><h3 id="hashpartitioner和rangepartitioner的实现">HashPartitioner和RangePartitioner的实现
-</h3><h3 id="dagschedulertaskschedulerschedulerbackend实现原理">DAGScheduler、TaskScheduler、SchedulerBackend实现原理
-</h3><h3 id="driver怎么管理executor">Driver怎么管理executor
-</h3><h3 id="spark的map和flatmap的区别">Spark的map和flatmap的区别
-</h3><h3 id="map和mappartition的区别">map和mapPartition的区别
-</h3><h3 id="spark的cache和persist的区别它们是transformation算子还是action算子">Spark的cache和persist的区别？它们是transformation算子还是action算子？
-</h3><h3 id="sparkstreaming的工作原理">SparkStreaming的工作原理
-</h3><h3 id="spark-streaming的dstream和dstreamgraph的区别">Spark Streaming的DStream和DStreamGraph的区别
-</h3><h3 id="spark输出文件的个数如何合并小文件">Spark输出文件的个数，如何合并小文件
-</h3><h3 id="spark的driver是怎么驱动作业流程的">Spark的driver是怎么驱动作业流程的
-</h3><h3 id="sparksql的劣势">SparkSQL的劣势
-</h3><h3 id="dag划分spark源码实现">DAG划分Spark源码实现
-</h3><h3 id="spark-steaming的双流join的过程怎么做的">Spark Steaming的双流join的过程，怎么做的
-</h3><h3 id="spark的block管理">Spark的Block管理
-</h3><h3 id="spark怎么保证数据不丢失">Spark怎么保证数据不丢失
-</h3><h3 id="sparksql如何使用udf">SparkSQL如何使用UDF
-</h3><h3 id="sparksql读取文件内存不够使用如何处理">SparkSQL读取文件，内存不够使用，如何处理
-</h3><h3 id="spark的lazy提现在哪里">Spark的lazy提现在哪里
-</h3><h3 id="spark中的并行度等于什么">Spark中的并行度等于什么
-</h3><h3 id="spark运行时并行度的设置">Spark运行时并行度的设置
-</h3><h3 id="sparksql的数据倾斜">SparkSQL的数据倾斜
-</h3><h3 id="spark的exactly-one">Spark的exactly-one
-</h3><h3 id="spark的rdd和partition的联系">Spark的RDD和partition的联系
-</h3><h3 id="spark3的特性">Spark3的特性
-</h3><h3 id="spakr计算的灵活性提现在哪里">Spakr计算的灵活性提现在哪里
-</h3><h3 id="说说rdddataframedataset三者的区别与联系">说说RDD、DataFrame、DataSet三者的区别与联系
+</h3><p>在 Spark 中，Map Join（也称为 Broadcast Join）是一种用于优化小表与大表 JOIN 操作的技术。它的核心思想是将小表的数据广播到所有 Executor 节点，从而避免 Shuffle 操作，显著提升 JOIN 的性能。在常规的 Shuffle Join 中，大表和小表的数据都需要通过网络传输到 Reduce 阶段进行 JOIN，这会导致大量的网络和磁盘 I/O 开销，而Map Join 通过将小表的数据广播到所有 Executor 节点，使得每个节点都可以在本地完成 JOIN 操作，从而避免 Shuffle。</p>
+<p>广播Join的原理是，Spark 使用广播变量将小表的数据序列化并分发到所有 Executor 节点，Executor 节点将接收到的数据反序列化并存储在内存中，然后每个 Executor 节点在本地将大表的分区数据与广播的小表数据进行 JOIN。Join的时候Spark会对大表的分区数据进行遍历，对于每条记录，根据JOIN Key在小表中查找匹配的记录并将匹配的结果输出，最后每个Executor 节点将 JOIN 结果输出到本地或外部存储系统。</p>
+<p>广播Join出发的条件是，小表的大小必须小于spark.sql.autoBroadcastJoinThreshold参数的值，默认10M，也就是小表的数据需要能够完全放入 Executor 的内存中，广播Join适用于Inner Join、Left Join 等 JOIN 类型。但Spark也支持用户手动使用broadcast函数触发。</p>
+<p>广播Join的优势在于避免了Shuffle操作，减少网络和磁盘的IO开销，同时JOIN操作在本地完成，显著提升了执行效率。但它也有自己的局限性，那就是小表的数据必须能够完全放入Executor 的内存中，并且广播Join不适用于Full Outer Join 等复杂的 JOIN 类型。</p>
+<h3 id="spark应用程序执行流程">Spark应用程序执行流程
+</h3><p>Spark应用程序的执行过程可以分为以下几个步骤：</p>
+<ol>
+<li><strong>创建SparkContext</strong> ：应用程序首先需要创建一个SparkContext对象，它是与Spark集群通信的入口点。SparkContext负责与集群管理器通信，并为应用程序分配资源。</li>
+<li><strong>创建RDD</strong> ：应用程序需要将数据加载到弹性分布式数据集（RDD）中。RDD是Spark的核心数据结构，它代表了分布在集群中的数据集合。RDD可以通过读取文件、从内存中的数据集创建、从其他RDD转换等方式来创建。</li>
+<li><strong>转换操作</strong> ：一旦RDD被创建，应用程序可以对RDD进行一系列的转换操作，例如map、filter、reduce等。这些转换操作会生成新的RDD，而不会立即执行计算。</li>
+<li><strong>行动操作</strong> ：当应用程序需要获取转换操作的结果时，需要执行行动操作。行动操作会触发Spark执行计划的生成和执行。常见的行动操作包括collect、count、save等，它们会返回计算结果给应用程序。</li>
+<li><strong>作业划分</strong> ：Spark将应用程序的行动操作划分为一系列的作业（jobs），每个作业由一组相关的转换操作组成。作业划分是为了提高并行度和数据本地性，以便更好地利用集群资源。</li>
+<li><strong>任务划分</strong> ：每个作业被划分为一系列的任务（tasks），每个任务处理数据的一部分。任务的划分是根据数据分区和可用资源来完成的。</li>
+<li><strong>任务调度和执行</strong> ：Spark将任务分发到集群中的执行器节点上执行。任务调度器负责将任务分配给可用的执行器节点，并考虑数据本地性以提高性能。执行器节点会加载数据到内存中，并执行任务操作。</li>
+<li><strong>结果返回</strong> ：一旦任务执行完成，执行器将结果返回给驱动程序。驱动程序可以将结果保存到内存、磁盘或其他外部存储中，也可以将结果返回给应用程序。</li>
+<li><strong>容错和恢复</strong> ：Spark具有容错机制，可以在节点故障时自动恢复。如果某个节点失败，Spark可以重新调度任务并在其他节点上执行。</li>
+</ol>
+<p>总的来说，Spark应用程序的执行过程包括创建SparkContext、创建RDD、转换操作、行动操作、作业划分、任务划分、任务调度和执行、结果返回以及容错和恢复等步骤。通过这些步骤，Spark能够以高效、可靠的方式处理大规模数据和复杂计算任务。</p>
+<h3 id="介绍下spark-shuffle以及其优缺点">介绍下Spark Shuffle以及其优缺点
+</h3><p>在 Apache Spark 中，Shuffle 是一个关键的操作，它负责在分布式计算中重新分布数据。Shuffle 通常发生在宽依赖操作（如 groupByKey、reduceByKey、join 等）中，是 Spark 作业中最昂贵的操作之一。Shuffle 是 Spark 中数据重新分布的过程。当需要将数据按照某种规则（如 Key）重新分组或聚合时，Spark 会将数据从上游任务（Map 阶段）的输出分区重新分区并传输到下游任务（Reduce 阶段）的输入分区。</p>
+<p>Shuffle 分为两个主要阶段，Shuffle Write：Map 任务将输出数据写入本地磁盘，并按照分区规则将数据分组，数据会被写入多个临时文件，每个文件对应一个 Reduce 分区。Shuffle Read：Reduce 任务从各个 Map 任务的输出文件中读取数据，并进行聚合或计算，数据读取过程可能涉及网络传输。</p>
+<p>Spark 提供了两种 Shuffle 实现方式，Hash Shuffle：每个 Map 任务为每个 Reduce 任务生成一个文件，导致文件数过多，适用于小规模数据，但会产生大量小文件，影响性能。Sort Shuffle：Map 任务将数据排序后写入单个文件，并生成索引文件，减少了文件数，适用于大规模数据，是 Spark 1.2 之后的默认实现。</p>
+<p>Shuffle 的优点：Shuffle 使得 Spark 能够支持复杂的宽依赖操作，如 groupByKey、reduceByKey、join 等；Shuffle 可以根据业务需求重新分布数据，满足计算需求；灵活性：Shuffle 支持自定义分区器（Partitioner），用户可以根据业务需求定义分区规则。</p>
+<p>Shuffle 的缺点</p>
+<p>性能开销大：磁盘 I/O：Shuffle Write 和 Shuffle Read 都涉及大量磁盘读写操作；网络传输：数据需要在节点之间传输，网络带宽可能成为瓶颈；序列化/反序列化：数据在传输前后需要序列化和反序列化，消耗 CPU 资源。</p>
+<p>数据倾斜：某些分区的数据量远大于其他分区，导致任务负载不均衡。</p>
+<p>小文件问题：Hash Shuffle 会产生大量小文件，影响存储和查询性能。</p>
+<p>Shuffle 的优化</p>
+<p>减少 Shuffle 数据量：在 Shuffle 前过滤掉不必要的数据，使用 reduceByKey 代替 groupByKey，减少数据传输量。</p>
+<p>优化分区数：合理设置分区数，避免过多或过少的分区。</p>
+<p>使用高效的序列化库：使用 Kryo 序列化库，减少序列化开销。</p>
+<p>启用 Shuffle 压缩：通过 spark.shuffle.compress 参数启用压缩，减少网络传输量。</p>
+<p>数据倾斜处理：对倾斜的 Key 添加随机前缀，分散数据，使用自定义分区器，优化数据分布。</p>
+<h3 id="什么情况下会产生spark-shuffle">什么情况下会产生Spark Shuffle
+</h3><p>宽依赖操作会导致 Shuffle，因为数据需要重新分布到不同的分区，例如groupByKey、reduceByKey、join、cogroup、distinct、repartition、sortByKey。</p>
+<p>我们应当尽量避免不必要的shuffle或者要对shuffle做些调优，例如使用广播JOIN、使用 reduceByKey 代替 groupByKey(reduceByKey 在 Map 端进行局部聚合，减少了 Shuffle 数据量)、优化分区数、使用缓存等。避免不必要的 Shuffle，是优化 Spark 作业性能的关键，通过合理设计数据处理逻辑和优化配置，可以显著减少 Shuffle 的开销。</p>
+<h3 id="为什么要spark-shuffle">为什么要Spark Shuffle
+</h3><p>在分布式计算中，数据通常分布在不同的节点上。要对数据进行聚合或连接操作，需要将具有相同 Key 的数据重新分布到同一个节点上进行处理。</p>
+<h3 id="说明yarn-cluster模式作业提交流程yarn-cluster与yarn-client的区别">说明yarn-cluster模式作业提交流程，yarn-cluster与yarn-client的区别
+</h3><p>在Spark中，YARN是一种用于集群资源管理的框架，可以将Spark应用程序提交到YARN集群上进行执行。YARN提供了两种模式供Spark应用程序提交：yarn-cluster和yarn-client。</p>
+<ol>
+<li>yarn-cluster模式作业提交流程：
+<ul>
+<li>当你在使用 <code>spark-submit</code>命令提交Spark应用程序时，指定了 <code>--deploy-mode cluster</code>参数，即使用yarn-cluster模式。</li>
+<li>提交命令发送给YARN的ResourceManager，ResourceManager会为应用程序分配一个ApplicationMaster。</li>
+<li>ApplicationMaster是一个专门负责管理应用程序执行的组件，它会向ResourceManager请求资源。</li>
+<li>ResourceManager会为ApplicationMaster分配一定数量的资源，这些资源将用于启动Executor。</li>
+<li>ApplicationMaster会与各个NodeManager通信，启动Executor，并将应用程序的代码和依赖文件分发到各个Executor所在的节点上。</li>
+<li>Executor会根据指定的任务分配策略执行具体的任务，任务的执行结果会返回给ApplicationMaster。</li>
+<li>ApplicationMaster会将任务的执行结果返回给Driver程序，Driver程序可以根据需要进行后续处理。</li>
+</ul>
+</li>
+<li>yarn-cluster与yarn-client的区别：
+<ul>
+<li>yarn-cluster模式下，Driver程序运行在集群中的一个Executor上，并且Driver程序与ApplicationMaster是独立的进程。这意味着Driver程序的执行不会受到本地环境的限制，可以充分利用集群资源。</li>
+<li>yarn-client模式下，Driver程序运行在提交Spark应用程序的本地机器上，而不是集群中的一个Executor上。Driver程序与ApplicationMaster是同一个进程。这意味着Driver程序的执行受到本地环境的限制，例如可用的内存和CPU资源。</li>
+<li>在yarn-cluster模式下，提交的应用程序可以在集群中长时间运行，即使与提交应用程序的客户端断开连接，应用程序仍然可以继续执行。而在yarn-client模式下，如果与客户端断开连接，应用程序会被终止。</li>
+<li>yarn-cluster模式适用于长时间运行的应用程序，例如批处理作业。yarn-client模式适用于交互式应用程序，例如Spark Shell。</li>
+</ul>
+</li>
+</ol>
+<p>Yarn Client模式(一般用于测试)</p>
+<ul>
+<li>Driver在任务提交的本地机器上运行</li>
+<li>Driver启动后会向ResourceManager通讯申请启动ApplicationMaster</li>
+<li>ResourceManager分配Container，在合适的NodeManager上启动ApplicationMaster，负责向ResourceManager申请Executor内存</li>
+<li>ResourceManager接到ApplicationMaster的资源申请后会分配Container，然后ApplicationMaster在资源分配指定的NodeManager上驱动Executor进程</li>
+<li>Executor进程启动后会向Driver反向注册，Executor全部注册完成之后，Driver开始执行Main函数</li>
+<li>之后执行到Action算子，触发一个Job，并根据宽依赖开始划分Stage，每个Stage生成对应的TaskSet，之后将Task分发到各个Executor上执行</li>
+</ul>
+<p>Yarn Cluster模式</p>
+<ul>
+<li>任务提交后，Client会先和ResourceManager通讯，申请启动ApplicationMaster</li>
+<li>ResourceManager分配Container，在合适的NodeManager上启动ApplicationMaster，此时的ApplicationMaster就是Driver</li>
+<li>Driver启动后会向ResourceManager申请Executor内存，ResourceManager接到ApplicationMaster的资源申请后会分配Container，然后在合适的NodeManager上启动Executor进程</li>
+<li>Executor进程启动后会向Driver反向注册，Executor全部注册完成之后，Driver开始执行Main函数</li>
+<li>之后执行到Action算子，触发一个Job，并根据宽依赖开始划分Stage，每个Stage生成对应的TaskSet，之后将Task分发到各个Executor上执行</li>
+</ul>
+<p>总结：yarn-cluster模式下，Driver程序运行在集群中的一个Executor上，与ApplicationMaster是独立的进程；yarn-client模式下，Driver程序运行在本地机器上，与ApplicationMaster是同一个进程。</p>
+<h3 id="spark的内存模型">Spark的内存模型
+</h3><p>Spark中的内存使用分为两部分：执行（execution）与存储（storage）。执行内存主要用于shuffles、joins、sorts和aggregations，存储内存则用于缓存或者跨节点的内部数据传输。1.6之前，对于一个Executor，内存都由以下部分构成：
+  1）ExecutionMemory。这片内存区域是为了解决 shuffles,joins, sorts and aggregations 过程中为了避免频繁IO需要的buffer。 通过spark.shuffle.memoryFraction(默认 0.2) 配置。
+  2）StorageMemory。这片内存区域是为了解决 block cache(就是你显示调用rdd.cache, rdd.persist等方法), 还有就是broadcasts,以及task results的存储。可以通过参数 spark.storage.memoryFraction(默认0.6)设置。
+  3）OtherMemory。给系统预留的，因为程序本身运行也是需要内存的(默认为0.2)。   传统内存管理的不足：
+  1）Shuffle占用内存0.2*0.8，内存分配这么少，可能会将数据spill到磁盘，频繁的磁盘IO是很大的负担，Storage内存占用0.6，主要是为了迭代处理。传统的Spark内存分配对操作人的要求非常高。（Shuffle分配内存：ShuffleMemoryManager, TaskMemoryManager, ExecutorMemoryManager）一个Task获得全部的Execution的Memory，其他Task过来就没有内存了，只能等待；
+  2）默认情况下，Task在线程中可能会占满整个内存，分片数据</p>
+<h3 id="说说rdddataframedataset三者的区别与联系">说说RDD、DataFrame、DataSet三者的区别与联系
 </h3><p>RDD (Spark1.0) —&gt; Dataframe(Spark1.3) —&gt; Dataset(Spark1.6)，如果同样的数据都给到这三个数据结构，他们分别计算之后，都会给出相同的结果。不同是的他们的执行效率和执行方式。在后期的Spark版本中，DataSet会逐步取代RDD和DataFrame成为唯一的API接口。</p>
 <p><strong>RDD</strong></p>
 <p>RDD叫做弹性分布式数据集，是Spark中最基本的数据处理模型。代码中是一个抽象类，它代表了一个弹性的、不可变的、可分区、里面的元素可进行计算的集合。</p>
@@ -752,122 +786,9 @@ import spark.implicits._
 <h3 id="简述广播变量和累加器的基本原理和用途">简述广播变量和累加器的基本原理和用途
 </h3><p>通常情况下，一个传递给 RDD 操作（如map、reduceByKey）的 func 是在远程节点上执行的。函数 func 在多个节点执行过程中使用的变量，是Driver上同一个变量的多个副本。这些变量以副本的方式拷贝到每个task中，并且各task中变量的更新并不会返回 Driver</p>
 <p>为了解决以上问题，Spark 提供了两种特定类型的共享变量 : 广播变量 和 累加器。<strong>广播变量主要用于高效分发较大的数据对象，累加器主要用于对信息进行聚合</strong></p>
-<p>广播变量的好处，不需要每个task带上一份变量副本，而是变成每个节点的executor才一份副本。这样的话， 就可以让变量产生的副本大大减少。而且 Spark 使用高效广播算法（BT协议）分发广播变量以降低通信成本</p>
+<p>广播变量的好处，不需要每个task带上一份变量副本，而是变成每个节点的executor的一份副本。这样的话， 就可以让变量产生的副本大大减少。而且 Spark 使用高效广播算法（BT协议）分发广播变量以降低通信成本</p>
 <p>累加器是 Spark 中提供的一种分布式的变量机制，在Driver端进行初始化，task中对变量进行累加操作</p>
 <p>广播变量典型的使用案例是Map Side Join；累加器经典的应用场景是用来在 Spark 应用中记录某些事件/信息的数量</p>
-<h2 id="基本">基本
-</h2><h3 id="说说spark提交作业参数">说说Spark提交作业参数
-</h3><p>提交作业时的重要参数：</p>
-<ul>
-<li>executor_cores
-缺省值：1 in YARN mode, all the available cores on the worker in standalone and Mesos coarse-grained modes
-生产环境中不宜设置为1！否则 work 进程中线程数过少，一般 2~5 为宜</li>
-<li>executor_memory
-缺省值：1g
-该参数与executor分配的core有关，分配的core越多 executor_memory 值就应该越大；
-core与memory的比值一般在 1:2 到 1:4 之间，即每个core可分配2~4G内存。如 executor_cores 为4，那么executor_memory 可以分配 8G ~ 16G；
-单个Executor内存大小一般在 20G 左右（经验值），单个JVM内存太高易导致GC代价过高，或资源浪费</li>
-<li>executor_cores * num_executors
-表示的是能够并行执行Task的数目。不宜太小或太大！理想情况下，一般给每个core分配 2-3 个task，由此可反推 num_executors 的个数</li>
-<li>driver-memory
-driver 不做任何计算和存储，只是下发任务与yarn资源管理器和task交互，一般设为 1-2G 即可；</li>
-</ul>
-<p>增加每个executor的内存量，增加了内存量以后，对性能的提升，有三点：</p>
-<ol>
-<li>如果需要对RDD进行cache，那么更多的内存，就可以缓存更多的数据，将更少的数据写入磁盘，甚至不写入磁盘。减少了磁盘IO</li>
-<li>对于shuffle操作，reduce端，会需要内存来存放拉取的数据并进行聚合。如果内存不够，也会写入磁盘。如果给executor分配更多内存，会减少磁盘的写入操作，进而提升性能</li>
-<li>task的执行，可能会创建很多对象。如果内存比较小，可能会频繁导致JVM堆内存满了，然后频繁GC，垃圾回收，minor GC和full GC。内存加大以后，带来更少的GC，垃圾回收，避免了速度变慢，性能提升；</li>
-</ol>
-<h3 id="spark的宽窄依赖以及spark如何划分stage如何确定每个stage中task个数">Spark的宽窄依赖，以及Spark如何划分Stage，如何确定每个Stage中Task个数
-</h3><p>RDD之间的依赖关系分为窄依赖（narrow dependency）和宽依赖（Wide Depencency，也称为Shuffle Depencency）</p>
-<ul>
-<li><strong>窄依赖</strong> ：指父RDD的每个分区只被子RDD的一个分区所使用，子RDD分区通常对应常数个父RDD分区（O(1)，与数据规模无关）</li>
-<li><strong>宽依赖</strong> ：是指父RDD的每个分区都可能被多个子RDD分区所使用，子RDD分区通常对应所有的父RDD分区（O(n),与数据规模有关）</li>
-</ul>
-<p>相比于宽依赖，窄依赖对优化很有利，主要基于以下几点：</p>
-<ul>
-<li>宽依赖往往对应着Shuffle操作，需要在运行过程中将同一个父RDD的分区传入到不同的子RDD分区中，中间可能涉及多个节点之间的数据传输；而窄依赖的每个父RDD的分区只会传入到一个子RDD分区中，通常可以在一个节点内完成转换</li>
-<li>当RDD分区丢失时（某个节点故障），Spark会对数据进行重算</li>
-<li>对于窄依赖，由于父RDD的一个分区只对应一个子RDD分区，这样只需要重算和子RDD分区对应的父RDD分区即可，所以这个重算对数据的利用率是100%的</li>
-<li>对于宽依赖，重算的父RDD分区对应多个子RDD分区的，这样实际上父RDD中只有一部分的数据是被用于恢复这个丢失的子RDD分区的，另一部分对应子RDD的其他未丢失分区，这就造成了多余的计算；更一般的，宽依赖中子RDD分区通常来自多个父RDD分区，所有的父RDD分区都要进行重新计算</li>
-</ul>
-<p>Stage：根据RDD之间的依赖关系将Job划分成不同的Stage，遇到一个宽依赖则划分一个Stage。</p>
-<p>Task：Stage是一个TaskSet，将Stage根据分区数划分成一个个的Task</p>
-<h3 id="如何理解spark中lineage">如何理解Spark中Lineage
-</h3><p>首先要明确一下 Spark 中 RDD 的容错机制。每一个 RDD 都是一个不可变的分布式可重算的数据集，其记录着确定性的操作继承关系（ lineage ），所以只要输入数据是可容错的，那么任意一个 RDD 的分区（ Partition ）出错或不可用，都是可以利用原始输入数据通过转换操作而重新算出的。如果一个分区出错了：</p>
-<ul>
-<li>对于窄依赖，则只要把丢失的父 RDD 分区重算即可，不依赖于其他分区</li>
-<li>对于宽依赖，则父 RDD 的所有分区都需要重算，代价昂贵</li>
-</ul>
-<p>所以在长“血统”链特别是有宽依赖的时候，需要在适当的时机设置数据检查点</p>
-<h3 id="aqe是什么">AQE是什么
-</h3><p>Adaptive Query Execution (AQE) 就像 SparkSQL的智能助手，它解决了查询计划不那么完美的问题，它通过在sparksSQL查询运行时从去从数据中去学习并通过算法模型优化来实现这一点。AQE不依赖于数据的固定信息，而是在查询展开时收集实时细节。通过这样做，AQE 可以对查询计划进行即时改进，确保其运行更高效，确保最终的结果尽可能快捷。</p>
-<p><strong>动态合并Shuffle分区</strong>
-当 Spark 处理大型数据集时，它通常需要通过网络重新组织或打乱数据以执行某些操作，例如ioin连接或聚合。这个shuffle过程涉及到将数据划分为多个分区，而这个分区的效率极大地影响了查询性能，而AQE 在查询运行时动态调整随机分区的数量，假设您有一个大数据集，最初，Spark 决定使用一定数量的分区进行shuffle。这个数字可能很难得到正确的值，因为如果它太低，每个分区可能太大，导致处理速度慢。另一方面，如果它太高，您会得到很多小分区，导致数据获取效率低下并增加开销。</p>
-<p>如果没有 AQE，Spark 可能会决定在本地分组操作后创建五个分区。然而，AQE 很聪明。它注意到其中三个分区非常小。AQE 不会通过单独处理每个小分区来浪费资源，而是将这些小分区合并 (组合) 为一个。现在，最终的聚合只需要对三个任务执行，而不是五个，使得查询更加高效。在后台，AQE 动态调整随机分区的数量并根据需要合并它们，从而优化查询执行计划</p>
-<p><strong>动态切换Join策略</strong></p>
-<p>当您在 Spark 中执行join连接时，可以采用不同的方法来组合数据。最有效的方法之一称为广播哈希join (broadcast hash join)其中连接的一侧足够小以适合放到内存里，从而使Join过程更快，类似hive中的mapjoin。现在，假设您正在运行join连接操作，并且最初，Spark 计划根据其对数据大小的估计使用某种连接策略。这就是 AQE 的用武之地。它不会盲目地坚持最初的计划。相反，它会在查询运行时关注数据的实际大小，动态调整join策略。</p>
-<p>如果在执行过程中，AQE 注意到join一侧的数据大小比最初估计的要小得多，它可以动态地将ioin连接策略切换为更高效的broadcasthash join。这一点至关重要，因为有时初始化时估计可能会由于各种因素而出现偏差，例如各种filter或一组复杂的操作后数据量明显变小</p>
-<p>Spark 计划使用sort merge join ，刚开始以为是大表Join。然而，AQE 观察到运行时的实际大小要小得多，这使得使用广播哈希连接更加高效。因此，AQE 可以智能地切换连接策略来优化性能。现在我们开启AQE后，运行涉及join的查询时，AQE 将根据实际数据大小动态调整联接策略，确保最佳性能。</p>
-<p><strong>动态优化倾斜连接</strong></p>
-<p>我们知道当分区之间的数据分布不均匀时，就会出现数据倾斜。在 Spark 集群中，数据被划分为多个分区以进行并行处理。理想情况下每个分区的数据量大致相等，确保所有处理任务的工作负载均衡。然而，在数据倾斜的情况下，一个或几个分区可能包含比其他分区多得多的数据。数据倾斜对查询性能的影响: 任务相当存在数据倾斜时，与处理较少数据比，与倾斜分区相关的处理任务而要更长的时间才能完成。这种不平衡可能会导致性能瓶颈，因为某些任务会成为整个操作的瓶颈。这在join连接期间尤其成问题，其中涉及倾斜分在join连接期间尤其成问题，其中涉及倾斜分区的任务可能会滞后，从而降低整体查询性能。AQE通过其倾斜连接优化来解决这个问题AQE在运行时通过分析shuffle文件统计信息自动检测数据倾斜何时影响查询性能。一旦识别出倾斜，AQE就会动态调整方法。分割倾斜分区:AQE 不会让一些负载较重的分区成为处理瓶颈，而是智能地将这些倾斜的分区拆分为更小的子分区。现在，每个子分区包含更均衡的数据量，防止工作负载集中在少数任务上假设一个jin连接操作，其中join连接的一侧有一个分区 (我们称之为 P1) ，其中的数据明显多于其他分区:在 AQE 倾斜连接优化之前: 如果没有 AQEjoin连接操作可能会因负载过重的 P1分区而变慢，从而导致性能问题在AQE倾斜连接优化之后:AQE检测到倾斜并动态地将P1分区分割成更小、更均衡的子分区现在，工作负载的分布更加均匀，从而提高了查询性能。</p>
-<p><strong>总结</strong>
-Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态统计的依赖和解决运行时的挑战，AQE增强了Spark对不同数据条件的适应性。三个关键特性一合并shuffle分区、切换JOIN策略和优化倾斜连接。有助于大幅提高性能，使Spark SQL在各种工作负载下更具弹性和效率。随着AQE成为标准特性，用户可以减少很多手动调优技能的输出，降低使用成本。</p>
-<h3 id="说明yarn-cluster模式作业提交流程yarn-cluster与yarn-client的区别">说明yarn-cluster模式作业提交流程，yarn-cluster与yarn-client的区别
-</h3><p>在Spark中，YARN是一种用于集群资源管理的框架，可以将Spark应用程序提交到YARN集群上进行执行。YARN提供了两种模式供Spark应用程序提交：yarn-cluster和yarn-client。</p>
-<ol>
-<li>yarn-cluster模式作业提交流程：
-<ul>
-<li>当你在使用 <code>spark-submit</code>命令提交Spark应用程序时，指定了 <code>--deploy-mode cluster</code>参数，即使用yarn-cluster模式。</li>
-<li>提交命令发送给YARN的ResourceManager，ResourceManager会为应用程序分配一个ApplicationMaster。</li>
-<li>ApplicationMaster是一个专门负责管理应用程序执行的组件，它会向ResourceManager请求资源。</li>
-<li>ResourceManager会为ApplicationMaster分配一定数量的资源，这些资源将用于启动Executor。</li>
-<li>ApplicationMaster会与各个NodeManager通信，启动Executor，并将应用程序的代码和依赖文件分发到各个Executor所在的节点上。</li>
-<li>Executor会根据指定的任务分配策略执行具体的任务，任务的执行结果会返回给ApplicationMaster。</li>
-<li>ApplicationMaster会将任务的执行结果返回给Driver程序，Driver程序可以根据需要进行后续处理。</li>
-</ul>
-</li>
-<li>yarn-cluster与yarn-client的区别：
-<ul>
-<li>yarn-cluster模式下，Driver程序运行在集群中的一个Executor上，并且Driver程序与ApplicationMaster是独立的进程。这意味着Driver程序的执行不会受到本地环境的限制，可以充分利用集群资源。</li>
-<li>yarn-client模式下，Driver程序运行在提交Spark应用程序的本地机器上，而不是集群中的一个Executor上。Driver程序与ApplicationMaster是同一个进程。这意味着Driver程序的执行受到本地环境的限制，例如可用的内存和CPU资源。</li>
-<li>在yarn-cluster模式下，提交的应用程序可以在集群中长时间运行，即使与提交应用程序的客户端断开连接，应用程序仍然可以继续执行。而在yarn-client模式下，如果与客户端断开连接，应用程序会被终止。</li>
-<li>yarn-cluster模式适用于长时间运行的应用程序，例如批处理作业。yarn-client模式适用于交互式应用程序，例如Spark Shell。</li>
-</ul>
-</li>
-</ol>
-<p>Yarn Client模式(一般用于测试)</p>
-<ul>
-<li>Driver在任务提交的本地机器上运行</li>
-<li>Driver启动后会向ResourceManager通讯申请启动ApplicationMaster</li>
-<li>ResourceManager分配Container，在合适的NodeManager上启动ApplicationMaster，负责向ResourceManager申请Executor内存</li>
-<li>ResourceManager接到ApplicationMaster的资源申请后会分配Container，然后ApplicationMaster在资源分配指定的NodeManager上驱动Executor进程</li>
-<li>Executor进程启动后会向Driver反向注册，Executor全部注册完成之后，Driver开始执行Main函数</li>
-<li>之后执行到Action算子，触发一个Job，并根据宽依赖开始划分Stage，每个Stage生成对应的TaskSet，之后将Task分发到各个Executor上执行</li>
-</ul>
-<p>Yarn Cluster模式</p>
-<ul>
-<li>任务提交后，Client会先和ResourceManager通讯，申请启动ApplicationMaster</li>
-<li>ResourceManager分配Container，在合适的NodeManager上启动ApplicationMaster，此时的ApplicationMaster就是Driver</li>
-<li>Driver启动后会向ResourceManager申请Executor内存，ResourceManager接到ApplicationMaster的资源申请后会分配Container，然后在合适的NodeManager上启动Executor进程</li>
-<li>Executor进程启动后会向Driver反向注册，Executor全部注册完成之后，Driver开始执行Main函数</li>
-<li>之后执行到Action算子，触发一个Job，并根据宽依赖开始划分Stage，每个Stage生成对应的TaskSet，之后将Task分发到各个Executor上执行</li>
-</ul>
-<p>总结：yarn-cluster模式下，Driver程序运行在集群中的一个Executor上，与ApplicationMaster是独立的进程；yarn-client模式下，Driver程序运行在本地机器上，与ApplicationMaster是同一个进程。</p>
-<h3 id="spark应用程序的执行过程是什么spark的执行流程">Spark应用程序的执行过程是什么？spark的执行流程
-</h3><p>Spark应用程序的执行过程可以分为以下几个步骤：</p>
-<ol>
-<li><strong>创建SparkContext</strong> ：应用程序首先需要创建一个SparkContext对象，它是与Spark集群通信的入口点。SparkContext负责与集群管理器通信，并为应用程序分配资源。</li>
-<li><strong>创建RDD</strong> ：应用程序需要将数据加载到弹性分布式数据集（RDD）中。RDD是Spark的核心数据结构，它代表了分布在集群中的数据集合。RDD可以通过读取文件、从内存中的数据集创建、从其他RDD转换等方式来创建。</li>
-<li><strong>转换操作</strong> ：一旦RDD被创建，应用程序可以对RDD进行一系列的转换操作，例如map、filter、reduce等。这些转换操作会生成新的RDD，而不会立即执行计算。</li>
-<li><strong>行动操作</strong> ：当应用程序需要获取转换操作的结果时，需要执行行动操作。行动操作会触发Spark执行计划的生成和执行。常见的行动操作包括collect、count、save等，它们会返回计算结果给应用程序。</li>
-<li><strong>作业划分</strong> ：Spark将应用程序的行动操作划分为一系列的作业（jobs），每个作业由一组相关的转换操作组成。作业划分是为了提高并行度和数据本地性，以便更好地利用集群资源。</li>
-<li><strong>任务划分</strong> ：每个作业被划分为一系列的任务（tasks），每个任务处理数据的一部分。任务的划分是根据数据分区和可用资源来完成的。</li>
-<li><strong>任务调度和执行</strong> ：Spark将任务分发到集群中的执行器节点上执行。任务调度器负责将任务分配给可用的执行器节点，并考虑数据本地性以提高性能。执行器节点会加载数据到内存中，并执行任务操作。</li>
-<li><strong>结果返回</strong> ：一旦任务执行完成，执行器将结果返回给驱动程序。驱动程序可以将结果保存到内存、磁盘或其他外部存储中，也可以将结果返回给应用程序。</li>
-<li><strong>容错和恢复</strong> ：Spark具有容错机制，可以在节点故障时自动恢复。如果某个节点失败，Spark可以重新调度任务并在其他节点上执行。</li>
-</ol>
-<p>总的来说，Spark应用程序的执行过程包括创建SparkContext、创建RDD、转换操作、行动操作、作业划分、任务划分、任务调度和执行、结果返回以及容错和恢复等步骤。通过这些步骤，Spark能够以高效、可靠的方式处理大规模数据和复杂计算任务。</p>
 <h3 id="spark的优化怎么做spark做过哪些优化原理是什么">Spark的优化怎么做？Spark做过哪些优化？原理是什么
 </h3><p>Spark的优化可以从多个方面进行，包括数据存储和压缩、数据分区和分桶、Shuffle操作的优化、内存管理和缓存、并行度和资源配置等。以下是一些常见的Spark优化技术和原理：</p>
 <ol>
@@ -911,7 +832,7 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 </ol>
 <p>Spark做出这些优化的目的是为了提高作业的执行效率和性能，减少资源的浪费和开销。这些优化的原理主要是通过减少磁盘IO、网络传输和计算开销，提高数据的局部性和并行度，充分利用内存和缓存等方式来优化Spark的执行过程，从而提高作业的整体性能。</p>
 <h3 id="spark中lineage的基本原理">Spark中Lineage的基本原理
-</h3><p>在Spark中，Lineage（血统）是一种记录RDD（弹性分布式数据集）之间依赖关系的机制。它是Spark实现容错性和数据恢复的关键。当我们对RDD进行转换操作时，Spark并不会立即执行这些操作，而是将操作添加到RDD的Lineage中。这样做的好处是，当某个RDD分区数据丢失或节点失败时，Spark可以根据Lineage重新计算丢失的分区，而无需重新计算整个RDD。</p>
+</h3><p>在Spark中，Lineage（血统）是一种记录RDD（弹性分布式数据集）之间依赖关系的机制。每一个 RDD 都是一个不可变的分布式可重算的数据集，其记录着确定性的操作继承关系（ lineage ），所以只要输入数据是可容错的，那么任意一个 RDD 的分区（ Partition ）出错或不可用，都是可以利用原始输入数据通过转换操作而重新算出的，它是Spark实现容错性和数据恢复的关键。当我们对RDD进行转换操作时，Spark并不会立即执行这些操作，而是将操作添加到RDD的Lineage中。这样做的好处是，当某个RDD分区数据丢失或节点失败时，Spark可以根据Lineage重新计算丢失的分区，而无需重新计算整个RDD。</p>
 <p>Lineage的基本原理如下：</p>
 <ol>
 <li><strong>RDD的创建</strong> ：当我们创建一个RDD时，Spark会将其初始数据划分为一系列的分区，并将这些分区的元数据保存在Lineage中。</li>
@@ -920,6 +841,126 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 <li><strong>容错性和数据恢复</strong> ：当某个RDD分区数据丢失或节点失败时，Spark可以根据Lineage重新计算丢失的分区。它会遍历RDD的Lineage，根据依赖关系逐级计算缺失的分区，直到达到原始数据的来源。</li>
 </ol>
 <p>通过使用Lineage，Spark可以实现容错性和数据恢复。当节点失败或数据丢失时，Spark可以根据Lineage重新计算丢失的数据，而无需重新计算整个RDD，从而提高了计算效率和可靠性。</p>
+<p>如果一个分区出错了：</p>
+<ul>
+<li>对于窄依赖，则只要把丢失的父 RDD 分区重算即可，不依赖于其他分区</li>
+<li>对于宽依赖，则父 RDD 的所有分区都需要重算，代价昂贵</li>
+</ul>
+<p>所以在长“血统”链特别是有宽依赖的时候，需要在适当的时机设置数据检查点</p>
+<p>首先要明确一下 Spark 中 RDD 的容错机制。每一个 RDD 都是一个不可变的分布式可重算的数据集，其记录着确定性的操作继承关系（ lineage ），所以只要输入数据是可容错的，那么任意一个 RDD 的分区（ Partition ）出错或不可用，都是可以利用原始输入数据通过转换操作而重新算出的。如果一个分区出错了：</p>
+<ul>
+<li>对于窄依赖，则只要把丢失的父 RDD 分区重算即可，不依赖于其他分区</li>
+<li>对于宽依赖，则父 RDD 的所有分区都需要重算，代价昂贵</li>
+</ul>
+<p>所以在长“血统”链特别是有宽依赖的时候，需要在适当的时机设置数据检查点</p>
+<h3 id="谈一谈spark中的容错机制">谈一谈Spark中的容错机制
+</h3><p>Spark是一个分布式计算框架，具备强大的容错机制，以确保在集群中发生故障时能够保持计算的正确性和可靠性。下面是Spark中的几个主要容错机制：</p>
+<ol>
+<li><strong>数据容错</strong> ：Spark通过将数据划分为一系列弹性分布式数据集（RDD）来实现数据容错。RDD是不可变的、可分区的数据集合，它可以在集群中的多个节点上进行并行计算。当节点发生故障时，Spark可以使用RDD的血统（lineage）信息重新计算丢失的数据分区，从而实现数据的容错。</li>
+<li><strong>任务容错</strong> ：Spark将计算任务划分为一系列的阶段（stage），每个阶段包含一组可以并行执行的任务。每个任务都会在执行过程中生成一系列的输出数据，这些输出数据会被持久化到稳定存储中。如果任务失败，Spark可以通过重新执行该任务来实现任务的容错。</li>
+<li><strong>节点容错</strong> ：Spark通过使用主从架构来实现节点容错。在集群中，有一个主节点（Driver）负责协调任务的执行和结果的收集，以及监控集群中的节点状态。如果主节点发生故障，Spark可以通过重新启动一个新的主节点来实现节点的容错。</li>
+<li><strong>任务调度容错</strong> ：Spark使用任务调度器来管理任务的执行顺序和资源分配。如果某个任务在执行过程中发生错误，任务调度器可以重新调度该任务，并将其分配给其他可用的节点进行执行。</li>
+<li><strong>数据丢失容错</strong> ：Spark在执行过程中会将数据缓存在内存中，以提高计算性能。为了防止数据丢失，Spark提供了可配置的数据持久化选项，可以将数据持久化到磁盘或其他外部存储系统中。这样即使发生节点故障，数据也可以从持久化存储中恢复。</li>
+</ol>
+<p>总的来说，Spark的容错机制主要依赖于RDD的血统信息、任务调度器、主从架构和数据持久化等技术手段，通过这些手段可以实现数据、任务、节点和数据丢失的容错处理，保证计算的正确性和可靠性。</p>
+<h3 id="说说spark数据倾斜">说说Spark数据倾斜
+</h3><p>Spark数据倾斜是指在数据处理过程中，某些数据分区的负载远远超过其他分区，导致计算资源不均衡，从而影响整体性能。数据倾斜可能导致任务执行时间延长，资源浪费，甚至导致任务失败。下面是一些常见的数据倾斜情况和解决方法：</p>
+<ol>
+<li><strong>Key数据倾斜</strong> ：当使用某个字段作为数据集的Key时，如果该字段的分布不均匀，就会导致Key数据倾斜。解决方法包括：</li>
+</ol>
+<ul>
+<li><strong>增加分区</strong> ：通过增加数据集的分区数，可以将数据均匀地分布到更多的分区中，减少数据倾斜的可能性。</li>
+<li><strong>使用哈希分区</strong> ：使用哈希函数将Key映射到不同的分区，确保数据均匀分布。</li>
+<li><strong>聚合合并</strong> ：将具有相同Key的数据进行聚合操作，减少数据量，降低倾斜程度。</li>
+</ul>
+<ol start="2">
+<li><strong>数据倾斜的Join操作</strong> ：在进行Join操作时，如果连接字段的分布不均匀，就会导致数据倾斜。解决方法包括：</li>
+</ol>
+<ul>
+<li><strong>使用Broadcast Join</strong> ：对于小表和大表进行Join操作时，可以将小表广播到每个节点上，避免数据倾斜。</li>
+<li><strong>使用随机前缀</strong> ：对于连接字段分布不均匀的情况，可以在连接字段上添加随机前缀，使连接字段的值更均匀分布。</li>
+</ul>
+<ol start="3">
+<li><strong>数据倾斜的聚合操作</strong> ：在进行聚合操作时，如果某些分组的数据量远远超过其他分组，就会导致数据倾斜。解决方法包括：</li>
+</ol>
+<ul>
+<li><strong>使用预聚合</strong> ：对于可能导致数据倾斜的字段进行预聚合操作，将数据量较大的分组合并为一个分组，减少数据倾斜。</li>
+<li><strong>使用多级聚合</strong> ：将聚合操作拆分为多个阶段，逐步聚合，减少单个阶段的数据量。</li>
+</ul>
+<ol start="4">
+<li><strong>数据倾斜的排序操作</strong> ：在进行排序操作时，如果数据分布不均匀，就会导致数据倾斜。解决方法包括：</li>
+</ol>
+<ul>
+<li><strong>使用随机前缀</strong> ：对于排序字段分布不均匀的情况，可以在排序字段上添加随机前缀，使排序字段的值更均匀分布。</li>
+<li><strong>使用二次排序</strong> ：对于多个字段进行排序时，可以使用二次排序算法，先按照一个字段排序，再按照另一个字段排序，减少数据倾斜。</li>
+</ul>
+<p>除了上述方法，还可以通过动态资源分配、任务重试、数据重分区等方式来应对数据倾斜问题。数据倾斜是Spark中常见的性能瓶颈之一，需要根据具体情况选择合适的解决方法。</p>
+<h2 id="基本">基本
+</h2><h3 id="在源码中是怎么判断属于shufflemap-stage或result-stage的">在源码中是怎么判断属于ShuffleMap Stage或Result Stage的
+</h3><p>在Spark 中，任务的执行过程被划分为多个Stage，Stage分为 <strong>ShuffleMapStage</strong> 和 <strong>ResultStage</strong>。这两种Stage的划分是根据任务的依赖关系和执行目标来确定的。</p>
+<p>ShuffleMapStage：负责为后续的 Shuffle 操作准备数据，输出是 Shuffle 数据，供下游阶段使用，通常对应宽依赖。</p>
+<p>ResultStage：负责执行最终的计算并输出结果，输出是最终的计算结果，通常对应Action操作。</p>
+<p>在 Spark 源码中，阶段划分的核心逻辑位于 DAGScheduler 类中</p>
+<p>Stage创建阶段：入口方法是DAGScheduler.handleJobSubmitted，在 DAGScheduler.createResultStage 和 DAGScheduler.getOrCreateShuffleMapStage 方法中创建阶段。</p>
+<p>判断阶段：如果任务是最终的计算任务（如 collect、count、saveAsTextFile 等），则创建 ResultStage；如果任务是为 Shuffle 操作准备数据（如 groupByKey、reduceByKey、join 等），则创建 ShuffleMapStage；</p>
+<h3 id="spark-join在什么情况下会变成窄依赖">Spark join在什么情况下会变成窄依赖
+</h3><h3 id="数据本地性是在哪个环节确定的">数据本地性是在哪个环节确定的
+</h3><h3 id="spark的数据本地性有哪几种">Spark的数据本地性有哪几种
+</h3><p>Spark中的数据本地性有三种：
+  1）PROCESS_LOCAL是指读取缓存在本地节点的数据
+  2）NODE_LOCAL是指读取本地节点硬盘数据
+  3）ANY是指读取非本地节点数据
+  通常读取数据PROCESS_LOCAL&gt;NODE_LOCAL&gt;ANY，尽量使数据以PROCESS_LOCAL或NODE_LOCAL方式读取。其中PROCESS_LOCAL还和cache有关，如果RDD经常用的话将该RDD cache到内存中，注意，由于cache是lazy的，所以必须通过一个action的触发，才能真正的将该RDD cache到内存中。</p>
+<h3 id="说说spark提交作业参数">说说Spark提交作业参数
+</h3><p>提交作业时的重要参数：</p>
+<ul>
+<li>executor_cores
+缺省值：1 in YARN mode, all the available cores on the worker in standalone and Mesos coarse-grained modes
+生产环境中不宜设置为1！否则 work 进程中线程数过少，一般 2~5 为宜</li>
+<li>executor_memory
+缺省值：1g
+该参数与executor分配的core有关，分配的core越多 executor_memory 值就应该越大；
+core与memory的比值一般在 1:2 到 1:4 之间，即每个core可分配2~4G内存。如 executor_cores 为4，那么executor_memory 可以分配 8G ~ 16G；
+单个Executor内存大小一般在 20G 左右（经验值），单个JVM内存太高易导致GC代价过高，或资源浪费</li>
+<li>executor_cores * num_executors
+表示的是能够并行执行Task的数目。不宜太小或太大！理想情况下，一般给每个core分配 2-3 个task，由此可反推 num_executors 的个数</li>
+<li>driver-memory
+driver 不做任何计算和存储，只是下发任务与yarn资源管理器和task交互，一般设为 1-2G 即可；</li>
+</ul>
+<p>增加每个executor的内存量，增加了内存量以后，对性能的提升，有三点：</p>
+<ol>
+<li>如果需要对RDD进行cache，那么更多的内存，就可以缓存更多的数据，将更少的数据写入磁盘，甚至不写入磁盘。减少了磁盘IO</li>
+<li>对于shuffle操作，reduce端，会需要内存来存放拉取的数据并进行聚合。如果内存不够，也会写入磁盘。如果给executor分配更多内存，会减少磁盘的写入操作，进而提升性能</li>
+<li>task的执行，可能会创建很多对象。如果内存比较小，可能会频繁导致JVM堆内存满了，然后频繁GC，垃圾回收，minor GC和full GC。内存加大以后，带来更少的GC，垃圾回收，避免了速度变慢，性能提升；</li>
+</ol>
+<h3 id="spark的宽窄依赖以及spark如何划分stage如何确定每个stage中task个数">Spark的宽窄依赖，以及Spark如何划分Stage，如何确定每个Stage中Task个数
+</h3><p>RDD之间的依赖关系分为窄依赖（narrow dependency）和宽依赖（Wide Depencency，也称为Shuffle Depencency）</p>
+<ul>
+<li><strong>窄依赖</strong> ：指父RDD的每个分区只被子RDD的一个分区所使用，子RDD分区通常对应常数个父RDD分区（O(1)，与数据规模无关）</li>
+<li><strong>宽依赖</strong> ：是指父RDD的每个分区都可能被多个子RDD分区所使用，子RDD分区通常对应所有的父RDD分区（O(n),与数据规模有关）</li>
+</ul>
+<p>相比于宽依赖，窄依赖对优化很有利，主要基于以下几点：</p>
+<ul>
+<li>宽依赖往往对应着Shuffle操作，需要在运行过程中将同一个父RDD的分区传入到不同的子RDD分区中，中间可能涉及多个节点之间的数据传输；而窄依赖的每个父RDD的分区只会传入到一个子RDD分区中，通常可以在一个节点内完成转换</li>
+<li>当RDD分区丢失时（某个节点故障），Spark会对数据进行重算</li>
+<li>对于窄依赖，由于父RDD的一个分区只对应一个子RDD分区，这样只需要重算和子RDD分区对应的父RDD分区即可，所以这个重算对数据的利用率是100%的</li>
+<li>对于宽依赖，重算的父RDD分区对应多个子RDD分区的，这样实际上父RDD中只有一部分的数据是被用于恢复这个丢失的子RDD分区的，另一部分对应子RDD的其他未丢失分区，这就造成了多余的计算；更一般的，宽依赖中子RDD分区通常来自多个父RDD分区，所有的父RDD分区都要进行重新计算</li>
+</ul>
+<p>Stage：根据RDD之间的依赖关系将Job划分成不同的Stage，遇到一个宽依赖则划分一个Stage。</p>
+<p>Task：Stage是一个TaskSet，将Stage根据分区数划分成一个个的Task</p>
+<h3 id="aqe是什么">AQE是什么
+</h3><p>Adaptive Query Execution (AQE) 就像 SparkSQL的智能助手，它解决了查询计划不那么完美的问题，它通过在sparksSQL查询运行时从去从数据中去学习并通过算法模型优化来实现这一点。AQE不依赖于数据的固定信息，而是在查询展开时收集实时细节。通过这样做，AQE 可以对查询计划进行即时改进，确保其运行更高效，确保最终的结果尽可能快捷。</p>
+<p><strong>动态合并Shuffle分区</strong>
+当 Spark 处理大型数据集时，它通常需要通过网络重新组织或打乱数据以执行某些操作，例如ioin连接或聚合。这个shuffle过程涉及到将数据划分为多个分区，而这个分区的效率极大地影响了查询性能，而AQE 在查询运行时动态调整随机分区的数量，假设您有一个大数据集，最初，Spark 决定使用一定数量的分区进行shuffle。这个数字可能很难得到正确的值，因为如果它太低，每个分区可能太大，导致处理速度慢。另一方面，如果它太高，您会得到很多小分区，导致数据获取效率低下并增加开销。</p>
+<p>如果没有 AQE，Spark 可能会决定在本地分组操作后创建五个分区。然而，AQE 很聪明。它注意到其中三个分区非常小。AQE 不会通过单独处理每个小分区来浪费资源，而是将这些小分区合并 (组合) 为一个。现在，最终的聚合只需要对三个任务执行，而不是五个，使得查询更加高效。在后台，AQE 动态调整随机分区的数量并根据需要合并它们，从而优化查询执行计划</p>
+<p><strong>动态切换Join策略</strong></p>
+<p>当您在 Spark 中执行join连接时，可以采用不同的方法来组合数据。最有效的方法之一称为广播哈希join (broadcast hash join)其中连接的一侧足够小以适合放到内存里，从而使Join过程更快，类似hive中的mapjoin。现在，假设您正在运行join连接操作，并且最初，Spark 计划根据其对数据大小的估计使用某种连接策略。这就是 AQE 的用武之地。它不会盲目地坚持最初的计划。相反，它会在查询运行时关注数据的实际大小，动态调整join策略。</p>
+<p>如果在执行过程中，AQE 注意到join一侧的数据大小比最初估计的要小得多，它可以动态地将ioin连接策略切换为更高效的broadcasthash join。这一点至关重要，因为有时初始化时估计可能会由于各种因素而出现偏差，例如各种filter或一组复杂的操作后数据量明显变小</p>
+<p>Spark 计划使用sort merge join ，刚开始以为是大表Join。然而，AQE 观察到运行时的实际大小要小得多，这使得使用广播哈希连接更加高效。因此，AQE 可以智能地切换连接策略来优化性能。现在我们开启AQE后，运行涉及join的查询时，AQE 将根据实际数据大小动态调整联接策略，确保最佳性能。</p>
+<p><strong>动态优化倾斜连接</strong></p>
+<p>我们知道当分区之间的数据分布不均匀时，就会出现数据倾斜。在 Spark 集群中，数据被划分为多个分区以进行并行处理。理想情况下每个分区的数据量大致相等，确保所有处理任务的工作负载均衡。然而，在数据倾斜的情况下，一个或几个分区可能包含比其他分区多得多的数据。数据倾斜对查询性能的影响: 任务相当存在数据倾斜时，与处理较少数据比，与倾斜分区相关的处理任务而要更长的时间才能完成。这种不平衡可能会导致性能瓶颈，因为某些任务会成为整个操作的瓶颈。这在join连接期间尤其成问题，其中涉及倾斜分在join连接期间尤其成问题，其中涉及倾斜分区的任务可能会滞后，从而降低整体查询性能。AQE通过其倾斜连接优化来解决这个问题AQE在运行时通过分析shuffle文件统计信息自动检测数据倾斜何时影响查询性能。一旦识别出倾斜，AQE就会动态调整方法。分割倾斜分区:AQE 不会让一些负载较重的分区成为处理瓶颈，而是智能地将这些倾斜的分区拆分为更小的子分区。现在，每个子分区包含更均衡的数据量，防止工作负载集中在少数任务上假设一个jin连接操作，其中join连接的一侧有一个分区 (我们称之为 P1) ，其中的数据明显多于其他分区:在 AQE 倾斜连接优化之前: 如果没有 AQEjoin连接操作可能会因负载过重的 P1分区而变慢，从而导致性能问题在AQE倾斜连接优化之后:AQE检测到倾斜并动态地将P1分区分割成更小、更均衡的子分区现在，工作负载的分布更加均匀，从而提高了查询性能。</p>
+<p><strong>总结</strong>
+Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态统计的依赖和解决运行时的挑战，AQE增强了Spark对不同数据条件的适应性。三个关键特性一合并shuffle分区、切换JOIN策略和优化倾斜连接。有助于大幅提高性能，使Spark SQL在各种工作负载下更具弹性和效率。随着AQE成为标准特性，用户可以减少很多手动调优技能的输出，降低使用成本。</p>
 <h3 id="spark累加器有哪些特点">Spark累加器有哪些特点
 </h3><p>Spark累加器是一种用于在分布式计算中进行累加操作的特殊变量。以下是Spark累加器的几个特点：</p>
 <ol>
@@ -1079,8 +1120,7 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 <p>直接方式具有更低的延迟和更高的吞吐量，因为它直接连接到Kafka分区，避免了接收器线程的开销。同时，直接方式可以实现端到端的一次性语义，确保数据的精确处理。</p>
 <p>接收器方式相对简单，适用于较低的数据吞吐量和较高的延迟容忍度。它使用接收器线程将数据存储在Spark的内存中，并由Spark Streaming进行处理。但是，由于接收器的存在，可能会引入一些额外的延迟，并且无法提供端到端的一次性语义。</p>
 <p>根据具体的需求和应用场景，可以选择适合的方式来消费Kafka数据。如果对延迟和一次性语义有较高的要求，直接方式是更好的选择；如果对延迟和一次性语义要求较低，接收器方式可能更简单方便。</p>
-<h3 id="简要介绍下spark的内存管理">简要介绍下Spark的内存管理
-</h3><h3 id="说说对spark-shuffle的理解">说说对Spark Shuffle的理解
+<h3 id="说说对spark-shuffle的理解">说说对Spark Shuffle的理解
 </h3><p>Spark中的Shuffle是指在数据重分区（Data Redistribution）的过程中，将数据从一个或多个输入分区重新分布到新的输出分区的操作。Shuffle是Spark中一种非常重要的操作，它在许多转换操作（如groupByKey、reduceByKey和join等）中都会被使用到。</p>
 <p>Shuffle的原理可以分为三个主要步骤：Map阶段、Shuffle阶段和Reduce阶段。</p>
 <p><strong>1. Map阶段</strong> ：</p>
@@ -1105,48 +1145,6 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 <li>基于Sort的Merge：在Reduce阶段，可以使用基于Sort的Merge算法对具有相同键的记录进行合并，减少计算的次数。</li>
 </ul>
 <p>通过合理配置Shuffle相关的参数，使用适当的优化技术，可以提高Shuffle的性能，从而提升Spark应用程序的整体性能和可扩展性。</p>
-<h3 id="谈一谈spark中的容错机制">谈一谈Spark中的容错机制
-</h3><p>Spark是一个分布式计算框架，具备强大的容错机制，以确保在集群中发生故障时能够保持计算的正确性和可靠性。下面是Spark中的几个主要容错机制：</p>
-<ol>
-<li><strong>数据容错</strong> ：Spark通过将数据划分为一系列弹性分布式数据集（RDD）来实现数据容错。RDD是不可变的、可分区的数据集合，它可以在集群中的多个节点上进行并行计算。当节点发生故障时，Spark可以使用RDD的血统（lineage）信息重新计算丢失的数据分区，从而实现数据的容错。</li>
-<li><strong>任务容错</strong> ：Spark将计算任务划分为一系列的阶段（stage），每个阶段包含一组可以并行执行的任务。每个任务都会在执行过程中生成一系列的输出数据，这些输出数据会被持久化到稳定存储中。如果任务失败，Spark可以通过重新执行该任务来实现任务的容错。</li>
-<li><strong>节点容错</strong> ：Spark通过使用主从架构来实现节点容错。在集群中，有一个主节点（Driver）负责协调任务的执行和结果的收集，以及监控集群中的节点状态。如果主节点发生故障，Spark可以通过重新启动一个新的主节点来实现节点的容错。</li>
-<li><strong>任务调度容错</strong> ：Spark使用任务调度器来管理任务的执行顺序和资源分配。如果某个任务在执行过程中发生错误，任务调度器可以重新调度该任务，并将其分配给其他可用的节点进行执行。</li>
-<li><strong>数据丢失容错</strong> ：Spark在执行过程中会将数据缓存在内存中，以提高计算性能。为了防止数据丢失，Spark提供了可配置的数据持久化选项，可以将数据持久化到磁盘或其他外部存储系统中。这样即使发生节点故障，数据也可以从持久化存储中恢复。</li>
-</ol>
-<p>总的来说，Spark的容错机制主要依赖于RDD的血统信息、任务调度器、主从架构和数据持久化等技术手段，通过这些手段可以实现数据、任务、节点和数据丢失的容错处理，保证计算的正确性和可靠性。</p>
-<h3 id="说说spark数据倾斜">说说Spark数据倾斜
-</h3><p>Spark数据倾斜是指在数据处理过程中，某些数据分区的负载远远超过其他分区，导致计算资源不均衡，从而影响整体性能。数据倾斜可能导致任务执行时间延长，资源浪费，甚至导致任务失败。下面是一些常见的数据倾斜情况和解决方法：</p>
-<ol>
-<li><strong>Key数据倾斜</strong> ：当使用某个字段作为数据集的Key时，如果该字段的分布不均匀，就会导致Key数据倾斜。解决方法包括：</li>
-</ol>
-<ul>
-<li><strong>增加分区</strong> ：通过增加数据集的分区数，可以将数据均匀地分布到更多的分区中，减少数据倾斜的可能性。</li>
-<li><strong>使用哈希分区</strong> ：使用哈希函数将Key映射到不同的分区，确保数据均匀分布。</li>
-<li><strong>聚合合并</strong> ：将具有相同Key的数据进行聚合操作，减少数据量，降低倾斜程度。</li>
-</ul>
-<ol start="2">
-<li><strong>数据倾斜的Join操作</strong> ：在进行Join操作时，如果连接字段的分布不均匀，就会导致数据倾斜。解决方法包括：</li>
-</ol>
-<ul>
-<li><strong>使用Broadcast Join</strong> ：对于小表和大表进行Join操作时，可以将小表广播到每个节点上，避免数据倾斜。</li>
-<li><strong>使用随机前缀</strong> ：对于连接字段分布不均匀的情况，可以在连接字段上添加随机前缀，使连接字段的值更均匀分布。</li>
-</ul>
-<ol start="3">
-<li><strong>数据倾斜的聚合操作</strong> ：在进行聚合操作时，如果某些分组的数据量远远超过其他分组，就会导致数据倾斜。解决方法包括：</li>
-</ol>
-<ul>
-<li><strong>使用预聚合</strong> ：对于可能导致数据倾斜的字段进行预聚合操作，将数据量较大的分组合并为一个分组，减少数据倾斜。</li>
-<li><strong>使用多级聚合</strong> ：将聚合操作拆分为多个阶段，逐步聚合，减少单个阶段的数据量。</li>
-</ul>
-<ol start="4">
-<li><strong>数据倾斜的排序操作</strong> ：在进行排序操作时，如果数据分布不均匀，就会导致数据倾斜。解决方法包括：</li>
-</ol>
-<ul>
-<li><strong>使用随机前缀</strong> ：对于排序字段分布不均匀的情况，可以在排序字段上添加随机前缀，使排序字段的值更均匀分布。</li>
-<li><strong>使用二次排序</strong> ：对于多个字段进行排序时，可以使用二次排序算法，先按照一个字段排序，再按照另一个字段排序，减少数据倾斜。</li>
-</ul>
-<p>除了上述方法，还可以通过动态资源分配、任务重试、数据重分区等方式来应对数据倾斜问题。数据倾斜是Spark中常见的性能瓶颈之一，需要根据具体情况选择合适的解决方法。</p>
 <h3 id="说说spark的优化">说说Spark的优化
 </h3><p>Spark是一个基于内存的分布式计算框架，为了提高计算性能和资源利用率，它采用了多种优化技术。下面是Spark的一些优化策略：</p>
 <ol>
@@ -1394,7 +1392,8 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 <li><strong>Spark过程中的reduce个数</strong> ：在Spark中，reduce是指对数据进行聚合操作的阶段，通常是在MapReduce模型中的reduce阶段。在Spark中，reduce的个数由数据的分区数决定，每个分区都会有一个reduce任务。分区数可以通过调整RDD的分区策略或使用 <code>repartition</code>、<code>coalesce</code>等操作来进行控制。reduce的个数影响了并行计算的程度，可以根据数据量和计算资源进行调整。</li>
 </ol>
 <p>虽然HBase的预分区个数和Spark过程中的reduce个数可以相互关联，但它们并不是一一对应的关系。HBase的预分区个数主要用于数据的存储和负载均衡，而Spark的reduce个数主要用于计算的并行度控制。在实际应用中，可以根据数据的特点和计算需求来调整它们的个数，以达到最佳的性能和效果。</p>
-<h3 id="spark读取hdfs上的文件然后count有多少行的操作你可以说说过程吗那这个count是在内存中还是磁盘中计算的呢">Spark读取hdfs上的文件，然后count有多少行的操作，你可以说说过程吗。那这个count是在内存中，还是磁盘中计算的呢
+<h3 id="简要介绍下spark的内存管理">简要介绍下Spark的内存管理
+</h3><h3 id="spark读取hdfs上的文件然后count有多少行的操作你可以说说过程吗那这个count是在内存中还是磁盘中计算的呢">Spark读取hdfs上的文件，然后count有多少行的操作，你可以说说过程吗。那这个count是在内存中，还是磁盘中计算的呢
 </h3><h3 id="hbase-region多大会分区spark读取hbase数据是如何划分partition的">hbase region多大会分区，spark读取hbase数据是如何划分partition的
 </h3><h3 id="说说blockmanager怎么管理硬盘和内存的">说说BlockManager怎么管理硬盘和内存的
 </h3><h3 id="列举spark中常见的端口分别有什么功能">列举Spark中常见的端口，分别有什么功能
@@ -1421,7 +1420,54 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 <li><strong>编程接口</strong> ：MapReduce使用Java编程接口，而Spark支持多种编程语言接口，包括Java、Scala、Python和R，使得开发者可以使用自己熟悉的语言进行开发。</li>
 </ol>
 <p>总体而言，Spark相对于MapReduce来说更加灵活和高效，尤其适用于需要实时计算和复杂数据处理的场景。但对于一些传统的离线批处理任务，MapReduce仍然是一个可靠的选择。</p>
-<h2 id="实战">实战
+<h3 id="对rdddag和task的理解">对RDD、DAG和Task的理解
+</h3><h3 id="dag为什么适合spark">DAG为什么适合Spark
+</h3><h3 id="介绍下spark的dag以及它的生成过程">介绍下Spark的DAG以及它的生成过程
+</h3><h3 id="dagscheduler如何划分干了什么活">DAGScheduler如何划分？干了什么活
+</h3><h3 id="spark的容错机制">Spark的容错机制
+</h3><h3 id="rdd的容错">RDD的容错
+</h3><h3 id="executor内存分配">Executor内存分配
+</h3><h3 id="spark的batchsize怎么解决小文件合并问题">Spark的batchsize，怎么解决小文件合并问题
+</h3><h3 id="spark参数性能调优">Spark参数(性能)调优
+</h3><h3 id="介绍一下spark是怎么基于内存计算的">介绍一下Spark是怎么基于内存计算的
+</h3><h3 id="说下什么是rdd对rdd的理解rdd有哪些特点说下知道的rdd算子">说下什么是RDD(对RDD的理解)，RDD有哪些特点？说下知道的RDD算子
+</h3><h3 id="rdd底层原理">RDD底层原理
+</h3><h3 id="rdd属性">RDD属性
+</h3><h3 id="rdd的缓存级别">RDD的缓存级别
+</h3><h3 id="spark广播变量的实现和原理">Spark广播变量的实现和原理
+</h3><h3 id="reducebykey和groupbykey的区别和作用">reduceByKey和groupByKey的区别和作用
+</h3><h3 id="reducebykey和reduce的区别">reduceByKey和reduce的区别
+</h3><h3 id="使用reducebykey出现数据倾斜怎么办">使用reduceByKey出现数据倾斜怎么办
+</h3><h3 id="sparksql的执行原理">SparkSQL的执行原理
+</h3><h3 id="sparksql的优化">SparkSQL的优化
+</h3><h3 id="说下spark-checkpoint">说下Spark checkpoint
+</h3><h3 id="sparksql自定义函数怎么创建dataframe">Sparksql自定义函数？怎么创建DataFrame
+</h3><h3 id="hashpartitioner和rangepartitioner的实现">HashPartitioner和RangePartitioner的实现
+</h3><h3 id="dagschedulertaskschedulerschedulerbackend实现原理">DAGScheduler、TaskScheduler、SchedulerBackend实现原理
+</h3><h3 id="driver怎么管理executor">Driver怎么管理executor
+</h3><h3 id="spark的map和flatmap的区别">Spark的map和flatmap的区别
+</h3><h3 id="map和mappartition的区别">map和mapPartition的区别
+</h3><h3 id="spark的cache和persist的区别它们是transformation算子还是action算子">Spark的cache和persist的区别？它们是transformation算子还是action算子？
+</h3><h3 id="sparkstreaming的工作原理">SparkStreaming的工作原理
+</h3><h3 id="spark-streaming的dstream和dstreamgraph的区别">Spark Streaming的DStream和DStreamGraph的区别
+</h3><h3 id="spark输出文件的个数如何合并小文件">Spark输出文件的个数，如何合并小文件
+</h3><h3 id="spark的driver是怎么驱动作业流程的">Spark的driver是怎么驱动作业流程的
+</h3><h3 id="sparksql的劣势">SparkSQL的劣势
+</h3><h3 id="dag划分spark源码实现">DAG划分Spark源码实现
+</h3><h3 id="spark-steaming的双流join的过程怎么做的">Spark Steaming的双流join的过程，怎么做的
+</h3><h3 id="spark的block管理">Spark的Block管理
+</h3><h3 id="spark怎么保证数据不丢失">Spark怎么保证数据不丢失
+</h3><h3 id="sparksql如何使用udf">SparkSQL如何使用UDF
+</h3><h3 id="sparksql读取文件内存不够使用如何处理">SparkSQL读取文件，内存不够使用，如何处理
+</h3><h3 id="spark的lazy提现在哪里">Spark的lazy提现在哪里
+</h3><h3 id="spark中的并行度等于什么">Spark中的并行度等于什么
+</h3><h3 id="spark运行时并行度的设置">Spark运行时并行度的设置
+</h3><h3 id="sparksql的数据倾斜">SparkSQL的数据倾斜
+</h3><h3 id="spark的exactly-one">Spark的exactly-one
+</h3><h3 id="spark的rdd和partition的联系">Spark的RDD和partition的联系
+</h3><h3 id="spark3的特性">Spark3的特性
+</h3><h3 id="spakr计算的灵活性提现在哪里">Spakr计算的灵活性提现在哪里
+</h3><h2 id="实战">实战
 </h2><h3 id="spark数据倾斜问题如何定位解决方案">Spark数据倾斜问题，如何定位，解决方案
 </h3><h3 id="spark提交你的jar包时所用的命令是什么">Spark提交你的jar包时所用的命令是什么
 </h3><h3 id="spark-submit的时候如何引入外部jar包">spark-submit的时候如何引入外部jar包

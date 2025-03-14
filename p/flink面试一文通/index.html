@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="zh-cn" dir="ltr">
     <head><meta charset='utf-8'>
-<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="高频 Flink架构 Flink的窗口都有哪些，什么区别，如何定义 说一说Flink的checkpoint机制 checkpoint底层如何实现的 checkpoint和savepoint的区别 Checkpoint工作流程 Checkpoint的作用 Flink中Checkpoint超时原因 Flink的Exactly Once语义怎么保证 Flink的端到端Exactly Once Flink的水印(Watermark)有哪几种 Flink的时间语义 Flink相比其他流式处理框架的优点 Flink和Spark的区别？什么情况下使用Flink？有什么优点？ Flink backPressure反压机制是什么样的，指标监控你是怎么做的 Flink如何保持一致性 Flink支持JobManager的HA吗？原理是怎么样的？ 如何确定Flink任务的合理并行度 Flink任务如何实现端到端一致 Flink如何处理背压 Flink解决数据延迟的问题 Flink消费kafka分区的数据室，Flink任务并行度之间的关系 使用Flink-client消费kafka数据还是使用flink-connector消费 如何动态修改Flink的配置，前提是Flink不能重启 Flink流批一体解释一下 说一下Flink的check和barrier 说一下Flink状态机制 Flink广播流 Flink实时topN Savepoint知道是什么吗 基本 简单介绍一下 Flink Flink 是一个框架和分布式处理引擎，用于对无界和有界数据流进行有状态计算。并且 Flink 提供了数据分布、容错机制以及资源管理等核心功能。Flink提供了诸多高抽象层的API以便用户编写分布式任务：\n">
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="高频 讲一下Flink的运行架构 Flink程序在运行时主要有TaskManager，JobManager，Client三种角色。当 Flink 集群启动后，⾸先会启动⼀个 JobManger 和⼀个或多个的 TaskManager。由 Client 提交任务给 JobManager，JobManager 再调度任务到各个 TaskManager 去执⾏，然后 TaskManager 将⼼跳和统计信息汇报给 JobManager。TaskManager 之间以流的形式进⾏数据的传输。上述三者均为独⽴的 JVM 进程。\n">
 <title>Flink面试一文通</title>
 
 <link rel='canonical' href='https://sherlock-lin.github.io/p/flink%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/'>
 
 <link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="Flink面试一文通">
-<meta property='og:description' content="高频 Flink架构 Flink的窗口都有哪些，什么区别，如何定义 说一说Flink的checkpoint机制 checkpoint底层如何实现的 checkpoint和savepoint的区别 Checkpoint工作流程 Checkpoint的作用 Flink中Checkpoint超时原因 Flink的Exactly Once语义怎么保证 Flink的端到端Exactly Once Flink的水印(Watermark)有哪几种 Flink的时间语义 Flink相比其他流式处理框架的优点 Flink和Spark的区别？什么情况下使用Flink？有什么优点？ Flink backPressure反压机制是什么样的，指标监控你是怎么做的 Flink如何保持一致性 Flink支持JobManager的HA吗？原理是怎么样的？ 如何确定Flink任务的合理并行度 Flink任务如何实现端到端一致 Flink如何处理背压 Flink解决数据延迟的问题 Flink消费kafka分区的数据室，Flink任务并行度之间的关系 使用Flink-client消费kafka数据还是使用flink-connector消费 如何动态修改Flink的配置，前提是Flink不能重启 Flink流批一体解释一下 说一下Flink的check和barrier 说一下Flink状态机制 Flink广播流 Flink实时topN Savepoint知道是什么吗 基本 简单介绍一下 Flink Flink 是一个框架和分布式处理引擎，用于对无界和有界数据流进行有状态计算。并且 Flink 提供了数据分布、容错机制以及资源管理等核心功能。Flink提供了诸多高抽象层的API以便用户编写分布式任务：\n">
+<meta property='og:description' content="高频 讲一下Flink的运行架构 Flink程序在运行时主要有TaskManager，JobManager，Client三种角色。当 Flink 集群启动后，⾸先会启动⼀个 JobManger 和⼀个或多个的 TaskManager。由 Client 提交任务给 JobManager，JobManager 再调度任务到各个 TaskManager 去执⾏，然后 TaskManager 将⼼跳和统计信息汇报给 JobManager。TaskManager 之间以流的形式进⾏数据的传输。上述三者均为独⽴的 JVM 进程。\n">
 <meta property='og:url' content='https://sherlock-lin.github.io/p/flink%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/'>
 <meta property='og:site_name' content='夏洛克-林'>
 <meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2025-03-12T11:52:29&#43;08:00'/><meta property='article:modified_time' content='2025-03-12T11:52:29&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/flink%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/leaf-8687801_1280.jpg' />
 <meta name="twitter:title" content="Flink面试一文通">
-<meta name="twitter:description" content="高频 Flink架构 Flink的窗口都有哪些，什么区别，如何定义 说一说Flink的checkpoint机制 checkpoint底层如何实现的 checkpoint和savepoint的区别 Checkpoint工作流程 Checkpoint的作用 Flink中Checkpoint超时原因 Flink的Exactly Once语义怎么保证 Flink的端到端Exactly Once Flink的水印(Watermark)有哪几种 Flink的时间语义 Flink相比其他流式处理框架的优点 Flink和Spark的区别？什么情况下使用Flink？有什么优点？ Flink backPressure反压机制是什么样的，指标监控你是怎么做的 Flink如何保持一致性 Flink支持JobManager的HA吗？原理是怎么样的？ 如何确定Flink任务的合理并行度 Flink任务如何实现端到端一致 Flink如何处理背压 Flink解决数据延迟的问题 Flink消费kafka分区的数据室，Flink任务并行度之间的关系 使用Flink-client消费kafka数据还是使用flink-connector消费 如何动态修改Flink的配置，前提是Flink不能重启 Flink流批一体解释一下 说一下Flink的check和barrier 说一下Flink状态机制 Flink广播流 Flink实时topN Savepoint知道是什么吗 基本 简单介绍一下 Flink Flink 是一个框架和分布式处理引擎，用于对无界和有界数据流进行有状态计算。并且 Flink 提供了数据分布、容错机制以及资源管理等核心功能。Flink提供了诸多高抽象层的API以便用户编写分布式任务：\n"><meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="高频 讲一下Flink的运行架构 Flink程序在运行时主要有TaskManager，JobManager，Client三种角色。当 Flink 集群启动后，⾸先会启动⼀个 JobManger 和⼀个或多个的 TaskManager。由 Client 提交任务给 JobManager，JobManager 再调度任务到各个 TaskManager 去执⾏，然后 TaskManager 将⼼跳和统计信息汇报给 JobManager。TaskManager 之间以流的形式进⾏数据的传输。上述三者均为独⽴的 JVM 进程。\n"><meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content='https://sherlock-lin.github.io/p/flink%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/leaf-8687801_1280.jpg' />
     </head>
     <body class="
@@ -268,16 +268,23 @@
   <ol>
     <li><a href="#高频">高频</a>
       <ol>
-        <li><a href="#flink架构">Flink架构</a></li>
-        <li><a href="#flink的窗口都有哪些什么区别如何定义">Flink的窗口都有哪些，什么区别，如何定义</a></li>
+        <li><a href="#讲一下flink的运行架构">讲一下Flink的运行架构</a></li>
+        <li><a href="#flink-中对窗口的支持包括哪几种说说他们的使用场景什么区别以及如何定义">Flink 中对窗口的支持包括哪几种，说说他们的使用场景，什么区别，以及如何定义</a></li>
+        <li><a href="#flink的checkpoint存在哪里">Flink的Checkpoint存在哪里？</a></li>
         <li><a href="#说一说flink的checkpoint机制">说一说Flink的checkpoint机制</a></li>
-        <li><a href="#checkpoint底层如何实现的">checkpoint底层如何实现的</a></li>
+        <li><a href="#说说flink-的容错机制flink是如何做到容错的">说说Flink 的容错机制，Flink是如何做到容错的？</a></li>
+        <li><a href="#flink分布式快照的原理是什么">Flink分布式快照的原理是什么</a></li>
+        <li><a href="#说说flink的几种时间语义">说说Flink的几种时间语义</a></li>
+        <li><a href="#说说flink中的watermark机制">说说Flink中的Watermark机制</a></li>
+        <li><a href="#说说flink的状态储存机制">说说Flink的状态储存机制</a></li>
         <li><a href="#checkpoint和savepoint的区别">checkpoint和savepoint的区别</a></li>
         <li><a href="#checkpoint工作流程">Checkpoint工作流程</a></li>
         <li><a href="#checkpoint的作用">Checkpoint的作用</a></li>
         <li><a href="#flink中checkpoint超时原因">Flink中Checkpoint超时原因</a></li>
         <li><a href="#flink的exactly-once语义怎么保证">Flink的Exactly Once语义怎么保证</a></li>
         <li><a href="#flink的端到端exactly-once">Flink的端到端Exactly Once</a></li>
+        <li><a href="#tasksolt是什么">TaskSolt是什么</a></li>
+        <li><a href="#flink的slots和并行度有什么关系">Flink的Slots和并行度有什么关系</a></li>
         <li><a href="#flink的水印watermark有哪几种">Flink的水印(Watermark)有哪几种</a></li>
         <li><a href="#flink的时间语义">Flink的时间语义</a></li>
         <li><a href="#flink相比其他流式处理框架的优点">Flink相比其他流式处理框架的优点</a></li>
@@ -302,76 +309,63 @@
     </li>
     <li><a href="#基本">基本</a>
       <ol>
+        <li><a href="#checkpoint底层如何实现的">checkpoint底层如何实现的</a></li>
         <li><a href="#简单介绍一下-flink">简单介绍一下 Flink</a></li>
         <li><a href="#flink的主要特点是什么">Flink的主要特点是什么？</a></li>
-        <li><a href="#flink的应用场景有哪些">Flink的应用场景有哪些？</a>
-          <ol>
-            <li><a href="#4flink编程模型是什么">4、Flink编程模型是什么？</a></li>
-            <li><a href="#5讲一下flink的运行架构flink集群有哪些角色各自有什么作用">5、讲一下Flink的运行架构，Flink集群有哪些角色？各自有什么作用？</a></li>
-            <li><a href="#6flink的集群部署模式有哪些">6、Flink的集群部署模式有哪些？</a></li>
-            <li><a href="#7你们之前flink集群规模有多大">7、你们之前Flink集群规模有多大？</a></li>
-            <li><a href="#8说说flink集群优化">8、说说Flink集群优化</a></li>
-            <li><a href="#9公司怎么提交的实时任务有多少job-manager">9、公司怎么提交的实时任务，有多少Job Manager？</a></li>
-            <li><a href="#10flink的并行度了解吗flink的并行度设置是怎样的">10、Flink的并行度了解吗？Flink的并行度设置是怎样的？</a></li>
-            <li><a href="#11flink的checkpoint存在哪里">11、Flink的Checkpoint存在哪里？</a></li>
-            <li><a href="#12flink的checkpoint机制对比spark有什么不同和优势">12、Flink的checkpoint机制对比spark有什么不同和优势？</a></li>
-            <li><a href="#13flink常用的算子有哪些">13、Flink常用的算子有哪些？</a></li>
-            <li><a href="#14flink的流式处理如何处理延迟">14、Flink的流式处理如何处理延迟？</a></li>
-            <li><a href="#15flink-中对窗口的支持包括哪几种说说他们的使用场景">15、Flink 中对窗口的支持包括哪几种？说说他们的使用场景</a></li>
-            <li><a href="#16flink支持哪些第三方集成">16、Flink支持哪些第三方集成？</a></li>
-            <li><a href="#17flink的source和sink有哪些">17、Flink的source和sink有哪些？</a></li>
-            <li><a href="#18flink支持哪些批处理操作">18、Flink支持哪些批处理操作？</a></li>
-            <li><a href="#19flink的流处理和批处理如何切换">19、Flink的流处理和批处理如何切换？</a></li>
-            <li><a href="#20为什么使用-flink-替代-spark">20、为什么使用 Flink 替代 Spark？</a></li>
-            <li><a href="#21说说flink-的容错机制flink是如何做到容错的">21、说说Flink 的容错机制，Flink是如何做到容错的？</a></li>
-            <li><a href="#22flink是如何做到高效的网络数据交换的">22、Flink是如何做到高效的网络数据交换的？</a></li>
-            <li><a href="#23flink程序在面对数据高峰期时如何处理">23、Flink程序在面对数据高峰期时如何处理？</a></li>
-            <li><a href="#24flink分布式快照的原理是什么">24、Flink分布式快照的原理是什么？</a></li>
-            <li><a href="#25flink跟spark-streaming的区别">25、Flink跟Spark Streaming的区别</a></li>
-            <li><a href="#26说说flink的几种时间语义">26、说说Flink的几种时间语义</a></li>
-            <li><a href="#27说说flink中的watermark机制">27、说说Flink中的Watermark机制</a></li>
-            <li><a href="#28flink怎么做压力测试和监控">28、Flink怎么做压力测试和监控？</a></li>
-            <li><a href="#29flink是通过什么机制实现的背压机制">29、Flink是通过什么机制实现的背压机制？</a></li>
-            <li><a href="#30flink是如何处理反压的如何监控和发现">30、Flink是如何处理反压的？如何监控和发现？</a></li>
-            <li><a href="#31flink中的window出现了数据倾斜你有什么解决办法">31、Flink中的Window出现了数据倾斜，你有什么解决办法？</a></li>
-            <li><a href="#32使用keyby算子时某一个key的数据量过大导致数据倾斜怎么处理">32、使用KeyBy算子时，某一个Key的数据量过大，导致数据倾斜，怎么处理？</a></li>
-            <li><a href="#33flink在使用聚合函数之后出现数据热点怎么解决">33、Flink在使用聚合函数之后出现数据热点怎么解决</a></li>
-            <li><a href="#34flink-任务延迟高想解决这个问题你会如何入手">34、Flink 任务延迟高，想解决这个问题，你会如何入手？</a></li>
-            <li><a href="#35flink是如何保证exactly-once语义的">35、Flink是如何保证Exactly-once语义的？</a></li>
-            <li><a href="#36说说flink的状态">36、说说Flink的状态</a></li>
-            <li><a href="#37说说flink的状态储存机制">37、说说Flink的状态储存机制</a></li>
-            <li><a href="#38介绍一下flink的cep机制">38、介绍一下Flink的CEP机制</a></li>
-            <li><a href="#39flink-cep-编程中当状态没有到达的时候会将数据保存在哪里">39、Flink CEP 编程中当状态没有到达的时候会将数据保存在哪里？</a></li>
-            <li><a href="#40flink的并行度是什么flink的并行度设置是怎么样的">40、Flink的并行度是什么？Flink的并行度设置是怎么样的？</a></li>
-            <li><a href="#41说说flink的分区策略">41、说说Flink的分区策略</a></li>
-            <li><a href="#42tasksolt是什么">42、TaskSolt是什么？</a></li>
-            <li><a href="#43flink的slots和并行度有什么关系">43、Flink的Slots和并行度有什么关系？</a></li>
-            <li><a href="#44说说flink的资源调度">44、说说Flink的资源调度</a></li>
-            <li><a href="#45flink中有没有重启策略">45、Flink中有没有重启策略？</a></li>
-            <li><a href="#46flink假如遇到程序异常重启怎么办">46、Flink假如遇到程序异常重启怎么办？</a></li>
-            <li><a href="#47flink-的分布式缓存有什么作用如何使用">47、Flink 的分布式缓存有什么作用？如何使用？</a></li>
-            <li><a href="#48说说flink中的广播变量使用广播变量的时候需要注意什么">48、说说Flink中的广播变量，使用广播变量的时候需要注意什么？</a></li>
-            <li><a href="#49说说flink-operator-chains">49、说说Flink Operator Chains</a></li>
-            <li><a href="#50flink什么情况下才会把operator-chain在一起形成算子链">50、Flink什么情况下才会把Operator chain在一起形成算子链？</a></li>
-            <li><a href="#51flink序列化如何实现">51、Flink序列化如何实现</a></li>
-            <li><a href="#52flink需要依赖于hadoop吗">52、Flink需要依赖于Hadoop吗？</a></li>
-            <li><a href="#53flink组件栈有哪些">53、Flink组件栈有哪些</a></li>
-            <li><a href="#54flink支持哪些机器学习和图处理库">54、Flink支持哪些机器学习和图处理库？</a></li>
-            <li><a href="#55说说flink-运行时组件">55、说说Flink 运行时组件</a></li>
-            <li><a href="#56flink的api可分为哪几层">56、Flink的API可分为哪几层？</a></li>
-            <li><a href="#57flink中应用在table-api中的udf有几种">57、Flink中应用在table API中的UDF有几种？</a></li>
-            <li><a href="#58说说flink-sql的实现原理">58、说说Flink SQL的实现原理</a></li>
-            <li><a href="#59说说flink任务提交流程">59、说说Flink任务提交流程</a></li>
-            <li><a href="#60flink-on-yarn常见的提交模式有哪些分别有什么优缺点">60、Flink-On-Yarn常见的提交模式有哪些，分别有什么优缺点？</a></li>
-            <li><a href="#61说说flink的执行图">61、说说Flink的执行图</a></li>
-            <li><a href="#62说说flink的cbo逻辑执行计划和物理执行计划">62、说说Flink的CBO，逻辑执行计划和物理执行计划</a></li>
-            <li><a href="#63什么是flink的全局快照为什么需要全局快照">63、什么是Flink的全局快照？为什么需要全局快照？</a></li>
-            <li><a href="#64flink维表关联怎么做">64、Flink维表关联怎么做</a></li>
-            <li><a href="#65flink如何海量key去重">65、Flink如何海量key去重</a></li>
-            <li><a href="#66说说flink的rpc">66、说说Flink的RPC</a></li>
-            <li><a href="#参考">参考</a></li>
-          </ol>
-        </li>
+        <li><a href="#flink的应用场景有哪些">Flink的应用场景有哪些？</a></li>
+        <li><a href="#flink编程模型是什么">Flink编程模型是什么？</a></li>
+        <li><a href="#flink的集群部署模式有哪些">Flink的集群部署模式有哪些？</a></li>
+        <li><a href="#你们之前flink集群规模有多大">你们之前Flink集群规模有多大？</a></li>
+        <li><a href="#说说flink集群优化">说说Flink集群优化</a></li>
+        <li><a href="#公司怎么提交的实时任务有多少job-manager">公司怎么提交的实时任务，有多少Job Manager？</a></li>
+        <li><a href="#flink的并行度了解吗flink的并行度设置是怎样的">Flink的并行度了解吗？Flink的并行度设置是怎样的？</a></li>
+        <li><a href="#flink的checkpoint机制对比spark有什么不同和优势">Flink的checkpoint机制对比spark有什么不同和优势？</a></li>
+        <li><a href="#flink常用的算子有哪些">Flink常用的算子有哪些？</a></li>
+        <li><a href="#flink的流式处理如何处理延迟">Flink的流式处理如何处理延迟？</a></li>
+        <li><a href="#flink支持哪些第三方集成">Flink支持哪些第三方集成？</a></li>
+        <li><a href="#flink的source和sink有哪些">Flink的source和sink有哪些？</a></li>
+        <li><a href="#flink支持哪些批处理操作">Flink支持哪些批处理操作？</a></li>
+        <li><a href="#flink的流处理和批处理如何切换">Flink的流处理和批处理如何切换？</a></li>
+        <li><a href="#为什么使用-flink-替代-spark">为什么使用 Flink 替代 Spark？</a></li>
+        <li><a href="#flink是如何做到高效的网络数据交换的">Flink是如何做到高效的网络数据交换的</a></li>
+        <li><a href="#flink程序在面对数据高峰期时如何处理">Flink程序在面对数据高峰期时如何处理</a></li>
+        <li><a href="#flink跟spark-streaming的区别">Flink跟Spark Streaming的区别</a></li>
+        <li><a href="#flink怎么做压力测试和监控">Flink怎么做压力测试和监控</a></li>
+        <li><a href="#flink是通过什么机制实现的背压机制">Flink是通过什么机制实现的背压机制</a></li>
+        <li><a href="#flink是如何处理反压的如何监控和发现">Flink是如何处理反压的？如何监控和发现？</a></li>
+        <li><a href="#flink中的window出现了数据倾斜你有什么解决办法">Flink中的Window出现了数据倾斜，你有什么解决办法？</a></li>
+        <li><a href="#使用keyby算子时某一个key的数据量过大导致数据倾斜怎么处理">使用KeyBy算子时，某一个Key的数据量过大，导致数据倾斜，怎么处理？</a></li>
+        <li><a href="#flink在使用聚合函数之后出现数据热点怎么解决">Flink在使用聚合函数之后出现数据热点怎么解决</a></li>
+        <li><a href="#flink-任务延迟高想解决这个问题你会如何入手">Flink 任务延迟高，想解决这个问题，你会如何入手？</a></li>
+        <li><a href="#flink是如何保证exactly-once语义的">Flink是如何保证Exactly-once语义的？</a></li>
+        <li><a href="#说说flink的状态">说说Flink的状态</a></li>
+        <li><a href="#介绍一下flink的cep机制">介绍一下Flink的CEP机制</a></li>
+        <li><a href="#flink-cep-编程中当状态没有到达的时候会将数据保存在哪里">Flink CEP 编程中当状态没有到达的时候会将数据保存在哪里</a></li>
+        <li><a href="#flink的并行度是什么flink的并行度设置是怎么样的">Flink的并行度是什么？Flink的并行度设置是怎么样的？</a></li>
+        <li><a href="#说说flink的分区策略">说说Flink的分区策略</a></li>
+        <li><a href="#说说flink的资源调度">说说Flink的资源调度</a></li>
+        <li><a href="#flink中有没有重启策略">Flink中有没有重启策略</a></li>
+        <li><a href="#flink假如遇到程序异常重启怎么办">Flink假如遇到程序异常重启怎么办</a></li>
+        <li><a href="#flink-的分布式缓存有什么作用如何使用">Flink 的分布式缓存有什么作用？如何使用？</a></li>
+        <li><a href="#说说flink中的广播变量使用广播变量的时候需要注意什么">说说Flink中的广播变量，使用广播变量的时候需要注意什么</a></li>
+        <li><a href="#说说flink-operator-chains">说说Flink Operator Chains</a></li>
+        <li><a href="#flink什么情况下才会把operator-chain在一起形成算子链">Flink什么情况下才会把Operator chain在一起形成算子链</a></li>
+        <li><a href="#flink序列化如何实现">Flink序列化如何实现</a></li>
+        <li><a href="#flink需要依赖于hadoop吗">Flink需要依赖于Hadoop吗</a></li>
+        <li><a href="#flink组件栈有哪些">Flink组件栈有哪些</a></li>
+        <li><a href="#flink支持哪些机器学习和图处理库">Flink支持哪些机器学习和图处理库</a></li>
+        <li><a href="#说说flink-运行时组件">说说Flink 运行时组件</a></li>
+        <li><a href="#flink的api可分为哪几层">Flink的API可分为哪几层</a></li>
+        <li><a href="#flink中应用在table-api中的udf有几种">Flink中应用在table API中的UDF有几种</a></li>
+        <li><a href="#说说flink-sql的实现原理">说说Flink SQL的实现原理</a></li>
+        <li><a href="#说说flink任务提交流程">说说Flink任务提交流程</a></li>
+        <li><a href="#flink-on-yarn常见的提交模式有哪些分别有什么优缺点">Flink-On-Yarn常见的提交模式有哪些，分别有什么优缺点？</a></li>
+        <li><a href="#说说flink的执行图">说说Flink的执行图</a></li>
+        <li><a href="#说说flink的cbo逻辑执行计划和物理执行计划">说说Flink的CBO，逻辑执行计划和物理执行计划</a></li>
+        <li><a href="#什么是flink的全局快照为什么需要全局快照">什么是Flink的全局快照？为什么需要全局快照？</a></li>
+        <li><a href="#flink维表关联怎么做">Flink维表关联怎么做</a></li>
+        <li><a href="#flink如何海量key去重">Flink如何海量key去重</a></li>
+        <li><a href="#说说flink的rpc">说说Flink的RPC</a></li>
       </ol>
     </li>
   </ol>
@@ -450,7 +444,7 @@
 
 
                 <time class="article-time--reading">
-                    阅读时长: 49 分钟
+                    阅读时长: 48 分钟
                 </time>
             </div>
         
@@ -466,17 +460,100 @@
     
     
     <h2 id="高频">高频
-</h2><h3 id="flink架构">Flink架构
-</h3><h3 id="flink的窗口都有哪些什么区别如何定义">Flink的窗口都有哪些，什么区别，如何定义
-</h3><h3 id="说一说flink的checkpoint机制">说一说Flink的checkpoint机制
-</h3><h3 id="checkpoint底层如何实现的">checkpoint底层如何实现的
-</h3><h3 id="checkpoint和savepoint的区别">checkpoint和savepoint的区别
+</h2><h3 id="讲一下flink的运行架构">讲一下Flink的运行架构
+</h3><p>Flink程序在运行时主要有TaskManager，JobManager，Client三种角色。当 Flink 集群启动后，⾸先会启动⼀个 JobManger 和⼀个或多个的 TaskManager。由 Client 提交任务给 JobManager，JobManager 再调度任务到各个 TaskManager 去执⾏，然后 TaskManager 将⼼跳和统计信息汇报给 JobManager。TaskManager 之间以流的形式进⾏数据的传输。上述三者均为独⽴的 JVM 进程。</p>
+<ul>
+<li>JobManager：扮演着集群中的管理者Master的角色，它是整个集群的协调者，负责接收Flink Job，协调检查点，Failover 故障恢复等，同时管理Flink集群中从节点TaskManager。</li>
+<li>TaskManager：是实际负责执行计算的Worker，在其上执行Flink Job的一组Task，每个TaskManager负责管理其所在节点上的资源信息，如内存、磁盘、网络，在启动的时候将资源的状态向JobManager汇报。</li>
+<li>Client：是Flink程序提交的客户端，当用户提交一个Flink程序时，会首先创建一个Client，该Client首先会对用户提交的Flink程序进行预处理，并提交到Flink集群中处理，所以Client需要从用户提交的Flink程序配置中获取JobManager的地址，并建立到JobManager的连接，将Flink Job提交给JobManager。</li>
+</ul>
+<h3 id="flink-中对窗口的支持包括哪几种说说他们的使用场景什么区别以及如何定义">Flink 中对窗口的支持包括哪几种，说说他们的使用场景，什么区别，以及如何定义
+</h3><p>Flink支持两种划分窗口的方式，按照time和count，session也是一种时间。</p>
+<ul>
+<li>Tumbling Time Window（滚动时间窗口）：当达到一定时间后的，进行滑动，可以联想到以前用的诺基亚的滑盖手机，这个其实就是微批。用于处理实时数据流中的时间序列数据，如股票价格走势、实时监测流量等。假如我们需要统计每一分钟中用户购买的商品的总数，需要将用户的行为事件按每一分钟进 行切分，这种切分被成为翻滚时间窗口（Tumbling Time Window）。翻滚窗口能将数据流切分成 不重叠的窗口，每一个事件只能属于一个窗口。</li>
+<li>Sliding Time Window（滑动时间窗口）：当达到一定时间后，进行翻滚，可以有重叠。用于处理时间序列数据的近期分析，如近 5 分钟用户购买商品总数等。我们可以每 30 秒计算一次最近一分钟用户购买的商品总数。这种窗口我们称为滑动时间窗 口（Sliding Time Window）。在滑窗中，一个元素可以对应多个窗口。</li>
+<li>Tumbling Count Window（滚动计数窗口）：当达到一定条数的时候执行计算，无折叠。用于处理计数型数据，如统计网站访问量、分析用户购买行为等。当我们想要每 100 个用户购买行为事件统计购买总数，那么每当窗口中填满 100 个元素了， 就会对窗口进行计算，这种窗口我们称之为翻滚计数窗口（Tumbling Count Window），上图所 示窗口大小为 3 个。</li>
+<li>Sliding Count Window（滑动计数窗口）：当达到一定数量后进行滑动。用于处理计数型数据的实时分析，如实时监测广告点击率、实时统计投票数等。</li>
+<li>Session Window（会话窗口）：窗口数据没有固定的大小，根据用户传入的参数进行划分，窗口数据无叠加。用于处理用户交互事件流中的数据，如计算每个用户在活跃期间总共购买的商品数量等。类似于当用户退出的时候，计算这个用户之前的动作。在这种用户交互事件流中，我们首先想到的是将事件聚合到会话窗口中（一段用户持续活跃 的周期），由非活跃的间隙分隔开。如上图所示，就是需要计算每个用户在活跃期间总共购买的 商品数量，如果用户 30 秒没有活动则视为会话断开（假设 raw data stream 是单个用户的购买 行为流）。一般而言，window 是在无限的流上定义了一个有限的元素集合。这个集合可以是基于时间的，元素个数的，时间和个数结合的，会话间隙的，或者是自定义的。Flink 的 DataStream API 提供了简洁的算子来满足常用的窗口操作，同时提供了通用的窗口机制来允许用户自己定义 窗口分配逻辑。</li>
+</ul>
+<h3 id="flink的checkpoint存在哪里">Flink的Checkpoint存在哪里？
+</h3><p>Flink 的 Checkpoint 是 Flink 的核心组件之一，它用于记录应用程序在特定时刻的状态，以便在应用程序失败时进行恢复。Checkpoint 通常存储在 Flink 的存储系统中，可以是内存、文件系统或 RocksDB。</p>
+<ol>
+<li>内存</li>
+</ol>
+<p>Flink 的内存状态是存储在 Java 内存中的。当应用程序运行时，Flink 会将状态数据存储在内存中，并定期将这些状态数据持久化到外部存储系统中。如果应用程序在运行时出现故障，Flink 可以从内存状态中恢复应用程序的状态。</p>
+<ol start="2">
+<li>文件系统</li>
+</ol>
+<p>Flink 也可以将状态数据存储在文件系统中。当应用程序运行时，Flink 会将状态数据写入分布式文件系统，如 HDFS 或 NFS。如果应用程序在运行时出现故障，Flink 可以从文件系统中恢复应用程序的状态。</p>
+<ol start="3">
+<li>RocksDB</li>
+</ol>
+<p>Flink 还可以将状态数据存储在 RocksDB 中。RocksDB 是一种高性能、高可靠性的键值存储数据库，它支持高效的数据压缩和快速查找。当应用程序运行时，Flink 会将状态数据写入 RocksDB 数据库，并定期将这些状态数据持久化到外部存储系统中。如果应用程序在运行时出现故障，Flink 可以从 RocksDB 中恢复应用程序的状态。</p>
+<p>总之，Flink 的 Checkpoint 可以存储在内存、文件系统或 RocksDB 中，具体存储位置由用户配置决定。Flink 提供了一些 API 来管理 Checkpoint，如 checkpointCoordinator.checkpoint() 方法和 checkpointCoordinator.restoreFromCheckpoint() 方法。使用这些 API，用户可以手动触发 Checkpoint，也可以在应用程序失败时自动恢复状态。</p>
+<h3 id="说一说flink的checkpoint机制">说一说Flink的checkpoint机制
+</h3><h3 id="说说flink-的容错机制flink是如何做到容错的">说说Flink 的容错机制，Flink是如何做到容错的？
+</h3><p>Flink 是一个分布式流处理框架，它实现了容错机制以确保在节点故障时，数据不会丢失并且可以进行故障恢复。Flink 的容错机制主要依靠两个强大的机制：Checkpoint 和 State。</p>
+<ul>
+<li><strong>Checkpoint</strong> ：是一种快照机制，它用于定期备份 Flink 程序中的状态，并将其存储在外部存储系统中。当节点发生故障时，Flink 可以使用 Checkpoint 来恢复程序的状态，并从故障点继续处理数据流。Checkpoint 的备份可以是全量的，也可以是增量的，这取决于 Checkpoint 的触发条件和备份策略。Flink 还支持 Exactly-Once 语义，这意味着在故障恢复时，Flink 可以确保每个事件都被处理了一次且仅一次。</li>
+<li><strong>State</strong> ：是 Flink 中的另一种重要机制，它用于存储计算过程中的中间状态。State 可以分为两种类型：Operator State 和 Keyed State。Operator State 是一种基于算子的状态，它存储在算子内部，并随着算子的执行而更新。Keyed State 是一种基于键的状态，它存储在 Stateful Function 内部，并使用键来标识状态的数据。Keyed State 可以具有过期时间（TTL），这使得 Flink 可以在状态过期时自动清理过期的状态数据。</li>
+</ul>
+<p>在 Flink 中，Checkpoint 和 State 是相互依存的。Checkpoint 用于备份 State，并确保在节点故障时，可以恢复程序的状态。而 State 则用于存储计算过程中的中间状态，并支持 Exactly-Once 语义。Flink 通过这两个机制的结合，实现了强大的容错和故障恢复能力，使得 Flink 在分布式流处理中具有高度的可靠性和可用性。</p>
+<h3 id="flink分布式快照的原理是什么">Flink分布式快照的原理是什么
+</h3><p>Flink的容错机制的核心部分是制作分布式数据流和操作算子状态的一致性快照。 这些快照充当一致性checkpoint，系统可以在发生故障时回滚。 Flink用于制作这些快照的机制在“分布式数据流的轻量级异步快照”中进行了描述。 它受到分布式快照的标准Chandy-Lamport算法的启发，专门针对Flink的执行模型而定制。</p>
+<p>barriers在数据流源处被注入并行数据流中。快照n的barriers被插入的位置（我们称之为Sn）是快照所包含的数据在数据源中最大位置。</p>
+<p>例如，在Apache Kafka中，此位置将是分区中最后一条记录的偏移量。 将该位置Sn报告给checkpoint协调器（Flink的JobManager）。</p>
+<p>然后barriers向下游流动。当一个中间操作算子从其所有输入流中收到快照n的barriers时，它会为快照n发出barriers进入其所有输出流中。</p>
+<p>一旦sink操作算子（流式DAG的末端）从其所有输入流接收到barriers n，它就向checkpoint协调器确认快照n完成。</p>
+<p>在所有sink确认快照后，意味快照着已完成。一旦完成快照n，job将永远不再向数据源请求Sn之前的记录，因为此时这些记录（及其后续记录）将已经通过整个数据流拓扑，也即是已经被处理结束。</p>
+<h3 id="说说flink的几种时间语义">说说Flink的几种时间语义
+</h3><p>Flink 支持三种时间语义：Event Time、Ingestion Time 和 Processing Time。</p>
+<p><strong>1. Event Time（事件时间）</strong></p>
+<p>Event Time 是事件创建的时间，它通常由事件中的时间戳描述。通常由事件生成器或者传感器生成。在 Flink 中，事件时间可以通过 water-mark 或者定时器来处理。例如，在采集日志数据时，每一条日志都会记录自己的生成时间，Flink 通过时间戳分配器访问事件时间戳。Event Time 是事件产生的时间，与数据处理的时间无关，因此它可以反映事件产生的实时性，但是对于数据处理的延迟和异步性无法体现。</p>
+<p><strong>2. Ingestion Time（注入时间）</strong></p>
+<p>Ingestion Time 是数据进入 Flink 的时间。它是指数据被 Flink 算子处理的时间，与事件创建的时间无关。Ingestion Time 能够反映数据处理的延迟和异步性，但是无法反映事件产生的实时性。</p>
+<p><strong>3. Processing Time（处理时间）</strong></p>
+<p>Processing Time 是每一个执行基于时间操作的算子的本地系统时间，与机器相关。它是指算子处理数据的时间，与事件创建的时间和数据进入 Flink 的时间无关。Processing Time 是默认的时间属性，除非明确指定时间语义为 Event Time 或 Ingestion Time。</p>
+<p>在实际应用中，选择合适的时间语义可以影响 Flink 处理的数据流的正确性和效率。</p>
+<p>例如，如果需要处理实时数据流，那么选择 Event Time 更为合适；</p>
+<p>如果需要处理延迟数据流，那么选择 Ingestion Time 更为合适；</p>
+<p>如果需要处理离线数据集，那么选择 Processing Time 更为合适。</p>
+<p>同时，Flink 也提供了 WaterMark 机制来处理延迟数据和异步数据，以保证数据处理的正确性和可靠性。</p>
+<h3 id="说说flink中的watermark机制">说说Flink中的Watermark机制
+</h3><p>Flink 中的 Watermark 机制是一种衡量 Event Time 进展的机制，可以用于处理乱序事件。在数据流处理过程中，由于网络延迟、背压等多种因素的影响，数据可能会乱序到达。为了正确处理这些乱序事件，Flink 引入了 Watermark 机制，结合窗口 (Window) 来实现。</p>
+<p>Watermark 是一个时间戳，用于表示事件时间小于等于该时间戳的数据都已经到达。在 Flink 中，每个 Operator 都会维护一个当前的 Watermark，当一个事件到达时，如果它的时间戳小于等于当前 Watermark，那么该事件就会被认为是到达了，会被放入窗口中进行处理。窗口的执行是由 Watermark 触发的，当 Watermark 达到窗口的结束时间时，窗口就会触发并执行其中的计算逻辑。</p>
+<p>为了实现窗口的正确处理，Flink 还引入了事件时间 (Event Time) 概念，每个事件都会携带一个时间戳，表示该事件产生的时间。在数据流处理过程中，Flink 会根据事件时间戳的顺序来处理事件，这样可以保证事件的正确顺序。但是，由于网络延迟、背压等原因，事件可能会乱序到达，这就需要使用 Watermark 机制来处理这些乱序事件。</p>
+<p>总结起来，Flink 中的 Watermark 机制是用于处理乱序事件的一种机制，它可以设定延迟触发，用于表示事件时间小于等于该时间戳的数据都已经到达。通过结合窗口机制，Watermark 机制可以实现对乱序事件的正确处理，保证数据流的正确性和完整性。</p>
+<h3 id="说说flink的状态储存机制">说说Flink的状态储存机制
+</h3><p>Flink 的状态储存是指在 Flink 程序运行过程中，用于存储和管理算子状态的数据结构和存储系统。Flink 提供了多种状态后端，以适应不同的应用场景和需求。这里将详细叙述 Flink 的状态储存，包括 1.13 版本之前的状态后端和 1.13 版本之后的状态后端。</p>
+<p>1.13 版本之前：</p>
+<ul>
+<li><strong>MemoryStateBackend</strong> ：开发时使用。这是一种基于内存的状态后端，用于在开发过程中快速调试和测试 Flink 程序。由于它使用内存存储状态数据，因此适用于状态数据较小的场景。</li>
+<li><strong>FsStateBackend</strong> ：生产时使用，常用。这是一种基于文件系统的状态后端，将状态数据存储在磁盘上。FsStateBackend 提供了一种高可用性的状态备份和恢复机制，以确保在任务失败时能够恢复状态。</li>
+<li><strong>RocksDBStateBackend</strong> ：生产时使用，非常大的状态时用。这是一种基于 RocksDB 的状态后端，使用 RocksDB 数据库存储状态数据。RocksDB 是一种支持高效压缩和快速查找的键值存储系统，适用于处理大规模状态数据的场景。</li>
+</ul>
+<p>1.13 版本之后：</p>
+<ul>
+<li><strong>HashMapStateBackend</strong> ：即 MemoryStateBackend 和 FsStateBackend，根据 API 不同。从 1.13 版本开始，Flink 对状态后端进行了整合，将 MemoryStateBackend 和 FsStateBackend 合并为一个统一的 HashMapStateBackend。它使用 HashMap 数据结构存储状态数据，并提供了一些额外的功能，如快照、checkpoint 等。</li>
+<li><strong>EmbeddedRocksDBStateBackend</strong> ：生产时使用，非常大的状态时用。这是一种基于 RocksDB 的状态后端，但与 RocksDBStateBackend 不同的是，它将 RocksDB 数据库嵌入到 Flink 的 TaskManager 进程中。这样做的优点是在状态数据较大时，可以减少网络开销和提高访问性能。
+总之，Flink 的状态储存系统包括多种状态后端，以适应不同的应用场景和需求。开发者可以根据实际情况选择合适的状态后端，以实现高效、可靠的 Flink 程序。</li>
+</ul>
+<h3 id="checkpoint和savepoint的区别">checkpoint和savepoint的区别
 </h3><h3 id="checkpoint工作流程">Checkpoint工作流程
 </h3><h3 id="checkpoint的作用">Checkpoint的作用
 </h3><h3 id="flink中checkpoint超时原因">Flink中Checkpoint超时原因
 </h3><h3 id="flink的exactly-once语义怎么保证">Flink的Exactly Once语义怎么保证
 </h3><h3 id="flink的端到端exactly-once">Flink的端到端Exactly Once
-</h3><h3 id="flink的水印watermark有哪几种">Flink的水印(Watermark)有哪几种
+</h3><h3 id="tasksolt是什么">TaskSolt是什么
+</h3><p>TaskSlot 是 Flink 中用于控制 TaskManager 接收任务的数量的一个概念。它是一个抽象的概念，表示一个 TaskManager 能够处理的任务数量。在 Flink 中，TaskManager 是实际执行程序的工作节点，为了起到资源隔离和并行执行的作用，TaskManager 是一个 JVM 进程。通过 TaskSlot 的概念，可以控制 TaskManager 接收的任务数量，从而更好地利用集群资源。</p>
+<p>当有一个 source 需要指定三个并行度时，它就需要使用三个 TaskSlot。这是因为 TaskSlot 的数量决定了 TaskManager 能够处理的任务数量。如果 source 需要三个并行度，那么 TaskManager 就需要三个 TaskSlot 来处理这三个并行度的任务。</p>
+<p>还有一个需要主要的优化概念是，当算子的并行度相同，并且没有发生并行度改变、或者没有 shuffle 时，这些算子会合并在一起。这样做的目的是为了减少资源的消耗，提高计算效率。</p>
+<h3 id="flink的slots和并行度有什么关系">Flink的Slots和并行度有什么关系
+</h3><p>Solt 是 TaskManager 中的概念，表示 TaskManager 的一个槽（Slot）。并行度是程序中的概念，表示程序并行执行的程度。在 Flink 中，Solt 和并行度有着密切的关系。</p>
+<p>具体来说，Solt 是 TaskManager 的资源分配单位，它决定了 TaskManager 能够支持的并行度。一个 TaskManager 有多个 Solt，每个 Solt 可以分配给一个 Task，用于执行程序。因此，TaskManager 的并行度就等于其 Solt 的数量。</p>
+<p>程序制定的并行度使用的是槽（Solt），也就是说，程序是通过分配 Solt 来控制并行度的。当程序需要更高的并行度时，它可以向 TaskManager 申请更多的 Solt，以便在同一时间内执行更多的 Task。</p>
+<p>因此，Solt 和并行度之间的关系可以总结为：Solt 是 TaskManager 中的概念，它决定了 TaskManager 能够支持的并行度；并行度是程序中的概念，它是通过分配 Solt 来控制的。TaskManager 是提供方，提供 Solt 资源给程序使用；程序是使用方，通过分配 Solt 来控制并行度。</p>
+<h3 id="flink的水印watermark有哪几种">Flink的水印(Watermark)有哪几种
 </h3><h3 id="flink的时间语义">Flink的时间语义
 </h3><h3 id="flink相比其他流式处理框架的优点">Flink相比其他流式处理框架的优点
 </h3><h3 id="flink和spark的区别什么情况下使用flink有什么优点">Flink和Spark的区别？什么情况下使用Flink？有什么优点？
@@ -497,7 +574,8 @@
 </h3><h3 id="flink实时topn">Flink实时topN
 </h3><h3 id="savepoint知道是什么吗">Savepoint知道是什么吗
 </h3><h2 id="基本">基本
-</h2><h3 id="简单介绍一下-flink">简单介绍一下 Flink
+</h2><h3 id="checkpoint底层如何实现的">checkpoint底层如何实现的
+</h3><h3 id="简单介绍一下-flink">简单介绍一下 Flink
 </h3><p>Flink 是一个框架和分布式处理引擎，用于对无界和有界数据流进行有状态计算。并且 Flink 提供了数据分布、容错机制以及资源管理等核心功能。Flink提供了诸多高抽象层的API以便用户编写分布式任务：</p>
 <ul>
 <li><strong>DataSet API</strong> ， 对静态数据进行批处理操作，将静态数据抽象成分布式的数据集，用户可以方便地使用Flink提供的各种操作符对分布式数据集进行处理，支持Java、Scala和Python。</li>
@@ -524,29 +602,22 @@
 <li><strong>实时计算和决策</strong> ：Flink 支持实时计算和决策，可以根据实时数据流进行实时决策和行动，适用于需要实时决策和行动的场景，如实时定价、实时广告投放等。</li>
 <li><strong>物联网应用</strong> ：Flink 可以处理大规模的实时数据流，适用于处理物联网应用中的实时数据，如智能家居、智能城市、智能交通等场景。</li>
 </ol>
-<h4 id="4flink编程模型是什么">4、Flink编程模型是什么？
-</h4><p>其实就一句话，就是 Source-&gt;Transformation-&gt;Sink</p>
+<h3 id="flink编程模型是什么">Flink编程模型是什么？
+</h3><p>其实就一句话，就是 Source-&gt;Transformation-&gt;Sink</p>
 <p>Flink 编程模型是一种用于处理流式数据的编程模型，它包括三个核心概念：Source、Transformation 和 Sink。数据流从 Source 开始，经过多个 Transformation 操作，最终到达 Sink 结束。在这个过程中，数据可以被处理、过滤、转换、聚合等操作，以实现数据的实时处理和分析。</p>
 <p>具体来说，Flink 编程模型中，开发者需要首先指定数据的 Source，即数据的来源，可以是文件、网络数据流、数据库等。然后，通过一系列 Transformation 操作对数据进行处理，例如过滤、映射、聚合、窗口等操作。这些 Transformation 操作可以组合使用，以实现复杂的数据处理和分析。最后，将处理后的数据发送到 Sink 端，即数据的去向，可以是文件、网络数据流、数据库等。</p>
 <p>Flink 编程模型支持事件时间语义，即数据处理按照事件发生的时间进行排序和处理。同时，Flink 还支持窗口操作、状态管理和事件处理等功能，以实现更复杂的数据处理和分析场景。</p>
-<h4 id="5讲一下flink的运行架构flink集群有哪些角色各自有什么作用">5、讲一下Flink的运行架构，Flink集群有哪些角色？各自有什么作用？
-</h4><p>Flink程序在运行时主要有TaskManager，JobManager，Client三种角色。当 Flink 集群启动后，⾸先会启动⼀个 JobManger 和⼀个或多个的 TaskManager。由 Client 提交任务给 JobManager，JobManager 再调度任务到各个 TaskManager 去执⾏，然后 TaskManager 将⼼跳和统计信息汇报给 JobManager。TaskManager 之间以流的形式进⾏数据的传输。上述三者均为独⽴的 JVM 进程。</p>
-<ul>
-<li>JobManager：扮演着集群中的管理者Master的角色，它是整个集群的协调者，负责接收Flink Job，协调检查点，Failover 故障恢复等，同时管理Flink集群中从节点TaskManager。</li>
-<li>TaskManager：是实际负责执行计算的Worker，在其上执行Flink Job的一组Task，每个TaskManager负责管理其所在节点上的资源信息，如内存、磁盘、网络，在启动的时候将资源的状态向JobManager汇报。</li>
-<li>Client：是Flink程序提交的客户端，当用户提交一个Flink程序时，会首先创建一个Client，该Client首先会对用户提交的Flink程序进行预处理，并提交到Flink集群中处理，所以Client需要从用户提交的Flink程序配置中获取JobManager的地址，并建立到JobManager的连接，将Flink Job提交给JobManager。</li>
-</ul>
-<h4 id="6flink的集群部署模式有哪些">6、Flink的集群部署模式有哪些？
-</h4><p>Flink的集群部署模式包括：</p>
+<h3 id="flink的集群部署模式有哪些">Flink的集群部署模式有哪些？
+</h3><p>Flink的集群部署模式包括：</p>
 <ul>
 <li>单机模式：在单个机器上运行Flink集群，适用于开发和测试环境。</li>
 <li>本地模式：在本地的多个线程上模拟Flink集群，适用于开发和调试任务。</li>
 <li>分离式部署：将JobManager和TaskManager分别部署在不同的机器上，适用于生产环境和大规模任务的执行。</li>
 <li>嵌入式模式：将Flink集成到现有的应用程序中，作为库来使用，适用于需要将流处理能力集成到其他应用中的场景。</li>
 </ul>
-<h4 id="7你们之前flink集群规模有多大">7、你们之前Flink集群规模有多大？
-</h4><h4 id="8说说flink集群优化">8、说说Flink集群优化
-</h4><p>Flink 集群优化是提高 Flink 集群性能的关键步骤。</p>
+<h3 id="你们之前flink集群规模有多大">你们之前Flink集群规模有多大？
+</h3><h3 id="说说flink集群优化">说说Flink集群优化
+</h3><p>Flink 集群优化是提高 Flink 集群性能的关键步骤。</p>
 <p>以下是一些 Flink 集群优化的建议：</p>
 <ol>
 <li>taskmanager.heap.mb 调优：taskmanager.heap.mb 是 Flink 任务管理器堆内存的大小，默认为 1024MB。如果需要更高的内存，可以将其调整为 2048MB 或更高。这可以确保任务管理器有足够的内存来处理数据和执行任务。</li>
@@ -557,9 +628,9 @@
 <li>使用 Flink 的高级优化功能：Flink 还提供了许多高级优化功能，例如代码生成、优化器和迭代算子等。这些功能可以显著提高 Flink 集群的性能，但需要根据具体情况进行调整和使用。</li>
 </ol>
 <p>总结起来，Flink 集群优化需要综合考虑多个方面，包括内存管理、任务调度、网络配置、状态管理和高级优化功能等。通过调整这些参数和配置，可以显著提高 Flink 集群的性能和效率。</p>
-<h4 id="9公司怎么提交的实时任务有多少job-manager">9、公司怎么提交的实时任务，有多少Job Manager？
-</h4><h4 id="10flink的并行度了解吗flink的并行度设置是怎样的">10、Flink的并行度了解吗？Flink的并行度设置是怎样的？
-</h4><p>Flink 程序由多个任务（Source、Transformation、Sink）组成。任务被分成多个并行实例来执行，每个并行实例处理任务的输入数据的子集。任务的并行实例的数量称之为并行度。</p>
+<h3 id="公司怎么提交的实时任务有多少job-manager">公司怎么提交的实时任务，有多少Job Manager？
+</h3><h3 id="flink的并行度了解吗flink的并行度设置是怎样的">Flink的并行度了解吗？Flink的并行度设置是怎样的？
+</h3><p>Flink 程序由多个任务（Source、Transformation、Sink）组成。任务被分成多个并行实例来执行，每个并行实例处理任务的输入数据的子集。任务的并行实例的数量称之为并行度。</p>
 <p>我们在实际生产环境中可以从四个不同层面设置并行度：</p>
 <ul>
 <li>操作算子层面 (Operator Level)：算子.setParallelism(3),实际算子时设置</li>
@@ -572,23 +643,8 @@
 <p>在 flink-conf.yaml 中通过parallelism.default 配置项给所有 execution environments 指定系统级的默认parallelism；</p>
 <p>在 ExecutionEnvironment 里头可以通过 setParallelism 来给 operators、data sources、data sinks 设置默认的 parallelism；</p>
 <p>如果 operators、data sources、datasinks 自己有设置 parallelism 则会覆盖 ExecutionEnvironment 设置的 parallelism。</p>
-<h4 id="11flink的checkpoint存在哪里">11、Flink的Checkpoint存在哪里？
-</h4><p>Flink 的 Checkpoint 是 Flink 的核心组件之一，它用于记录应用程序在特定时刻的状态，以便在应用程序失败时进行恢复。Checkpoint 通常存储在 Flink 的存储系统中，可以是内存、文件系统或 RocksDB。</p>
-<ol>
-<li>内存</li>
-</ol>
-<p>Flink 的内存状态是存储在 Java 内存中的。当应用程序运行时，Flink 会将状态数据存储在内存中，并定期将这些状态数据持久化到外部存储系统中。如果应用程序在运行时出现故障，Flink 可以从内存状态中恢复应用程序的状态。</p>
-<ol start="2">
-<li>文件系统</li>
-</ol>
-<p>Flink 也可以将状态数据存储在文件系统中。当应用程序运行时，Flink 会将状态数据写入分布式文件系统，如 HDFS 或 NFS。如果应用程序在运行时出现故障，Flink 可以从文件系统中恢复应用程序的状态。</p>
-<ol start="3">
-<li>RocksDB</li>
-</ol>
-<p>Flink 还可以将状态数据存储在 RocksDB 中。RocksDB 是一种高性能、高可靠性的键值存储数据库，它支持高效的数据压缩和快速查找。当应用程序运行时，Flink 会将状态数据写入 RocksDB 数据库，并定期将这些状态数据持久化到外部存储系统中。如果应用程序在运行时出现故障，Flink 可以从 RocksDB 中恢复应用程序的状态。</p>
-<p>总之，Flink 的 Checkpoint 可以存储在内存、文件系统或 RocksDB 中，具体存储位置由用户配置决定。Flink 提供了一些 API 来管理 Checkpoint，如 checkpointCoordinator.checkpoint() 方法和 checkpointCoordinator.restoreFromCheckpoint() 方法。使用这些 API，用户可以手动触发 Checkpoint，也可以在应用程序失败时自动恢复状态。</p>
-<h4 id="12flink的checkpoint机制对比spark有什么不同和优势">12、Flink的checkpoint机制对比spark有什么不同和优势？
-</h4><p>Flink 和 Spark 都是主流的大数据处理框架，它们都支持 Checkpoint 机制以保证实时数据的可靠性和容错性。然而，Flink 和 Spark 的 Checkpoint 机制在实现方式和功能上有一些不同之处。</p>
+<h3 id="flink的checkpoint机制对比spark有什么不同和优势">Flink的checkpoint机制对比spark有什么不同和优势？
+</h3><p>Flink 和 Spark 都是主流的大数据处理框架，它们都支持 Checkpoint 机制以保证实时数据的可靠性和容错性。然而，Flink 和 Spark 的 Checkpoint 机制在实现方式和功能上有一些不同之处。</p>
 <ol>
 <li>实现方式</li>
 </ol>
@@ -606,8 +662,8 @@
 </ol>
 <p>Flink 的 Checkpoint 机制采用了轻量级的分布式快照技术，因此其性能影响相对较小。Spark 的 Checkpoint 机制需要将整个应用程序的状态数据都保存到外部存储系统中，因此其性能影响相对较大。</p>
 <p>总的来说，Flink 的 Checkpoint 机制相对于 Spark 的 Checkpoint 机制更为复杂和强大，可以支持任意节点的故障恢复，并保证数据一致性。此外，Flink 的 Checkpoint 机制采用了轻量级的分布式快照技术，因此其性能影响相对较小。这些优势使得 Flink 在实时数据处理方面具有更好的可靠性和容错性。</p>
-<h4 id="13flink常用的算子有哪些">13、Flink常用的算子有哪些？
-</h4><p>Flink 是一个流处理框架，提供了丰富的算子用于数据的处理和转换。以下是一些常见的算子：</p>
+<h3 id="flink常用的算子有哪些">Flink常用的算子有哪些？
+</h3><p>Flink 是一个流处理框架，提供了丰富的算子用于数据的处理和转换。以下是一些常见的算子：</p>
 <p>Map 算子：将一个数据流中的每个元素映射成另一个元素。Map 算子是 Flink 中最基本的算子之一，它接受一个映射函数作为参数，该函数将输入数据映射到输出数据。</p>
 <p>Filter 算子：将一个数据流中的每个元素映射成多个元素。Filter 算子根据指定的条件过滤掉不符合条件的元素，只输出符合条件的元素。</p>
 <p>KeyBy 算子：根据指定的 key 对数据流进行分组。KeyBy 算子将数据流中的元素按照指定的 key 进行分组，并将每个分组中的元素聚合在一起。</p>
@@ -616,21 +672,12 @@
 <p>Aggregate 算子：对数据流中的元素进行聚合操作。Aggregate 算子与 Reduce 算子类似，但它可以指定多个聚合函数，同时支持局部聚合和全局聚合。</p>
 <p>Join 算子：对数据流中的元素进行连接操作。Join 算子可以指定连接的方式、连接的键和连接的条件等参数，将两个数据流连接在一起。</p>
 <p>除了上述算子之外，Flink 还提供了很多其他算子，例如 Union、HashJoin、Sort、Limit 等，以实现更复杂的数据处理和分析场景。</p>
-<h4 id="14flink的流式处理如何处理延迟">14、Flink的流式处理如何处理延迟？
-</h4><p>Flink的流式处理可以通过以下方式处理延迟：</p>
+<h3 id="flink的流式处理如何处理延迟">Flink的流式处理如何处理延迟？
+</h3><p>Flink的流式处理可以通过以下方式处理延迟：</p>
 <p>事件时间处理：Flink支持事件时间处理，可以处理乱序事件，根据事件时间对数据进行排序和处理，从而解决延迟问题。</p>
 <p>窗口操作：Flink的窗口操作可以根据事件时间或处理时间对数据流进行划分和处理，可以根据需要设定窗口大小和滑动间隔来控制延迟的处理。</p>
-<h4 id="15flink-中对窗口的支持包括哪几种说说他们的使用场景">15、Flink 中对窗口的支持包括哪几种？说说他们的使用场景
-</h4><p>Flink支持两种划分窗口的方式，按照time和count，session也是一种时间。</p>
-<ul>
-<li>Tumbling Time Window（滚动时间窗口）：当达到一定时间后的，进行滑动，可以联想到以前用的诺基亚的滑盖手机，这个其实就是微批。用于处理实时数据流中的时间序列数据，如股票价格走势、实时监测流量等。假如我们需要统计每一分钟中用户购买的商品的总数，需要将用户的行为事件按每一分钟进 行切分，这种切分被成为翻滚时间窗口（Tumbling Time Window）。翻滚窗口能将数据流切分成 不重叠的窗口，每一个事件只能属于一个窗口。</li>
-<li>Sliding Time Window（滑动时间窗口）：当达到一定时间后，进行翻滚，可以有重叠。用于处理时间序列数据的近期分析，如近 5 分钟用户购买商品总数等。我们可以每 30 秒计算一次最近一分钟用户购买的商品总数。这种窗口我们称为滑动时间窗 口（Sliding Time Window）。在滑窗中，一个元素可以对应多个窗口。</li>
-<li>Tumbling Count Window（滚动计数窗口）：当达到一定条数的时候执行计算，无折叠。用于处理计数型数据，如统计网站访问量、分析用户购买行为等。当我们想要每 100 个用户购买行为事件统计购买总数，那么每当窗口中填满 100 个元素了， 就会对窗口进行计算，这种窗口我们称之为翻滚计数窗口（Tumbling Count Window），上图所 示窗口大小为 3 个。</li>
-<li>Sliding Count Window（滑动计数窗口）：当达到一定数量后进行滑动。用于处理计数型数据的实时分析，如实时监测广告点击率、实时统计投票数等。</li>
-<li>Session Window（会话窗口）：窗口数据没有固定的大小，根据用户传入的参数进行划分，窗口数据无叠加。用于处理用户交互事件流中的数据，如计算每个用户在活跃期间总共购买的商品数量等。类似于当用户退出的时候，计算这个用户之前的动作。在这种用户交互事件流中，我们首先想到的是将事件聚合到会话窗口中（一段用户持续活跃 的周期），由非活跃的间隙分隔开。如上图所示，就是需要计算每个用户在活跃期间总共购买的 商品数量，如果用户 30 秒没有活动则视为会话断开（假设 raw data stream 是单个用户的购买 行为流）。一般而言，window 是在无限的流上定义了一个有限的元素集合。这个集合可以是基于时间的，元素个数的，时间和个数结合的，会话间隙的，或者是自定义的。Flink 的 DataStream API 提供了简洁的算子来满足常用的窗口操作，同时提供了通用的窗口机制来允许用户自己定义 窗口分配逻辑。</li>
-</ul>
-<h4 id="16flink支持哪些第三方集成">16、Flink支持哪些第三方集成？
-</h4><p>Flink支持与多种第三方工具和框架的集成，包括：</p>
+<h3 id="flink支持哪些第三方集成">Flink支持哪些第三方集成？
+</h3><p>Flink支持与多种第三方工具和框架的集成，包括：</p>
 <ul>
 <li><strong>Apache Kafka</strong> ：Flink可以与Kafka进行无缝集成，作为数据源和数据接收器。</li>
 <li><strong>Apache Hadoop</strong> ：Flink可以与Hadoop集成，可以读取Hadoop文件系统中的数据，也可以将处理结果写入Hadoop文件系统。</li>
@@ -638,13 +685,13 @@
 <li><strong>Apache HBase</strong> ：Flink可以与HBase集成，可以读取和写入HBase中的数据。</li>
 <li><strong>Elasticsearch</strong> ：Flink可以与Elasticsearch进行集成，可以将处理结果写入Elasticsearch进行实时搜索和分析。</li>
 </ul>
-<h4 id="17flink的source和sink有哪些">17、Flink的source和sink有哪些？
-</h4><p>Flink支持多种数据源和数据接收器，包括：</p>
+<h3 id="flink的source和sink有哪些">Flink的source和sink有哪些？
+</h3><p>Flink支持多种数据源和数据接收器，包括：</p>
 <p>数据源：可以从文件系统、Kafka、消息队列等数据源读取数据，并将其转化为数据流进行处理。</p>
 <p>数据接收器：可以将处理结果输出到文件系统、数据库、Kafka等数据接收器中，或者发送给下游处理环节。</p>
 <p>Flink内置了一些基本数据源和接收器，它们始终可用。该预定义的数据源包括文件、目录和Socket,并可以加载集合和迭代器的数据。该预定义的数据接收器支持写入文件，输出信息和异常 。</p>
-<h4 id="18flink支持哪些批处理操作">18、Flink支持哪些批处理操作？
-</h4><p>Flink支持多种批处理操作，包括：</p>
+<h3 id="flink支持哪些批处理操作">Flink支持哪些批处理操作？
+</h3><p>Flink支持多种批处理操作，包括：</p>
 <ul>
 <li>Map：对数据集中的每个元素应用指定的函数。</li>
 <li>Reduce：对数据集进行归约操作，将数据归约为一个结果。</li>
@@ -652,8 +699,8 @@
 <li>Join：将两个数据集按照指定的键进行连接操作。</li>
 <li>GroupBy：根据指定的键对数据集进行分组操作。</li>
 </ul>
-<h4 id="19flink的流处理和批处理如何切换">19、Flink的流处理和批处理如何切换？
-</h4><p>Flink 可以无缝地在流处理和批处理之间切换，这主要归功于其基于事件时间的窗口处理机制和灵活的作业调度策略。Flink 提供了两种作业类型：批处理作业和流处理作业。</p>
+<h3 id="flink的流处理和批处理如何切换">Flink的流处理和批处理如何切换？
+</h3><p>Flink 可以无缝地在流处理和批处理之间切换，这主要归功于其基于事件时间的窗口处理机制和灵活的作业调度策略。Flink 提供了两种作业类型：批处理作业和流处理作业。</p>
 <p><strong>1. 批处理作业</strong> ：</p>
 <p>批处理作业将数据作为有界数据集进行处理，类似于传统的批处理作业。在批处理模式下，Flink 会将数据按照批次进行划分，然后对每个批次进行离线处理。批处理作业通常用于处理历史数据或者定期生成统计报告等场景。</p>
 <p>要运行批处理作业，用户需要将数据作为批量文件上传到 Flink 的分布式文件系统（如 HDFS 或本地文件系统），然后通过 Flink 作业的方式进行处理。在批处理作业中，用户可以指定数据的截止时间（截止时间之前的数据会被处理），以及作业的并发度等参数。</p>
@@ -661,8 +708,8 @@
 <p>流处理作业将数据作为无界数据流进行处理，实时处理数据并生成实时结果。在流处理模式下，Flink 会实时地接收数据，并将其分配给不同的 Task 以进行处理。流处理作业通常用于实时数据处理、实时分析和实时监控等场景。</p>
 <p>要运行流处理作业，用户需要将数据源（如 Kafka、Flume 等）与 Flink 集群配置好，然后通过 Flink 作业的方式进行处理。在流处理作业中，用户可以指定数据处理的时间窗口、触发器等参数，以实现实时数据处理的需求。</p>
 <p>在 Flink 中，批处理作业和流处理作业之间的切换可以通过修改作业的配置文件实现。例如，修改 <code>batch.file.path</code> 和 <code>streaming.file.path</code> 参数，以指定批处理作业和流处理作业的输入数据路径。此外，用户还可以通过 Flink Web UI 查看和管理作业的状态，以确保作业的正确运行。</p>
-<h4 id="20为什么使用-flink-替代-spark">20、为什么使用 Flink 替代 Spark？
-</h4><p>Flink 相对于 Spark 的优势主要体现在以下几个方面：</p>
+<h3 id="为什么使用-flink-替代-spark">为什么使用 Flink 替代 Spark？
+</h3><p>Flink 相对于 Spark 的优势主要体现在以下几个方面：</p>
 <ol>
 <li>低延迟和高吞吐量：Flink 是基于事件驱动的流式计算框架，能够支持低延迟和高吞吐量的数据处理。Flink 的低延迟特性得益于其基于时间窗口的调度机制，可以支持毫秒级的延迟时间。同时，Flink 的高吞吐量也是其优势之一，能够支持每秒千万级别的数据处理。</li>
 <li>对流式数据应用场景更好的支持：Flink 专注于流式数据处理，能够更好地支持流式数据的应用场景，如实时计算、实时监控、实时推荐等。而 Spark 更适合于批量数据的处理，如离线分析、批量报告等。</li>
@@ -670,15 +717,8 @@
 <li>保证 exactly-once 的状态一致性：Flink 可以保证 exactly-once 的状态一致性，即每个事件都会被处理一次且仅一次。而 Spark 在处理数据时存在重复处理的问题，需要进行额外的优化和配置才能保证状态一致性。</li>
 </ol>
 <p>综上所述，Flink 相对于 Spark 在低延迟、高吞吐量、流式数据应用场景支持、处理乱序数据和保证状态一致性等方面具有优势，因此被越来越多的公司和开发者所采用。</p>
-<h4 id="21说说flink-的容错机制flink是如何做到容错的">21、说说Flink 的容错机制，Flink是如何做到容错的？
-</h4><p>Flink 是一个分布式流处理框架，它实现了容错机制以确保在节点故障时，数据不会丢失并且可以进行故障恢复。Flink 的容错机制主要依靠两个强大的机制：Checkpoint 和 State。</p>
-<ul>
-<li><strong>Checkpoint</strong> ：是一种快照机制，它用于定期备份 Flink 程序中的状态，并将其存储在外部存储系统中。当节点发生故障时，Flink 可以使用 Checkpoint 来恢复程序的状态，并从故障点继续处理数据流。Checkpoint 的备份可以是全量的，也可以是增量的，这取决于 Checkpoint 的触发条件和备份策略。Flink 还支持 Exactly-Once 语义，这意味着在故障恢复时，Flink 可以确保每个事件都被处理了一次且仅一次。</li>
-<li><strong>State</strong> ：是 Flink 中的另一种重要机制，它用于存储计算过程中的中间状态。State 可以分为两种类型：Operator State 和 Keyed State。Operator State 是一种基于算子的状态，它存储在算子内部，并随着算子的执行而更新。Keyed State 是一种基于键的状态，它存储在 Stateful Function 内部，并使用键来标识状态的数据。Keyed State 可以具有过期时间（TTL），这使得 Flink 可以在状态过期时自动清理过期的状态数据。</li>
-</ul>
-<p>在 Flink 中，Checkpoint 和 State 是相互依存的。Checkpoint 用于备份 State，并确保在节点故障时，可以恢复程序的状态。而 State 则用于存储计算过程中的中间状态，并支持 Exactly-Once 语义。Flink 通过这两个机制的结合，实现了强大的容错和故障恢复能力，使得 Flink 在分布式流处理中具有高度的可靠性和可用性。</p>
-<h4 id="22flink是如何做到高效的网络数据交换的">22、Flink是如何做到高效的网络数据交换的？
-</h4><p>Flink 在网络数据交换方面做到了高效，主要归功于以下几个方面：</p>
+<h3 id="flink是如何做到高效的网络数据交换的">Flink是如何做到高效的网络数据交换的
+</h3><p>Flink 在网络数据交换方面做到了高效，主要归功于以下几个方面：</p>
 <ol>
 <li><strong>分布式数据交换</strong> ：Flink 使用了基于 JobGraph 的分布式计算模型，数据可以在不同的 Task 中进行交互。这种分布式数据交换使得 Flink 能够充分利用集群中的多个节点来处理大规模的数据流，从而提高了整个系统的并行度和吞吐量。</li>
 <li><strong>TaskManager 负责数据交互</strong> ：在 Flink 中，TaskManager 负责管理 Task 的执行和数据交互。TaskManager 会从缓冲区（Buffer）中收集 Records，然后将其发送到其他 Task 中。这种集中式的数据管理方式可以减少网络连接次数，从而提高了网络吞吐量。</li>
@@ -687,8 +727,8 @@
 <li><strong>自适应网络拓扑</strong> ：Flink 支持自适应网络拓扑，它可以根据集群中节点的数量和位置动态地调整数据交换的路由策略。这种自适应网络拓扑可以提高系统的性能和可靠性，因为它能够更好地利用集群中的网络资源。</li>
 </ol>
 <p>综上所述，Flink 在网络数据交换方面实现了高效，主要通过分布式数据交换、TaskManager 负责数据交互、批次封装、网络拥塞控制和自适应网络拓扑等机制来实现。这些机制使得 Flink 在处理大规模数据流时具有高吞吐量、高并发度和高可靠性。</p>
-<h4 id="23flink程序在面对数据高峰期时如何处理">23、Flink程序在面对数据高峰期时如何处理？
-</h4><p>当 Flink 程序面对数据高峰期时，一种常用的方法是使用大容量的 Kafka 作为数据源，将数据先放到消息队列中，然后再使用 Flink 进行消费。这种方法可以有效地削峰平谷，减缓数据流量对 Flink 程序的影响，从而提高程序的稳定性和可靠性。</p>
+<h3 id="flink程序在面对数据高峰期时如何处理">Flink程序在面对数据高峰期时如何处理
+</h3><p>当 Flink 程序面对数据高峰期时，一种常用的方法是使用大容量的 Kafka 作为数据源，将数据先放到消息队列中，然后再使用 Flink 进行消费。这种方法可以有效地削峰平谷，减缓数据流量对 Flink 程序的影响，从而提高程序的稳定性和可靠性。</p>
 <p>不过，使用 Kafka 作为数据源会影响一点实时性。因为 Kafka 是一个异步的消息队列，数据在队列中需要等待消费者消费，所以会存在一定的延迟。为了解决这个问题，可以采用以下方法：</p>
 <ol>
 <li>调整 Kafka 的参数，如增大 Kafka 的缓存大小、增加 Kafka 的并发消费者数量等，以提高 Kafka 的吞吐量和处理能力。</li>
@@ -696,15 +736,8 @@
 <li>采用 Flink 中的 Stateful Functions 或 Checkpointing 功能，以保持数据的一致性和可靠性。Stateful Functions 可以让 Flink 程序对数据的处理具有状态感知能力，从而更好地处理数据流中的事件。而 Checkpointing 功能可以让 Flink 程序在处理数据时，定期将中间状态持久化到外部存储系统中，以便在程序失败时进行恢复。</li>
 </ol>
 <p>综上所述，使用 Kafka 作为数据源可以有效地处理数据高峰期，但需要注意 Kafka 和 Flink 的配置优化，以及数据处理的实时性和一致性问题。</p>
-<h4 id="24flink分布式快照的原理是什么">24、Flink分布式快照的原理是什么？
-</h4><p>Flink的容错机制的核心部分是制作分布式数据流和操作算子状态的一致性快照。 这些快照充当一致性checkpoint，系统可以在发生故障时回滚。 Flink用于制作这些快照的机制在“分布式数据流的轻量级异步快照”中进行了描述。 它受到分布式快照的标准Chandy-Lamport算法的启发，专门针对Flink的执行模型而定制。</p>
-<p>barriers在数据流源处被注入并行数据流中。快照n的barriers被插入的位置（我们称之为Sn）是快照所包含的数据在数据源中最大位置。</p>
-<p>例如，在Apache Kafka中，此位置将是分区中最后一条记录的偏移量。 将该位置Sn报告给checkpoint协调器（Flink的JobManager）。</p>
-<p>然后barriers向下游流动。当一个中间操作算子从其所有输入流中收到快照n的barriers时，它会为快照n发出barriers进入其所有输出流中。</p>
-<p>一旦sink操作算子（流式DAG的末端）从其所有输入流接收到barriers n，它就向checkpoint协调器确认快照n完成。</p>
-<p>在所有sink确认快照后，意味快照着已完成。一旦完成快照n，job将永远不再向数据源请求Sn之前的记录，因为此时这些记录（及其后续记录）将已经通过整个数据流拓扑，也即是已经被处理结束。</p>
-<h4 id="25flink跟spark-streaming的区别">25、Flink跟Spark Streaming的区别
-</h4><p>这个问题是一个非常宏观的问题，因为两个框架的不同点非常之多。但是在面试时有非常重要的一点一定要回答出来：Flink 是标准的实时处理引擎，基于事件驱动。而 Spark Streaming 是微批（Micro-Batch）的模型。</p>
+<h3 id="flink跟spark-streaming的区别">Flink跟Spark Streaming的区别
+</h3><p>这个问题是一个非常宏观的问题，因为两个框架的不同点非常之多。但是在面试时有非常重要的一点一定要回答出来：Flink 是标准的实时处理引擎，基于事件驱动。而 Spark Streaming 是微批（Micro-Batch）的模型。</p>
 <p>下面我们就分几个方面介绍两个框架的主要区别：</p>
 <ol>
 <li>架构模型Spark Streaming 在运行时的主要角色包括：Master、Worker、Driver、Executor，Flink 在运行时主要包含：Jobmanager、Taskmanager和Slot。</li>
@@ -712,33 +745,15 @@
 <li>时间机制Spark Streaming 支持的时间机制有限，只支持处理时间。 Flink 支持了流处理程序在时间上的三个定义：处理时间、事件时间、注入时间。同时也支持 watermark 机制来处理滞后数据。</li>
 <li>容错机制对于 Spark Streaming 任务，我们可以设置 checkpoint，然后假如发生故障并重启，我们可以从上次 checkpoint 之处恢复，但是这个行为只能使得数据不丢失，可能会重复处理，不能做到恰好一次处理语义。Flink 则使用两阶段提交协议来解决这个问题。</li>
 </ol>
-<h4 id="26说说flink的几种时间语义">26、说说Flink的几种时间语义
-</h4><p>Flink 支持三种时间语义：Event Time、Ingestion Time 和 Processing Time。</p>
-<p><strong>1. Event Time（事件时间）</strong></p>
-<p>Event Time 是事件创建的时间，它通常由事件中的时间戳描述。通常由事件生成器或者传感器生成。在 Flink 中，事件时间可以通过 water-mark 或者定时器来处理。例如，在采集日志数据时，每一条日志都会记录自己的生成时间，Flink 通过时间戳分配器访问事件时间戳。Event Time 是事件产生的时间，与数据处理的时间无关，因此它可以反映事件产生的实时性，但是对于数据处理的延迟和异步性无法体现。</p>
-<p><strong>2. Ingestion Time（注入时间）</strong></p>
-<p>Ingestion Time 是数据进入 Flink 的时间。它是指数据被 Flink 算子处理的时间，与事件创建的时间无关。Ingestion Time 能够反映数据处理的延迟和异步性，但是无法反映事件产生的实时性。</p>
-<p><strong>3. Processing Time（处理时间）</strong></p>
-<p>Processing Time 是每一个执行基于时间操作的算子的本地系统时间，与机器相关。它是指算子处理数据的时间，与事件创建的时间和数据进入 Flink 的时间无关。Processing Time 是默认的时间属性，除非明确指定时间语义为 Event Time 或 Ingestion Time。</p>
-<p>在实际应用中，选择合适的时间语义可以影响 Flink 处理的数据流的正确性和效率。</p>
-<p>例如，如果需要处理实时数据流，那么选择 Event Time 更为合适；</p>
-<p>如果需要处理延迟数据流，那么选择 Ingestion Time 更为合适；</p>
-<p>如果需要处理离线数据集，那么选择 Processing Time 更为合适。</p>
-<p>同时，Flink 也提供了 WaterMark 机制来处理延迟数据和异步数据，以保证数据处理的正确性和可靠性。</p>
-<h4 id="27说说flink中的watermark机制">27、说说Flink中的Watermark机制
-</h4><p>Flink 中的 Watermark 机制是一种衡量 Event Time 进展的机制，可以用于处理乱序事件。在数据流处理过程中，由于网络延迟、背压等多种因素的影响，数据可能会乱序到达。为了正确处理这些乱序事件，Flink 引入了 Watermark 机制，结合窗口 (Window) 来实现。</p>
-<p>Watermark 是一个时间戳，用于表示事件时间小于等于该时间戳的数据都已经到达。在 Flink 中，每个 Operator 都会维护一个当前的 Watermark，当一个事件到达时，如果它的时间戳小于等于当前 Watermark，那么该事件就会被认为是到达了，会被放入窗口中进行处理。窗口的执行是由 Watermark 触发的，当 Watermark 达到窗口的结束时间时，窗口就会触发并执行其中的计算逻辑。</p>
-<p>为了实现窗口的正确处理，Flink 还引入了事件时间 (Event Time) 概念，每个事件都会携带一个时间戳，表示该事件产生的时间。在数据流处理过程中，Flink 会根据事件时间戳的顺序来处理事件，这样可以保证事件的正确顺序。但是，由于网络延迟、背压等原因，事件可能会乱序到达，这就需要使用 Watermark 机制来处理这些乱序事件。</p>
-<p>总结起来，Flink 中的 Watermark 机制是用于处理乱序事件的一种机制，它可以设定延迟触发，用于表示事件时间小于等于该时间戳的数据都已经到达。通过结合窗口机制，Watermark 机制可以实现对乱序事件的正确处理，保证数据流的正确性和完整性。</p>
-<h4 id="28flink怎么做压力测试和监控">28、Flink怎么做压力测试和监控？
-</h4><p>产生的数据流的速度如果过快，而下游的算子消费不过来的话，会产生背压。背压的监控可以使用Flink Web UI来可视化监控Metrics，一旦报警就能知道。一般情况下可能由于sink这个操作符没有优化好，做一下优化就可以了。</p>
+<h3 id="flink怎么做压力测试和监控">Flink怎么做压力测试和监控
+</h3><p>产生的数据流的速度如果过快，而下游的算子消费不过来的话，会产生背压。背压的监控可以使用Flink Web UI来可视化监控Metrics，一旦报警就能知道。一般情况下可能由于sink这个操作符没有优化好，做一下优化就可以了。</p>
 <p>设置watermark的最大延迟时间这个参数，如果设置的过大，可能会造成内存的压力。可以设置最大延迟时间小一些，然后把迟到的元素发送到测输出流中，晚一点更新结果。</p>
 <p>还有就是滑动窗口的长度如果过大，而滑动距离很短的话，Flink的性能也会下降的厉害。可以通过分片的方法，将每个元素只存入一个“重叠窗口”，这样就可以减少窗口处理中状态的写入。</p>
-<h4 id="29flink是通过什么机制实现的背压机制">29、Flink是通过什么机制实现的背压机制？
-</h4><p>Flink在运行时主要由operators和streams两大构件组成。每个operator会消费中间状态的流，并在流上进行转换，然后生成新的流。对于Flink的网络机制一种形象的类比是，Flink使用了高效有界的分布式阻塞队列，就像Java通过的阻塞队列（BlockingQueue）一样。使用BlockingQueue的话，一个较慢的接受者会降低发送者的发送速率，因为一旦队列满了（有界队列）发送者会被阻塞。</p>
+<h3 id="flink是通过什么机制实现的背压机制">Flink是通过什么机制实现的背压机制
+</h3><p>Flink在运行时主要由operators和streams两大构件组成。每个operator会消费中间状态的流，并在流上进行转换，然后生成新的流。对于Flink的网络机制一种形象的类比是，Flink使用了高效有界的分布式阻塞队列，就像Java通过的阻塞队列（BlockingQueue）一样。使用BlockingQueue的话，一个较慢的接受者会降低发送者的发送速率，因为一旦队列满了（有界队列）发送者会被阻塞。</p>
 <p>在Flink中，这些分布式阻塞队列就是这些逻辑流，而队列容量通过缓冲池（LocalBufferPool）实现的。每个被生产和消费的流都会被分配一个缓冲池。缓冲池管理者一组缓冲（Buffer），缓冲在被消费后可以被回收循环利用。</p>
-<h4 id="30flink是如何处理反压的如何监控和发现">30、Flink是如何处理反压的？如何监控和发现？
-</h4><p>Flink 的反压（Backpressure）是指当一个 Operator 的输出速度比其下游 Operator 的输入速度慢时，下游 Operator 可能会积累一定数量的数据，导致处理速度变慢，甚至堵塞。为了解决这个问题，Flink 引入了反压机制，以便及时发现并解决数据处理速度不匹配的问题。</p>
+<h3 id="flink是如何处理反压的如何监控和发现">Flink是如何处理反压的？如何监控和发现？
+</h3><p>Flink 的反压（Backpressure）是指当一个 Operator 的输出速度比其下游 Operator 的输入速度慢时，下游 Operator 可能会积累一定数量的数据，导致处理速度变慢，甚至堵塞。为了解决这个问题，Flink 引入了反压机制，以便及时发现并解决数据处理速度不匹配的问题。</p>
 <p>Flink 在处理反压问题时，并没有使用复杂的机制，而是采用了一种简单而高效的方法。Flink 在数据传输过程中使用了分布式阻塞队列，从而有效地解决了反压问题。</p>
 <p>在 Flink 中，当一个算子的输出速度比下游算子快时，Flink 会使用分布式阻塞队列来缓存输出数据。这样可以避免上游算子过快地生成数据，导致下游算子无法及时处理，从而形成反压。当下游算子需要数据时，它会从队列中取出数据并进行处理。当队列中的数据达到一定阈值时，上游算子会收到通知，从而减缓数据生成速度。这样一来，Flink 就通过分布式阻塞队列实现了反压的缓解。</p>
 <p>另外，Flink 通过每个 TaskManager 和 JobManager 之间的通信来实现反压的缓解。当下游处理任务时间太长时，Flink 会检测到这种情况，并认为这是一个反压信号。此时，Flink 会将这个反压信号传递给上游任务的管理器。</p>
@@ -758,8 +773,8 @@
 <li><strong>自定义监控与报警</strong> ：为了更加实时和准确地监控反压状态，用户可以编写自定义的监控与报警脚本。这些脚本可以定期获取 Flink 集群的状态信息，并根据预设的规则发送告警通知。例如，当发现某个 Operator 的反压状态为 HIGH 时，可以自动发送告警邮件给相关人员。</li>
 </ol>
 <p>总之，Flink 通过 Web UI、命令行工具、第三方监控工具以及自定义监控与报警等多种方式，帮助用户实时监控和发现反压问题，从而确保数据处理的高效和稳定。</p>
-<h4 id="31flink中的window出现了数据倾斜你有什么解决办法">31、Flink中的Window出现了数据倾斜，你有什么解决办法？
-</h4><p>Flink 中的窗口操作是一种基于时间窗口的数据处理方式，可以用于统计分析、监控、实时计算等应用场景。然而，当数据量过大或者数据发送速度不均匀时，可能会导致窗口中堆积的数据量相差过多，即出现了数据倾斜的情况。</p>
+<h3 id="flink中的window出现了数据倾斜你有什么解决办法">Flink中的Window出现了数据倾斜，你有什么解决办法？
+</h3><p>Flink 中的窗口操作是一种基于时间窗口的数据处理方式，可以用于统计分析、监控、实时计算等应用场景。然而，当数据量过大或者数据发送速度不均匀时，可能会导致窗口中堆积的数据量相差过多，即出现了数据倾斜的情况。</p>
 <p>数据倾斜会对 Flink 的性能产生负面影响，因为窗口计算需要对所有数据进行聚合操作，而数据倾斜会导致部分窗口的数据量过大，从而增加计算时间和资源消耗。为了解决数据倾斜问题，可以采用以下几种方法：</p>
 <ol>
 <li><strong>在数据进入窗口之前做预聚合</strong> ：这种方法可以在数据进入窗口之前，先进行一定的聚合操作，使得每个窗口中的数据量相对均匀。具体的做法可以是在数据源处进行预聚合，或者在 Flink 中使用 DataStream API 中的窗口聚合函数（如 Tumbling Windows 和 Sliding Windows）进行预聚合。</li>
@@ -768,14 +783,14 @@
 <li><strong>使用 Flink 的 Ttl 操作</strong> ：Flink 中的 Ttl 操作可以在数据到达窗口时，根据数据的时间戳进行淘汰操作，从而避免数据倾斜。具体的做法是设置一个 Ttl 时间，当数据到达窗口时，如果数据的时间戳已经超过了 Ttl 时间，则将该数据淘汰，从而避免数据倾斜。</li>
 </ol>
 <p>综上所述，解决 Flink 中的窗口数据倾斜问题需要根据具体情况进行分析和处理。可以采用预聚合、重新设计窗口聚合的 key、调整窗口参数或者使用 Flink 的 Ttl 操作等方法来避免数据倾斜，从而提高 Flink 的性能和可靠性。</p>
-<h4 id="32使用keyby算子时某一个key的数据量过大导致数据倾斜怎么处理">32、使用KeyBy算子时，某一个Key的数据量过大，导致数据倾斜，怎么处理？
-</h4><p>当使用 KeyBy 算子时，如果某个 Key 的数据量过大，会导致数据倾斜，影响计算效率。为了解决这个问题，可以考虑以下方法：</p>
+<h3 id="使用keyby算子时某一个key的数据量过大导致数据倾斜怎么处理">使用KeyBy算子时，某一个Key的数据量过大，导致数据倾斜，怎么处理？
+</h3><p>当使用 KeyBy 算子时，如果某个 Key 的数据量过大，会导致数据倾斜，影响计算效率。为了解决这个问题，可以考虑以下方法：</p>
 <ol>
 <li>将 Key 进行散列，将 Key 转换为 Key-随机数的形式，这样可以保证数据散列，对打散后的数据进行聚合统计。这时，我们会得到原始的 Key 加上随机数的统计结果。</li>
 <li>将散列的 Key 去除拼接的随机数，得到原始的 Key，然后进行二次 KeyBy 进行结果统计。这样可以保证数据倾斜不会影响最终的结果。</li>
 </ol>
-<h4 id="33flink在使用聚合函数之后出现数据热点怎么解决">33、Flink在使用聚合函数之后出现数据热点怎么解决
-</h4><p>Flink 在使用聚合函数之后出现数据热点的问题，主要是由于某些聚合函数的计算量比较大，导致数据处理速度较慢，从而产生了数据积压和延迟。这种情况下，可以通过以下几种方法来解决数据热点问题：</p>
+<h3 id="flink在使用聚合函数之后出现数据热点怎么解决">Flink在使用聚合函数之后出现数据热点怎么解决
+</h3><p>Flink 在使用聚合函数之后出现数据热点的问题，主要是由于某些聚合函数的计算量比较大，导致数据处理速度较慢，从而产生了数据积压和延迟。这种情况下，可以通过以下几种方法来解决数据热点问题：</p>
 <ol>
 <li><strong>增加计算资源</strong> ：增加计算节点和内存资源，提高 Flink 集群的计算能力，从而加快数据处理速度，降低数据积压和延迟。</li>
 <li><strong>调整聚合函数参数</strong> ：有些聚合函数的计算量比较大，可以考虑调整聚合函数的参数，减少计算量，从而提高数据处理速度。例如，可以调整窗口的大小或者滑动间隔等参数。</li>
@@ -784,8 +799,8 @@
 <li><strong>调整数据源参数</strong> ：在某些情况下，数据源的参数设置可能导致数据热点问题。可以调整数据源的参数，例如发送数据的间隔时间、数据压缩等方式，从而降低数据热点问题。</li>
 </ol>
 <p>综上所述，解决 Flink 中的数据热点问题需要根据具体情况进行分析和处理。可以采用增加计算资源、调整聚合函数参数、使用批量处理、采用数据重复消除策略或者调整数据源参数等方法来解决数据热点问题，从而提高 Flink 的性能和可靠性。</p>
-<h4 id="34flink-任务延迟高想解决这个问题你会如何入手">34、Flink 任务延迟高，想解决这个问题，你会如何入手？
-</h4><p>如果 Flink 任务延迟高，需要从以下几个方面入手进行优化：</p>
+<h3 id="flink-任务延迟高想解决这个问题你会如何入手">Flink 任务延迟高，想解决这个问题，你会如何入手？
+</h3><p>如果 Flink 任务延迟高，需要从以下几个方面入手进行优化：</p>
 <ol>
 <li><strong>资源调优</strong> ：首先检查 Flink 集群的资源使用情况，如果发现某些节点资源使用率过高，可以考虑增加节点数量或者调整节点的资源配置，如增加内存、CPU 等。此外，还可以调整任务管理器的资源分配策略，如优先使用空闲节点等。</li>
 <li><strong>算子调优</strong> ：如果任务延迟高，可以考虑调整算子的参数，如窗口时长、并发数等。窗口时长越短，计算量越大，可能会导致延迟增加，因此需要根据具体情况进行调整。同时，可以考虑使用更高效的算子，如 Reducer 的并行度可以调整为 taskNumber 的因子等。</li>
@@ -794,8 +809,8 @@
 <li><strong>错误处理</strong> ：如果任务出现错误，可能会导致延迟增加。因此，需要设置正确的错误处理策略，如使用 try-catch 语句、设置错误处理延迟等，以避免错误导致的延迟增加。</li>
 </ol>
 <p>综上所述，要解决 Flink 任务延迟高的问题，需要从资源调优、算子调优、数据优化、任务调度优化和错误处理等方面入手，以提高 Flink 任务的性能和可靠性。</p>
-<h4 id="35flink是如何保证exactly-once语义的">35、Flink是如何保证Exactly-once语义的？
-</h4><p><strong>如果下级存储支持事务</strong> ：</p>
+<h3 id="flink是如何保证exactly-once语义的">Flink是如何保证Exactly-once语义的？
+</h3><p><strong>如果下级存储支持事务</strong> ：</p>
 <p>Flink可以通过实现两阶段提交和状态保存来实现端到端的一致性语义。</p>
 <p>分为以下几个步骤：</p>
 <ol>
@@ -808,30 +823,16 @@
 <p><strong>下级存储不支持事务</strong> ：</p>
 <p>端到端的exactly-once对sink的要求比较高，具体的实现主要有幂等写入和事务性写入两种方式。幂等写入的场景依赖于业务逻辑，更常见的是用事务性写入。而事务性写入又有预写日志（WAL）和两阶段提交（2PC）两种方式。</p>
 <p>如果外部系统不支持事务，那么可以使用预写日志的方式，把结果数据当成状态保存，然后在收到checkpoint完成的通知时，一次性写入sink系统。</p>
-<h4 id="36说说flink的状态">36、说说Flink的状态
-</h4><p>在 Flink 中，状态是指在实时计算过程中，用于存储和处理数据的一种机制。状态可以分为两种基本类型：KeyedState 和 OperatorState。</p>
+<h3 id="说说flink的状态">说说Flink的状态
+</h3><p>在 Flink 中，状态是指在实时计算过程中，用于存储和处理数据的一种机制。状态可以分为两种基本类型：KeyedState 和 OperatorState。</p>
 <ul>
 <li><strong>KeyedState</strong> ：是基于键（Key）的状态，通常和 KeyedStream 的操作相关。KeyedState 包含两种基本的状态：ValueState 和 MapState。ValueState 用于存储单一值的状态，而 MapState 用于存储映射关系。在实际生产中，通常使用 KeyedState 中的 ValueState 和 MapState。</li>
 <li><strong>OperatorState</strong> ：是基于算子（Operator）的状态，通常和非 KeyedStream 的操作相关。OperatorState 可以存储算子的内部状态，例如窗口状态、累加器等。</li>
 </ul>
 <p>KeyedState 和 OperatorState 都是 Flink 中的状态类型，它们在实时计算中起到了重要的作用。KeyedState 通常用于处理基于键的数据，例如对某个键进行计数、聚合等操作；而 OperatorState 通常用于处理非基于键的数据，例如对数据进行窗口操作、排序等操作。</p>
 <p>在学习 Flink 中的状态时，需要了解状态的基本概念、分类、使用方式以及状态管理的相关概念。同时，需要掌握如何在程序中使用 KeyedState 和 OperatorState，以便在实时计算中处理数据。</p>
-<h4 id="37说说flink的状态储存机制">37、说说Flink的状态储存机制
-</h4><p>Flink 的状态储存是指在 Flink 程序运行过程中，用于存储和管理算子状态的数据结构和存储系统。Flink 提供了多种状态后端，以适应不同的应用场景和需求。这里将详细叙述 Flink 的状态储存，包括 1.13 版本之前的状态后端和 1.13 版本之后的状态后端。</p>
-<p>1.13 版本之前：</p>
-<ul>
-<li><strong>MemoryStateBackend</strong> ：开发时使用。这是一种基于内存的状态后端，用于在开发过程中快速调试和测试 Flink 程序。由于它使用内存存储状态数据，因此适用于状态数据较小的场景。</li>
-<li><strong>FsStateBackend</strong> ：生产时使用，常用。这是一种基于文件系统的状态后端，将状态数据存储在磁盘上。FsStateBackend 提供了一种高可用性的状态备份和恢复机制，以确保在任务失败时能够恢复状态。</li>
-<li><strong>RocksDBStateBackend</strong> ：生产时使用，非常大的状态时用。这是一种基于 RocksDB 的状态后端，使用 RocksDB 数据库存储状态数据。RocksDB 是一种支持高效压缩和快速查找的键值存储系统，适用于处理大规模状态数据的场景。</li>
-</ul>
-<p>1.13 版本之后：</p>
-<ul>
-<li><strong>HashMapStateBackend</strong> ：即 MemoryStateBackend 和 FsStateBackend，根据 API 不同。从 1.13 版本开始，Flink 对状态后端进行了整合，将 MemoryStateBackend 和 FsStateBackend 合并为一个统一的 HashMapStateBackend。它使用 HashMap 数据结构存储状态数据，并提供了一些额外的功能，如快照、checkpoint 等。</li>
-<li><strong>EmbeddedRocksDBStateBackend</strong> ：生产时使用，非常大的状态时用。这是一种基于 RocksDB 的状态后端，但与 RocksDBStateBackend 不同的是，它将 RocksDB 数据库嵌入到 Flink 的 TaskManager 进程中。这样做的优点是在状态数据较大时，可以减少网络开销和提高访问性能。
-总之，Flink 的状态储存系统包括多种状态后端，以适应不同的应用场景和需求。开发者可以根据实际情况选择合适的状态后端，以实现高效、可靠的 Flink 程序。</li>
-</ul>
-<h4 id="38介绍一下flink的cep机制">38、介绍一下Flink的CEP机制
-</h4><p>Flink 的 CEP（Complex Event Processing，复杂事件处理）机制主要用于处理实时数据流中的复杂事件，以便实时地计算和响应这些事件。与传统的批处理方式不同，CEP 机制可以处理实时数据流中的事件，并根据事件的复杂逻辑进行实时计算和响应。</p>
+<h3 id="介绍一下flink的cep机制">介绍一下Flink的CEP机制
+</h3><p>Flink 的 CEP（Complex Event Processing，复杂事件处理）机制主要用于处理实时数据流中的复杂事件，以便实时地计算和响应这些事件。与传统的批处理方式不同，CEP 机制可以处理实时数据流中的事件，并根据事件的复杂逻辑进行实时计算和响应。</p>
 <p>Flink CEP 是在 Flink 中实现的复杂事件处理（CEP）库。CEP 允许在无休止的事件流中检测事件模式，让我们有机会掌握数据中重要的部分。一个或多个由简单事件构成的事件流通过一定的规则匹配，然后输出用户想得到的数据——满足规则的复杂事件。</p>
 <p>Flink 的 CEP 机制主要依赖于两个核心组件：Flink 的流处理框架和 CEP 库。Flink 的流处理框架提供了低延迟、高吞吐量的数据流处理能力，可以处理海量的实时数据。而 CEP 库则提供了处理复杂事件的逻辑，可以实现事件的过滤、聚合、路由等功能。通过这两个组件的结合，Flink 能够实现对实时数据流中复杂事件的实时处理和响应。</p>
 <p>Flink 的 CEP 机制具有以下特点：</p>
@@ -843,8 +844,8 @@
 <li><strong>流式处理</strong> ：Flink 的 CEP 机制采用流式处理的方式处理实时数据流，可以实时地计算和响应事件，不需要先收集所有数据再进行批处理。</li>
 </ol>
 <p>Flink 的 CEP 机制在实际应用中可以广泛应用于金融、物联网、物流等行业，例如：实时计算股票交易数据、实时监测传感器数据、实时路由物流信息等。了解 Flink 的 CEP 机制有助于更好地应对实时数据流中的复杂事件处理需求。</p>
-<h4 id="39flink-cep-编程中当状态没有到达的时候会将数据保存在哪里">39、Flink CEP 编程中当状态没有到达的时候会将数据保存在哪里？
-</h4><p>在 Flink CEP 编程中，当状态没有到达的时候，数据通常会被保存在内存中。这是因为在流式处理中，CEP 需要支持 EventTime，也就需要支持数据的迟到现象，这就需要使用 Watermark 机制来处理。对于未匹配成功的事件序列的处理，和迟到数据是类似的。在 Flink CEP 的处理逻辑中，状态没有满足的和迟到的数据，都会存储在一个 Map 数据结构中。</p>
+<h3 id="flink-cep-编程中当状态没有到达的时候会将数据保存在哪里">Flink CEP 编程中当状态没有到达的时候会将数据保存在哪里
+</h3><p>在 Flink CEP 编程中，当状态没有到达的时候，数据通常会被保存在内存中。这是因为在流式处理中，CEP 需要支持 EventTime，也就需要支持数据的迟到现象，这就需要使用 Watermark 机制来处理。对于未匹配成功的事件序列的处理，和迟到数据是类似的。在 Flink CEP 的处理逻辑中，状态没有满足的和迟到的数据，都会存储在一个 Map 数据结构中。</p>
 <p>这种内存存储数据的方式在处理延迟数据时是必要的，但也确实可能会对内存造成一定的损伤。为了降低内存占用，可以采取以下策略：</p>
 <ol>
 <li><strong>合理设置状态的时间间隔</strong> ：根据业务需求和数据处理的实际情况，合理设置状态的时间间隔，以减少内存中存储的数据量。</li>
@@ -853,8 +854,8 @@
 <li><strong>合理设置 Flink 的并行度</strong> ：根据实际硬件资源情况和数据处理需求，合理设置 Flink 的并行度，以平衡内存占用和处理速度之间的关系。</li>
 </ol>
 <p>在 Flink CEP 编程中，当状态没有到达的时候，数据会被保存在内存中。为了降低内存占用，可以采取合理设置状态时间间隔、使用外部状态存储、优化 CEP 算法以及合理设置 Flink 并行度等策略。</p>
-<h4 id="40flink的并行度是什么flink的并行度设置是怎么样的">40、Flink的并行度是什么？Flink的并行度设置是怎么样的？
-</h4><p>Flink 的并行度是指在执行算子时，可以同时处理的数据流分片的数量。通过设置并行度，可以充分利用集群中的多个 TaskSlots（任务槽）来执行多个数据流分片，从而提高计算性能。并行度这个概念很好理解，例如 Kafka Source，它的并行度默认就是它的分区数量。</p>
+<h3 id="flink的并行度是什么flink的并行度设置是怎么样的">Flink的并行度是什么？Flink的并行度设置是怎么样的？
+</h3><p>Flink 的并行度是指在执行算子时，可以同时处理的数据流分片的数量。通过设置并行度，可以充分利用集群中的多个 TaskSlots（任务槽）来执行多个数据流分片，从而提高计算性能。并行度这个概念很好理解，例如 Kafka Source，它的并行度默认就是它的分区数量。</p>
 <p>Flink 的并行度设置可以通过算子内部的参数或者外部的配置进行调整。</p>
 <p>下面是一些常见的设置方法：</p>
 <ol>
@@ -864,8 +865,8 @@
 一般情况下，我们应该根据数据量来设置并行度。对于源算子（如 Kafka Source、HDFS Source 等），它们的并行度通常可以与分区数量保持一致，因为源算子通常不会产生太多的数据量。对于中间算子（如 Map、Filter 等），并行度可以根据数据量的大小进行适当调整。对于聚合算子（如 Reduce、Aggregate 等）和连接算子（如 Join 等），并行度通常需要根据数据量的大小和算子的压力来综合考虑。</li>
 </ol>
 <p>合理地设置并行度可以充分发挥 Flink 的并行计算优势，提高数据处理的性能。</p>
-<h4 id="41说说flink的分区策略">41、说说Flink的分区策略
-</h4><p>Flink 提供了多种分区策略以满足不同数据处理的需求。以下是详细的叙述：</p>
+<h3 id="说说flink的分区策略">说说Flink的分区策略
+</h3><p>Flink 提供了多种分区策略以满足不同数据处理的需求。以下是详细的叙述：</p>
 <ol>
 <li><strong>GlobalPartitioner</strong> ：将数据发到下游算子的第一个实例。这种分区器适用于数据处理过程中只需要一个实例处理的情况。</li>
 <li><strong>ShufflePartitioner</strong> ：将数据随机分发到下游算子。这种分区器适用于数据处理过程中需要对数据进行随机分发的情况，例如数据去重或数据混淆等。</li>
@@ -878,24 +879,15 @@
 <li><strong>CustomPartitionerWrapper</strong> ：用户自定义分区器。这种分区器需要用户自己实现 Partitioner 接口，来定义自己的分区逻辑。适用于数据处理过程中需要根据特定逻辑进行数据分区的情况。</li>
 </ol>
 <p>Flink 提供了多种内置的分区器以满足常见的数据处理需求，同时也支持用户自定义分区器以满足特定需求。</p>
-<h4 id="42tasksolt是什么">42、TaskSolt是什么？
-</h4><p>TaskSlot 是 Flink 中用于控制 TaskManager 接收任务的数量的一个概念。它是一个抽象的概念，表示一个 TaskManager 能够处理的任务数量。在 Flink 中，TaskManager 是实际执行程序的工作节点，为了起到资源隔离和并行执行的作用，TaskManager 是一个 JVM 进程。通过 TaskSlot 的概念，可以控制 TaskManager 接收的任务数量，从而更好地利用集群资源。</p>
-<p>当有一个 source 需要指定三个并行度时，它就需要使用三个 TaskSlot。这是因为 TaskSlot 的数量决定了 TaskManager 能够处理的任务数量。如果 source 需要三个并行度，那么 TaskManager 就需要三个 TaskSlot 来处理这三个并行度的任务。</p>
-<p>还有一个需要主要的优化概念是，当算子的并行度相同，并且没有发生并行度改变、或者没有 shuffle 时，这些算子会合并在一起。这样做的目的是为了减少资源的消耗，提高计算效率。</p>
-<h4 id="43flink的slots和并行度有什么关系">43、Flink的Slots和并行度有什么关系？
-</h4><p>Solt 是 TaskManager 中的概念，表示 TaskManager 的一个槽（Slot）。并行度是程序中的概念，表示程序并行执行的程度。在 Flink 中，Solt 和并行度有着密切的关系。</p>
-<p>具体来说，Solt 是 TaskManager 的资源分配单位，它决定了 TaskManager 能够支持的并行度。一个 TaskManager 有多个 Solt，每个 Solt 可以分配给一个 Task，用于执行程序。因此，TaskManager 的并行度就等于其 Solt 的数量。</p>
-<p>程序制定的并行度使用的是槽（Solt），也就是说，程序是通过分配 Solt 来控制并行度的。当程序需要更高的并行度时，它可以向 TaskManager 申请更多的 Solt，以便在同一时间内执行更多的 Task。</p>
-<p>因此，Solt 和并行度之间的关系可以总结为：Solt 是 TaskManager 中的概念，它决定了 TaskManager 能够支持的并行度；并行度是程序中的概念，它是通过分配 Solt 来控制的。TaskManager 是提供方，提供 Solt 资源给程序使用；程序是使用方，通过分配 Solt 来控制并行度。</p>
-<h4 id="44说说flink的资源调度">44、说说Flink的资源调度
-</h4><p>Flink 的资源调度是基于 TaskManager 和 Task slot 的概念进行的。TaskManager 是 Flink 中最小的调度单元，负责管理和调度任务。而 Task slot 则是 TaskManager 中最细粒度的资源，代表了一个固定大小的资源子集。每个 TaskManager 会将其所占有的资源平分给它的 slot。通过调整 task slot 的数量，用户可以定义 task 之间是如何相互隔离的。</p>
+<h3 id="说说flink的资源调度">说说Flink的资源调度
+</h3><p>Flink 的资源调度是基于 TaskManager 和 Task slot 的概念进行的。TaskManager 是 Flink 中最小的调度单元，负责管理和调度任务。而 Task slot 则是 TaskManager 中最细粒度的资源，代表了一个固定大小的资源子集。每个 TaskManager 会将其所占有的资源平分给它的 slot。通过调整 task slot 的数量，用户可以定义 task 之间是如何相互隔离的。</p>
 <p>每个 TaskManager 有一个 slot，也就意味着每个 task 运行在独立的 JVM 中。这样做的好处是，任务之间的隔离更加明确，一个任务出现问题不会影响到其他任务。同时，独立的 JVM 可以提供更好的资源管理和垃圾回收。</p>
 <p>而当 TaskManager 拥有多个 slot 时，多个 task 可以运行在同一个 JVM 中。这样做的好处是，可以共享 TCP 连接（基于多路复用）和心跳消息，从而减少数据的网络传输。此外，同一个 JVM 进程中的 task 还可以共享一些数据结构，从而减少每个 task 的消耗。</p>
 <p>在 Flink 中，每个 slot 可以接受单个 task，也可以接受多个连续 task 组成的 pipeline。例如，FlatMap 函数占用一个 taskslot，而 key Agg 函数和 sink 函数共用一个 taskslot。这种灵活的资源调度方式可以根据不同的任务需求进行优化和配置，提高系统的资源利用率和性能。</p>
 <p>总之，Flink 的资源调度是通过 TaskManager 和 Task slot 的概念来实现的，通过调整 task slot 的数量和分配方式，可以满足不同任务的需求，提高系统的资源利用率和性能。</p>
 <p>如下图所示，FlatMap函数占用一个taskslot，而key Agg函数和sink函数共用一个taskslot：</p>
-<h4 id="45flink中有没有重启策略">45、Flink中有没有重启策略？
-</h4><p>Flink 中的重启策略用于在程序运行过程中发生故障时，如何重新启动算子以恢复程序的运行。重启策略可以在 flink-conf.yaml 中配置，也可以在应用代码中动态指定。</p>
+<h3 id="flink中有没有重启策略">Flink中有没有重启策略
+</h3><p>Flink 中的重启策略用于在程序运行过程中发生故障时，如何重新启动算子以恢复程序的运行。重启策略可以在 flink-conf.yaml 中配置，也可以在应用代码中动态指定。</p>
 <p>以下是 Flink 中常见的四种重启策略：</p>
 <ol>
 <li><strong>故障延迟重启策略</strong> （Failure Delay Restart Strategy）：当一个算子失败时，该策略会等待一个固定的时间间隔（即延迟时间）后，重新启动该算子。如果在延迟时间内，同一个算子再次失败，则会重新计算延迟时间，并将其设置为之前的两倍。这个过程会一直重复，直到延迟时间达到一个最大的值（通常是 60 秒），此时 Flink 会放弃重启该算子，并将其标记为永久失败。</li>
@@ -904,31 +896,28 @@
 <li><strong>Fallback 重启策略</strong> （Fallback Restart Strategy）：当一个算子失败时，该策略会尝试重新启动该算子，如果重启失败，则会 fallback 到之前的版本，即不会重新启动该算子。这个策略适用于那些可能因为程序升级导致失败的算子，以便在重启失败时能够回滚到之前的版本。</li>
 </ol>
 <p>如果没有启用 checkpointing，则使用无重启（no restart）策略。如果启用了 checkpointing，但没有配置重启策略，则使用固定间隔（fixed-delay）策略。在固定间隔策略中，Flink 会等待一个固定的时间间隔后，重新启动失败的算子。这个时间间隔可以通过 flink-conf.yaml 中的 restart.delay 配置项来设置。</p>
-<h4 id="46flink假如遇到程序异常重启怎么办">46、Flink假如遇到程序异常重启怎么办？
-</h4><h4 id="47flink-的分布式缓存有什么作用如何使用">47、Flink 的分布式缓存有什么作用？如何使用？
-</h4><h4 id="48说说flink中的广播变量使用广播变量的时候需要注意什么">48、说说Flink中的广播变量，使用广播变量的时候需要注意什么？
-</h4><h4 id="49说说flink-operator-chains">49、说说Flink Operator Chains
-</h4><h4 id="50flink什么情况下才会把operator-chain在一起形成算子链">50、Flink什么情况下才会把Operator chain在一起形成算子链？
-</h4><h4 id="51flink序列化如何实现">51、Flink序列化如何实现
-</h4><h4 id="52flink需要依赖于hadoop吗">52、Flink需要依赖于Hadoop吗？
-</h4><h4 id="53flink组件栈有哪些">53、Flink组件栈有哪些
-</h4><h4 id="54flink支持哪些机器学习和图处理库">54、Flink支持哪些机器学习和图处理库？
-</h4><h4 id="55说说flink-运行时组件">55、说说Flink 运行时组件
-</h4><h4 id="56flink的api可分为哪几层">56、Flink的API可分为哪几层？
-</h4><h4 id="57flink中应用在table-api中的udf有几种">57、Flink中应用在table API中的UDF有几种？
-</h4><h4 id="58说说flink-sql的实现原理">58、说说Flink SQL的实现原理
-</h4><h4 id="59说说flink任务提交流程">59、说说Flink任务提交流程
-</h4><h4 id="60flink-on-yarn常见的提交模式有哪些分别有什么优缺点">60、Flink-On-Yarn常见的提交模式有哪些，分别有什么优缺点？
-</h4><h4 id="61说说flink的执行图">61、说说Flink的执行图
-</h4><h4 id="62说说flink的cbo逻辑执行计划和物理执行计划">62、说说Flink的CBO，逻辑执行计划和物理执行计划
-</h4><h4 id="63什么是flink的全局快照为什么需要全局快照">63、什么是Flink的全局快照？为什么需要全局快照？
-</h4><h4 id="64flink维表关联怎么做">64、Flink维表关联怎么做
-</h4><h4 id="65flink如何海量key去重">65、Flink如何海量key去重
-</h4><h4 id="66说说flink的rpc">66、说说Flink的RPC
-</h4><h4 id="参考">参考
-</h4><p><a class="link" href="https://www.cnblogs.com/crazymakercircle/p/17619152.html"  target="_blank" rel="noopener"
-    >1. 史上最全Flink面试题，高薪必备，大数据面试宝典</a></p>
-
+<h3 id="flink假如遇到程序异常重启怎么办">Flink假如遇到程序异常重启怎么办
+</h3><h3 id="flink-的分布式缓存有什么作用如何使用">Flink 的分布式缓存有什么作用？如何使用？
+</h3><h3 id="说说flink中的广播变量使用广播变量的时候需要注意什么">说说Flink中的广播变量，使用广播变量的时候需要注意什么
+</h3><h3 id="说说flink-operator-chains">说说Flink Operator Chains
+</h3><h3 id="flink什么情况下才会把operator-chain在一起形成算子链">Flink什么情况下才会把Operator chain在一起形成算子链
+</h3><h3 id="flink序列化如何实现">Flink序列化如何实现
+</h3><h3 id="flink需要依赖于hadoop吗">Flink需要依赖于Hadoop吗
+</h3><h3 id="flink组件栈有哪些">Flink组件栈有哪些
+</h3><h3 id="flink支持哪些机器学习和图处理库">Flink支持哪些机器学习和图处理库
+</h3><h3 id="说说flink-运行时组件">说说Flink 运行时组件
+</h3><h3 id="flink的api可分为哪几层">Flink的API可分为哪几层
+</h3><h3 id="flink中应用在table-api中的udf有几种">Flink中应用在table API中的UDF有几种
+</h3><h3 id="说说flink-sql的实现原理">说说Flink SQL的实现原理
+</h3><h3 id="说说flink任务提交流程">说说Flink任务提交流程
+</h3><h3 id="flink-on-yarn常见的提交模式有哪些分别有什么优缺点">Flink-On-Yarn常见的提交模式有哪些，分别有什么优缺点？
+</h3><h3 id="说说flink的执行图">说说Flink的执行图
+</h3><h3 id="说说flink的cbo逻辑执行计划和物理执行计划">说说Flink的CBO，逻辑执行计划和物理执行计划
+</h3><h3 id="什么是flink的全局快照为什么需要全局快照">什么是Flink的全局快照？为什么需要全局快照？
+</h3><h3 id="flink维表关联怎么做">Flink维表关联怎么做
+</h3><h3 id="flink如何海量key去重">Flink如何海量key去重
+</h3><h3 id="说说flink的rpc">说说Flink的RPC
+</h3>
 </section>
 
 

@@ -245,7 +245,7 @@ UV：使用 COUNT(DISTINCT user_id) 计算。&lt;/p&gt;
 &lt;li&gt;&lt;strong&gt;JVM 的优化&lt;/strong&gt; : Hive 每次 MapReduce 操作，启动一个 Task 便会启动一次 JVM，基于进程的操作。而 Spark 每次操作是基于线程的，只在启动 Executor 时候启动一次 JVM，内存的 Task 操作是线程复用的。每次启动 JVM 的时间可能就需要几秒甚至十几秒，那么当 Task 多了，mapreduce 不知道比 Spark 慢了多少。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;总的来说Spark 之所以比 Hive 快，主要是因为 Spark 采用了DAG计算模型或者说内存计算、延迟计算、Catalyst 优化器等先进技术，减少了磁盘 I/O 和任务调度开销，提高了数据处理效率，因此Spark非常适合像批处理、机器学习这样的场景，当然对于一些传统的批处理场景，Mapreduce仍然是一种可靠的选择。&lt;/p&gt;
-&lt;h3 id=&#34;缓存机制与checkpoint机制的区别与联系&#34;&gt;缓存机制与checkpoint机制的区别与联系
+&lt;h3 id=&#34;缓存机制与checkpoint机制的区别&#34;&gt;缓存机制与checkpoint机制的区别
 &lt;/h3&gt;&lt;p&gt;两者都是做RDD持久化的，RDD通过cache方法或者persist方法可以将前面的计算结果缓存，但并不是立即缓存，而是在调用Action算子的时候，这个RDD会被缓存在计算节点的内存中，并供后面使用。缓存既不是transformation也不是action类的算子，并且缓存结束后不会产生新的RDD。&lt;/p&gt;
 &lt;p&gt;缓存有可能丢失，或者存储于内存的数据由于内存不足而被删除，RDD的缓存容错机制保证了即使缓存丢失也能保证计算的正确执行。通过基于RDD的一系列转换，丢失的数据会被重算，由于RDD的各个Partition是相对独立的，因此只需要计算丢失的部分即可，并不需要重算全部Partition。&lt;/p&gt;
 &lt;p&gt;使用缓存的条件：（或者说什么时候进行缓存）&lt;/p&gt;
@@ -364,60 +364,93 @@ UV：使用 COUNT(DISTINCT user_id) 计算。&lt;/p&gt;
 &lt;p&gt;第三步是任务计算，每个Task任务处理一个分区的数据，执行转换操作如map、filter等，任务在Executor中执行，Executor是运行在集群节点上的进程，在遇到宽依赖比如groupByKey、join的时候，Spark会进行Shuffle操作，Shuffle 操作涉及数据的跨节点传输和重新分区。如果数据需要多次使用，可以将其缓存到内存或磁盘中（如 persist、cache）。&lt;/p&gt;
 &lt;p&gt;最后一步就是结果输出，对于行动操作（如 collect、count），Spark 会将结果返回给 Driver 程序，对于输出操作（如 saveAsTextFile、saveAsTable），Spark 会将结果存储到外部存储系统中。&lt;/p&gt;
 &lt;h3 id=&#34;spark-map-join的实现原理&#34;&gt;Spark map join的实现原理
-&lt;/h3&gt;&lt;h3 id=&#34;介绍下spark-shuffle以及其优缺点&#34;&gt;介绍下Spark Shuffle以及其优缺点
-&lt;/h3&gt;&lt;h3 id=&#34;什么情况下会产生spark-shuffle&#34;&gt;什么情况下会产生Spark Shuffle
-&lt;/h3&gt;&lt;h3 id=&#34;为什么要spark-shuffle&#34;&gt;为什么要Spark Shuffle
-&lt;/h3&gt;&lt;h3 id=&#34;spark的stage如何划分在源码中是怎么判断属于shufflemap-stage或result-stage的&#34;&gt;Spark的Stage如何划分？在源码中是怎么判断属于ShuffleMap Stage或Result Stage的？
-&lt;/h3&gt;&lt;h3 id=&#34;spark-join在什么情况下会变成窄依赖&#34;&gt;Spark join在什么情况下会变成窄依赖
-&lt;/h3&gt;&lt;h3 id=&#34;spark的内存模型&#34;&gt;Spark的内存模型
-&lt;/h3&gt;&lt;h3 id=&#34;对rdddag和task的理解&#34;&gt;对RDD、DAG和Task的理解
-&lt;/h3&gt;&lt;h3 id=&#34;dag为什么适合spark&#34;&gt;DAG为什么适合Spark
-&lt;/h3&gt;&lt;h3 id=&#34;介绍下spark的dag以及它的生成过程&#34;&gt;介绍下Spark的DAG以及它的生成过程
-&lt;/h3&gt;&lt;h3 id=&#34;dagscheduler如何划分干了什么活&#34;&gt;DAGScheduler如何划分？干了什么活
-&lt;/h3&gt;&lt;h3 id=&#34;spark的容错机制&#34;&gt;Spark的容错机制
-&lt;/h3&gt;&lt;h3 id=&#34;rdd的容错&#34;&gt;RDD的容错
-&lt;/h3&gt;&lt;h3 id=&#34;executor内存分配&#34;&gt;Executor内存分配
-&lt;/h3&gt;&lt;h3 id=&#34;spark的batchsize怎么解决小文件合并问题&#34;&gt;Spark的batchsize，怎么解决小文件合并问题
-&lt;/h3&gt;&lt;h3 id=&#34;spark参数性能调优&#34;&gt;Spark参数(性能)调优
-&lt;/h3&gt;&lt;h3 id=&#34;介绍一下spark是怎么基于内存计算的&#34;&gt;介绍一下Spark是怎么基于内存计算的
-&lt;/h3&gt;&lt;h3 id=&#34;说下什么是rdd对rdd的理解rdd有哪些特点说下知道的rdd算子&#34;&gt;说下什么是RDD(对RDD的理解)，RDD有哪些特点？说下知道的RDD算子
-&lt;/h3&gt;&lt;h3 id=&#34;rdd底层原理&#34;&gt;RDD底层原理
-&lt;/h3&gt;&lt;h3 id=&#34;rdd属性&#34;&gt;RDD属性
-&lt;/h3&gt;&lt;h3 id=&#34;rdd的缓存级别&#34;&gt;RDD的缓存级别
-&lt;/h3&gt;&lt;h3 id=&#34;spark广播变量的实现和原理&#34;&gt;Spark广播变量的实现和原理
-&lt;/h3&gt;&lt;h3 id=&#34;reducebykey和groupbykey的区别和作用&#34;&gt;reduceByKey和groupByKey的区别和作用
-&lt;/h3&gt;&lt;h3 id=&#34;reducebykey和reduce的区别&#34;&gt;reduceByKey和reduce的区别
-&lt;/h3&gt;&lt;h3 id=&#34;使用reducebykey出现数据倾斜怎么办&#34;&gt;使用reduceByKey出现数据倾斜怎么办
-&lt;/h3&gt;&lt;h3 id=&#34;sparksql的执行原理&#34;&gt;SparkSQL的执行原理
-&lt;/h3&gt;&lt;h3 id=&#34;sparksql的优化&#34;&gt;SparkSQL的优化
-&lt;/h3&gt;&lt;h3 id=&#34;说下spark-checkpoint&#34;&gt;说下Spark checkpoint
-&lt;/h3&gt;&lt;h3 id=&#34;sparksql自定义函数怎么创建dataframe&#34;&gt;Sparksql自定义函数？怎么创建DataFrame
-&lt;/h3&gt;&lt;h3 id=&#34;hashpartitioner和rangepartitioner的实现&#34;&gt;HashPartitioner和RangePartitioner的实现
-&lt;/h3&gt;&lt;h3 id=&#34;dagschedulertaskschedulerschedulerbackend实现原理&#34;&gt;DAGScheduler、TaskScheduler、SchedulerBackend实现原理
-&lt;/h3&gt;&lt;h3 id=&#34;driver怎么管理executor&#34;&gt;Driver怎么管理executor
-&lt;/h3&gt;&lt;h3 id=&#34;spark的map和flatmap的区别&#34;&gt;Spark的map和flatmap的区别
-&lt;/h3&gt;&lt;h3 id=&#34;map和mappartition的区别&#34;&gt;map和mapPartition的区别
-&lt;/h3&gt;&lt;h3 id=&#34;spark的cache和persist的区别它们是transformation算子还是action算子&#34;&gt;Spark的cache和persist的区别？它们是transformation算子还是action算子？
-&lt;/h3&gt;&lt;h3 id=&#34;sparkstreaming的工作原理&#34;&gt;SparkStreaming的工作原理
-&lt;/h3&gt;&lt;h3 id=&#34;spark-streaming的dstream和dstreamgraph的区别&#34;&gt;Spark Streaming的DStream和DStreamGraph的区别
-&lt;/h3&gt;&lt;h3 id=&#34;spark输出文件的个数如何合并小文件&#34;&gt;Spark输出文件的个数，如何合并小文件
-&lt;/h3&gt;&lt;h3 id=&#34;spark的driver是怎么驱动作业流程的&#34;&gt;Spark的driver是怎么驱动作业流程的
-&lt;/h3&gt;&lt;h3 id=&#34;sparksql的劣势&#34;&gt;SparkSQL的劣势
-&lt;/h3&gt;&lt;h3 id=&#34;dag划分spark源码实现&#34;&gt;DAG划分Spark源码实现
-&lt;/h3&gt;&lt;h3 id=&#34;spark-steaming的双流join的过程怎么做的&#34;&gt;Spark Steaming的双流join的过程，怎么做的
-&lt;/h3&gt;&lt;h3 id=&#34;spark的block管理&#34;&gt;Spark的Block管理
-&lt;/h3&gt;&lt;h3 id=&#34;spark怎么保证数据不丢失&#34;&gt;Spark怎么保证数据不丢失
-&lt;/h3&gt;&lt;h3 id=&#34;sparksql如何使用udf&#34;&gt;SparkSQL如何使用UDF
-&lt;/h3&gt;&lt;h3 id=&#34;sparksql读取文件内存不够使用如何处理&#34;&gt;SparkSQL读取文件，内存不够使用，如何处理
-&lt;/h3&gt;&lt;h3 id=&#34;spark的lazy提现在哪里&#34;&gt;Spark的lazy提现在哪里
-&lt;/h3&gt;&lt;h3 id=&#34;spark中的并行度等于什么&#34;&gt;Spark中的并行度等于什么
-&lt;/h3&gt;&lt;h3 id=&#34;spark运行时并行度的设置&#34;&gt;Spark运行时并行度的设置
-&lt;/h3&gt;&lt;h3 id=&#34;sparksql的数据倾斜&#34;&gt;SparkSQL的数据倾斜
-&lt;/h3&gt;&lt;h3 id=&#34;spark的exactly-one&#34;&gt;Spark的exactly-one
-&lt;/h3&gt;&lt;h3 id=&#34;spark的rdd和partition的联系&#34;&gt;Spark的RDD和partition的联系
-&lt;/h3&gt;&lt;h3 id=&#34;spark3的特性&#34;&gt;Spark3的特性
-&lt;/h3&gt;&lt;h3 id=&#34;spakr计算的灵活性提现在哪里&#34;&gt;Spakr计算的灵活性提现在哪里
-&lt;/h3&gt;&lt;h3 id=&#34;说说rdddataframedataset三者的区别与联系&#34;&gt;说说RDD、DataFrame、DataSet三者的区别与联系
+&lt;/h3&gt;&lt;p&gt;在 Spark 中，Map Join（也称为 Broadcast Join）是一种用于优化小表与大表 JOIN 操作的技术。它的核心思想是将小表的数据广播到所有 Executor 节点，从而避免 Shuffle 操作，显著提升 JOIN 的性能。在常规的 Shuffle Join 中，大表和小表的数据都需要通过网络传输到 Reduce 阶段进行 JOIN，这会导致大量的网络和磁盘 I/O 开销，而Map Join 通过将小表的数据广播到所有 Executor 节点，使得每个节点都可以在本地完成 JOIN 操作，从而避免 Shuffle。&lt;/p&gt;
+&lt;p&gt;广播Join的原理是，Spark 使用广播变量将小表的数据序列化并分发到所有 Executor 节点，Executor 节点将接收到的数据反序列化并存储在内存中，然后每个 Executor 节点在本地将大表的分区数据与广播的小表数据进行 JOIN。Join的时候Spark会对大表的分区数据进行遍历，对于每条记录，根据JOIN Key在小表中查找匹配的记录并将匹配的结果输出，最后每个Executor 节点将 JOIN 结果输出到本地或外部存储系统。&lt;/p&gt;
+&lt;p&gt;广播Join出发的条件是，小表的大小必须小于spark.sql.autoBroadcastJoinThreshold参数的值，默认10M，也就是小表的数据需要能够完全放入 Executor 的内存中，广播Join适用于Inner Join、Left Join 等 JOIN 类型。但Spark也支持用户手动使用broadcast函数触发。&lt;/p&gt;
+&lt;p&gt;广播Join的优势在于避免了Shuffle操作，减少网络和磁盘的IO开销，同时JOIN操作在本地完成，显著提升了执行效率。但它也有自己的局限性，那就是小表的数据必须能够完全放入Executor 的内存中，并且广播Join不适用于Full Outer Join 等复杂的 JOIN 类型。&lt;/p&gt;
+&lt;h3 id=&#34;spark应用程序执行流程&#34;&gt;Spark应用程序执行流程
+&lt;/h3&gt;&lt;p&gt;Spark应用程序的执行过程可以分为以下几个步骤：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;创建SparkContext&lt;/strong&gt; ：应用程序首先需要创建一个SparkContext对象，它是与Spark集群通信的入口点。SparkContext负责与集群管理器通信，并为应用程序分配资源。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;创建RDD&lt;/strong&gt; ：应用程序需要将数据加载到弹性分布式数据集（RDD）中。RDD是Spark的核心数据结构，它代表了分布在集群中的数据集合。RDD可以通过读取文件、从内存中的数据集创建、从其他RDD转换等方式来创建。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;转换操作&lt;/strong&gt; ：一旦RDD被创建，应用程序可以对RDD进行一系列的转换操作，例如map、filter、reduce等。这些转换操作会生成新的RDD，而不会立即执行计算。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;行动操作&lt;/strong&gt; ：当应用程序需要获取转换操作的结果时，需要执行行动操作。行动操作会触发Spark执行计划的生成和执行。常见的行动操作包括collect、count、save等，它们会返回计算结果给应用程序。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;作业划分&lt;/strong&gt; ：Spark将应用程序的行动操作划分为一系列的作业（jobs），每个作业由一组相关的转换操作组成。作业划分是为了提高并行度和数据本地性，以便更好地利用集群资源。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;任务划分&lt;/strong&gt; ：每个作业被划分为一系列的任务（tasks），每个任务处理数据的一部分。任务的划分是根据数据分区和可用资源来完成的。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;任务调度和执行&lt;/strong&gt; ：Spark将任务分发到集群中的执行器节点上执行。任务调度器负责将任务分配给可用的执行器节点，并考虑数据本地性以提高性能。执行器节点会加载数据到内存中，并执行任务操作。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;结果返回&lt;/strong&gt; ：一旦任务执行完成，执行器将结果返回给驱动程序。驱动程序可以将结果保存到内存、磁盘或其他外部存储中，也可以将结果返回给应用程序。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;容错和恢复&lt;/strong&gt; ：Spark具有容错机制，可以在节点故障时自动恢复。如果某个节点失败，Spark可以重新调度任务并在其他节点上执行。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;总的来说，Spark应用程序的执行过程包括创建SparkContext、创建RDD、转换操作、行动操作、作业划分、任务划分、任务调度和执行、结果返回以及容错和恢复等步骤。通过这些步骤，Spark能够以高效、可靠的方式处理大规模数据和复杂计算任务。&lt;/p&gt;
+&lt;h3 id=&#34;介绍下spark-shuffle以及其优缺点&#34;&gt;介绍下Spark Shuffle以及其优缺点
+&lt;/h3&gt;&lt;p&gt;在 Apache Spark 中，Shuffle 是一个关键的操作，它负责在分布式计算中重新分布数据。Shuffle 通常发生在宽依赖操作（如 groupByKey、reduceByKey、join 等）中，是 Spark 作业中最昂贵的操作之一。Shuffle 是 Spark 中数据重新分布的过程。当需要将数据按照某种规则（如 Key）重新分组或聚合时，Spark 会将数据从上游任务（Map 阶段）的输出分区重新分区并传输到下游任务（Reduce 阶段）的输入分区。&lt;/p&gt;
+&lt;p&gt;Shuffle 分为两个主要阶段，Shuffle Write：Map 任务将输出数据写入本地磁盘，并按照分区规则将数据分组，数据会被写入多个临时文件，每个文件对应一个 Reduce 分区。Shuffle Read：Reduce 任务从各个 Map 任务的输出文件中读取数据，并进行聚合或计算，数据读取过程可能涉及网络传输。&lt;/p&gt;
+&lt;p&gt;Spark 提供了两种 Shuffle 实现方式，Hash Shuffle：每个 Map 任务为每个 Reduce 任务生成一个文件，导致文件数过多，适用于小规模数据，但会产生大量小文件，影响性能。Sort Shuffle：Map 任务将数据排序后写入单个文件，并生成索引文件，减少了文件数，适用于大规模数据，是 Spark 1.2 之后的默认实现。&lt;/p&gt;
+&lt;p&gt;Shuffle 的优点：Shuffle 使得 Spark 能够支持复杂的宽依赖操作，如 groupByKey、reduceByKey、join 等；Shuffle 可以根据业务需求重新分布数据，满足计算需求；灵活性：Shuffle 支持自定义分区器（Partitioner），用户可以根据业务需求定义分区规则。&lt;/p&gt;
+&lt;p&gt;Shuffle 的缺点&lt;/p&gt;
+&lt;p&gt;性能开销大：磁盘 I/O：Shuffle Write 和 Shuffle Read 都涉及大量磁盘读写操作；网络传输：数据需要在节点之间传输，网络带宽可能成为瓶颈；序列化/反序列化：数据在传输前后需要序列化和反序列化，消耗 CPU 资源。&lt;/p&gt;
+&lt;p&gt;数据倾斜：某些分区的数据量远大于其他分区，导致任务负载不均衡。&lt;/p&gt;
+&lt;p&gt;小文件问题：Hash Shuffle 会产生大量小文件，影响存储和查询性能。&lt;/p&gt;
+&lt;p&gt;Shuffle 的优化&lt;/p&gt;
+&lt;p&gt;减少 Shuffle 数据量：在 Shuffle 前过滤掉不必要的数据，使用 reduceByKey 代替 groupByKey，减少数据传输量。&lt;/p&gt;
+&lt;p&gt;优化分区数：合理设置分区数，避免过多或过少的分区。&lt;/p&gt;
+&lt;p&gt;使用高效的序列化库：使用 Kryo 序列化库，减少序列化开销。&lt;/p&gt;
+&lt;p&gt;启用 Shuffle 压缩：通过 spark.shuffle.compress 参数启用压缩，减少网络传输量。&lt;/p&gt;
+&lt;p&gt;数据倾斜处理：对倾斜的 Key 添加随机前缀，分散数据，使用自定义分区器，优化数据分布。&lt;/p&gt;
+&lt;h3 id=&#34;什么情况下会产生spark-shuffle&#34;&gt;什么情况下会产生Spark Shuffle
+&lt;/h3&gt;&lt;p&gt;宽依赖操作会导致 Shuffle，因为数据需要重新分布到不同的分区，例如groupByKey、reduceByKey、join、cogroup、distinct、repartition、sortByKey。&lt;/p&gt;
+&lt;p&gt;我们应当尽量避免不必要的shuffle或者要对shuffle做些调优，例如使用广播JOIN、使用 reduceByKey 代替 groupByKey(reduceByKey 在 Map 端进行局部聚合，减少了 Shuffle 数据量)、优化分区数、使用缓存等。避免不必要的 Shuffle，是优化 Spark 作业性能的关键，通过合理设计数据处理逻辑和优化配置，可以显著减少 Shuffle 的开销。&lt;/p&gt;
+&lt;h3 id=&#34;为什么要spark-shuffle&#34;&gt;为什么要Spark Shuffle
+&lt;/h3&gt;&lt;p&gt;在分布式计算中，数据通常分布在不同的节点上。要对数据进行聚合或连接操作，需要将具有相同 Key 的数据重新分布到同一个节点上进行处理。&lt;/p&gt;
+&lt;h3 id=&#34;说明yarn-cluster模式作业提交流程yarn-cluster与yarn-client的区别&#34;&gt;说明yarn-cluster模式作业提交流程，yarn-cluster与yarn-client的区别
+&lt;/h3&gt;&lt;p&gt;在Spark中，YARN是一种用于集群资源管理的框架，可以将Spark应用程序提交到YARN集群上进行执行。YARN提供了两种模式供Spark应用程序提交：yarn-cluster和yarn-client。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;yarn-cluster模式作业提交流程：
+&lt;ul&gt;
+&lt;li&gt;当你在使用 &lt;code&gt;spark-submit&lt;/code&gt;命令提交Spark应用程序时，指定了 &lt;code&gt;--deploy-mode cluster&lt;/code&gt;参数，即使用yarn-cluster模式。&lt;/li&gt;
+&lt;li&gt;提交命令发送给YARN的ResourceManager，ResourceManager会为应用程序分配一个ApplicationMaster。&lt;/li&gt;
+&lt;li&gt;ApplicationMaster是一个专门负责管理应用程序执行的组件，它会向ResourceManager请求资源。&lt;/li&gt;
+&lt;li&gt;ResourceManager会为ApplicationMaster分配一定数量的资源，这些资源将用于启动Executor。&lt;/li&gt;
+&lt;li&gt;ApplicationMaster会与各个NodeManager通信，启动Executor，并将应用程序的代码和依赖文件分发到各个Executor所在的节点上。&lt;/li&gt;
+&lt;li&gt;Executor会根据指定的任务分配策略执行具体的任务，任务的执行结果会返回给ApplicationMaster。&lt;/li&gt;
+&lt;li&gt;ApplicationMaster会将任务的执行结果返回给Driver程序，Driver程序可以根据需要进行后续处理。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;yarn-cluster与yarn-client的区别：
+&lt;ul&gt;
+&lt;li&gt;yarn-cluster模式下，Driver程序运行在集群中的一个Executor上，并且Driver程序与ApplicationMaster是独立的进程。这意味着Driver程序的执行不会受到本地环境的限制，可以充分利用集群资源。&lt;/li&gt;
+&lt;li&gt;yarn-client模式下，Driver程序运行在提交Spark应用程序的本地机器上，而不是集群中的一个Executor上。Driver程序与ApplicationMaster是同一个进程。这意味着Driver程序的执行受到本地环境的限制，例如可用的内存和CPU资源。&lt;/li&gt;
+&lt;li&gt;在yarn-cluster模式下，提交的应用程序可以在集群中长时间运行，即使与提交应用程序的客户端断开连接，应用程序仍然可以继续执行。而在yarn-client模式下，如果与客户端断开连接，应用程序会被终止。&lt;/li&gt;
+&lt;li&gt;yarn-cluster模式适用于长时间运行的应用程序，例如批处理作业。yarn-client模式适用于交互式应用程序，例如Spark Shell。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Yarn Client模式(一般用于测试)&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Driver在任务提交的本地机器上运行&lt;/li&gt;
+&lt;li&gt;Driver启动后会向ResourceManager通讯申请启动ApplicationMaster&lt;/li&gt;
+&lt;li&gt;ResourceManager分配Container，在合适的NodeManager上启动ApplicationMaster，负责向ResourceManager申请Executor内存&lt;/li&gt;
+&lt;li&gt;ResourceManager接到ApplicationMaster的资源申请后会分配Container，然后ApplicationMaster在资源分配指定的NodeManager上驱动Executor进程&lt;/li&gt;
+&lt;li&gt;Executor进程启动后会向Driver反向注册，Executor全部注册完成之后，Driver开始执行Main函数&lt;/li&gt;
+&lt;li&gt;之后执行到Action算子，触发一个Job，并根据宽依赖开始划分Stage，每个Stage生成对应的TaskSet，之后将Task分发到各个Executor上执行&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Yarn Cluster模式&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;任务提交后，Client会先和ResourceManager通讯，申请启动ApplicationMaster&lt;/li&gt;
+&lt;li&gt;ResourceManager分配Container，在合适的NodeManager上启动ApplicationMaster，此时的ApplicationMaster就是Driver&lt;/li&gt;
+&lt;li&gt;Driver启动后会向ResourceManager申请Executor内存，ResourceManager接到ApplicationMaster的资源申请后会分配Container，然后在合适的NodeManager上启动Executor进程&lt;/li&gt;
+&lt;li&gt;Executor进程启动后会向Driver反向注册，Executor全部注册完成之后，Driver开始执行Main函数&lt;/li&gt;
+&lt;li&gt;之后执行到Action算子，触发一个Job，并根据宽依赖开始划分Stage，每个Stage生成对应的TaskSet，之后将Task分发到各个Executor上执行&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;总结：yarn-cluster模式下，Driver程序运行在集群中的一个Executor上，与ApplicationMaster是独立的进程；yarn-client模式下，Driver程序运行在本地机器上，与ApplicationMaster是同一个进程。&lt;/p&gt;
+&lt;h3 id=&#34;spark的内存模型&#34;&gt;Spark的内存模型
+&lt;/h3&gt;&lt;p&gt;Spark中的内存使用分为两部分：执行（execution）与存储（storage）。执行内存主要用于shuffles、joins、sorts和aggregations，存储内存则用于缓存或者跨节点的内部数据传输。1.6之前，对于一个Executor，内存都由以下部分构成：
+  1）ExecutionMemory。这片内存区域是为了解决 shuffles,joins, sorts and aggregations 过程中为了避免频繁IO需要的buffer。 通过spark.shuffle.memoryFraction(默认 0.2) 配置。
+  2）StorageMemory。这片内存区域是为了解决 block cache(就是你显示调用rdd.cache, rdd.persist等方法), 还有就是broadcasts,以及task results的存储。可以通过参数 spark.storage.memoryFraction(默认0.6)设置。
+  3）OtherMemory。给系统预留的，因为程序本身运行也是需要内存的(默认为0.2)。   传统内存管理的不足：
+  1）Shuffle占用内存0.2*0.8，内存分配这么少，可能会将数据spill到磁盘，频繁的磁盘IO是很大的负担，Storage内存占用0.6，主要是为了迭代处理。传统的Spark内存分配对操作人的要求非常高。（Shuffle分配内存：ShuffleMemoryManager, TaskMemoryManager, ExecutorMemoryManager）一个Task获得全部的Execution的Memory，其他Task过来就没有内存了，只能等待；
+  2）默认情况下，Task在线程中可能会占满整个内存，分片数据&lt;/p&gt;
+&lt;h3 id=&#34;说说rdddataframedataset三者的区别与联系&#34;&gt;说说RDD、DataFrame、DataSet三者的区别与联系
 &lt;/h3&gt;&lt;p&gt;RDD (Spark1.0) —&amp;gt; Dataframe(Spark1.3) —&amp;gt; Dataset(Spark1.6)，如果同样的数据都给到这三个数据结构，他们分别计算之后，都会给出相同的结果。不同是的他们的执行效率和执行方式。在后期的Spark版本中，DataSet会逐步取代RDD和DataFrame成为唯一的API接口。&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;RDD&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;RDD叫做弹性分布式数据集，是Spark中最基本的数据处理模型。代码中是一个抽象类，它代表了一个弹性的、不可变的、可分区、里面的元素可进行计算的集合。&lt;/p&gt;
@@ -485,122 +518,9 @@ import spark.implicits._
 &lt;h3 id=&#34;简述广播变量和累加器的基本原理和用途&#34;&gt;简述广播变量和累加器的基本原理和用途
 &lt;/h3&gt;&lt;p&gt;通常情况下，一个传递给 RDD 操作（如map、reduceByKey）的 func 是在远程节点上执行的。函数 func 在多个节点执行过程中使用的变量，是Driver上同一个变量的多个副本。这些变量以副本的方式拷贝到每个task中，并且各task中变量的更新并不会返回 Driver&lt;/p&gt;
 &lt;p&gt;为了解决以上问题，Spark 提供了两种特定类型的共享变量 : 广播变量 和 累加器。&lt;strong&gt;广播变量主要用于高效分发较大的数据对象，累加器主要用于对信息进行聚合&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;广播变量的好处，不需要每个task带上一份变量副本，而是变成每个节点的executor才一份副本。这样的话， 就可以让变量产生的副本大大减少。而且 Spark 使用高效广播算法（BT协议）分发广播变量以降低通信成本&lt;/p&gt;
+&lt;p&gt;广播变量的好处，不需要每个task带上一份变量副本，而是变成每个节点的executor的一份副本。这样的话， 就可以让变量产生的副本大大减少。而且 Spark 使用高效广播算法（BT协议）分发广播变量以降低通信成本&lt;/p&gt;
 &lt;p&gt;累加器是 Spark 中提供的一种分布式的变量机制，在Driver端进行初始化，task中对变量进行累加操作&lt;/p&gt;
 &lt;p&gt;广播变量典型的使用案例是Map Side Join；累加器经典的应用场景是用来在 Spark 应用中记录某些事件/信息的数量&lt;/p&gt;
-&lt;h2 id=&#34;基本&#34;&gt;基本
-&lt;/h2&gt;&lt;h3 id=&#34;说说spark提交作业参数&#34;&gt;说说Spark提交作业参数
-&lt;/h3&gt;&lt;p&gt;提交作业时的重要参数：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;executor_cores
-缺省值：1 in YARN mode, all the available cores on the worker in standalone and Mesos coarse-grained modes
-生产环境中不宜设置为1！否则 work 进程中线程数过少，一般 2~5 为宜&lt;/li&gt;
-&lt;li&gt;executor_memory
-缺省值：1g
-该参数与executor分配的core有关，分配的core越多 executor_memory 值就应该越大；
-core与memory的比值一般在 1:2 到 1:4 之间，即每个core可分配2~4G内存。如 executor_cores 为4，那么executor_memory 可以分配 8G ~ 16G；
-单个Executor内存大小一般在 20G 左右（经验值），单个JVM内存太高易导致GC代价过高，或资源浪费&lt;/li&gt;
-&lt;li&gt;executor_cores * num_executors
-表示的是能够并行执行Task的数目。不宜太小或太大！理想情况下，一般给每个core分配 2-3 个task，由此可反推 num_executors 的个数&lt;/li&gt;
-&lt;li&gt;driver-memory
-driver 不做任何计算和存储，只是下发任务与yarn资源管理器和task交互，一般设为 1-2G 即可；&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;增加每个executor的内存量，增加了内存量以后，对性能的提升，有三点：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;如果需要对RDD进行cache，那么更多的内存，就可以缓存更多的数据，将更少的数据写入磁盘，甚至不写入磁盘。减少了磁盘IO&lt;/li&gt;
-&lt;li&gt;对于shuffle操作，reduce端，会需要内存来存放拉取的数据并进行聚合。如果内存不够，也会写入磁盘。如果给executor分配更多内存，会减少磁盘的写入操作，进而提升性能&lt;/li&gt;
-&lt;li&gt;task的执行，可能会创建很多对象。如果内存比较小，可能会频繁导致JVM堆内存满了，然后频繁GC，垃圾回收，minor GC和full GC。内存加大以后，带来更少的GC，垃圾回收，避免了速度变慢，性能提升；&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3 id=&#34;spark的宽窄依赖以及spark如何划分stage如何确定每个stage中task个数&#34;&gt;Spark的宽窄依赖，以及Spark如何划分Stage，如何确定每个Stage中Task个数
-&lt;/h3&gt;&lt;p&gt;RDD之间的依赖关系分为窄依赖（narrow dependency）和宽依赖（Wide Depencency，也称为Shuffle Depencency）&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;窄依赖&lt;/strong&gt; ：指父RDD的每个分区只被子RDD的一个分区所使用，子RDD分区通常对应常数个父RDD分区（O(1)，与数据规模无关）&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;宽依赖&lt;/strong&gt; ：是指父RDD的每个分区都可能被多个子RDD分区所使用，子RDD分区通常对应所有的父RDD分区（O(n),与数据规模有关）&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;相比于宽依赖，窄依赖对优化很有利，主要基于以下几点：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;宽依赖往往对应着Shuffle操作，需要在运行过程中将同一个父RDD的分区传入到不同的子RDD分区中，中间可能涉及多个节点之间的数据传输；而窄依赖的每个父RDD的分区只会传入到一个子RDD分区中，通常可以在一个节点内完成转换&lt;/li&gt;
-&lt;li&gt;当RDD分区丢失时（某个节点故障），Spark会对数据进行重算&lt;/li&gt;
-&lt;li&gt;对于窄依赖，由于父RDD的一个分区只对应一个子RDD分区，这样只需要重算和子RDD分区对应的父RDD分区即可，所以这个重算对数据的利用率是100%的&lt;/li&gt;
-&lt;li&gt;对于宽依赖，重算的父RDD分区对应多个子RDD分区的，这样实际上父RDD中只有一部分的数据是被用于恢复这个丢失的子RDD分区的，另一部分对应子RDD的其他未丢失分区，这就造成了多余的计算；更一般的，宽依赖中子RDD分区通常来自多个父RDD分区，所有的父RDD分区都要进行重新计算&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Stage：根据RDD之间的依赖关系将Job划分成不同的Stage，遇到一个宽依赖则划分一个Stage。&lt;/p&gt;
-&lt;p&gt;Task：Stage是一个TaskSet，将Stage根据分区数划分成一个个的Task&lt;/p&gt;
-&lt;h3 id=&#34;如何理解spark中lineage&#34;&gt;如何理解Spark中Lineage
-&lt;/h3&gt;&lt;p&gt;首先要明确一下 Spark 中 RDD 的容错机制。每一个 RDD 都是一个不可变的分布式可重算的数据集，其记录着确定性的操作继承关系（ lineage ），所以只要输入数据是可容错的，那么任意一个 RDD 的分区（ Partition ）出错或不可用，都是可以利用原始输入数据通过转换操作而重新算出的。如果一个分区出错了：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;对于窄依赖，则只要把丢失的父 RDD 分区重算即可，不依赖于其他分区&lt;/li&gt;
-&lt;li&gt;对于宽依赖，则父 RDD 的所有分区都需要重算，代价昂贵&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;所以在长“血统”链特别是有宽依赖的时候，需要在适当的时机设置数据检查点&lt;/p&gt;
-&lt;h3 id=&#34;aqe是什么&#34;&gt;AQE是什么
-&lt;/h3&gt;&lt;p&gt;Adaptive Query Execution (AQE) 就像 SparkSQL的智能助手，它解决了查询计划不那么完美的问题，它通过在sparksSQL查询运行时从去从数据中去学习并通过算法模型优化来实现这一点。AQE不依赖于数据的固定信息，而是在查询展开时收集实时细节。通过这样做，AQE 可以对查询计划进行即时改进，确保其运行更高效，确保最终的结果尽可能快捷。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;动态合并Shuffle分区&lt;/strong&gt;
-当 Spark 处理大型数据集时，它通常需要通过网络重新组织或打乱数据以执行某些操作，例如ioin连接或聚合。这个shuffle过程涉及到将数据划分为多个分区，而这个分区的效率极大地影响了查询性能，而AQE 在查询运行时动态调整随机分区的数量，假设您有一个大数据集，最初，Spark 决定使用一定数量的分区进行shuffle。这个数字可能很难得到正确的值，因为如果它太低，每个分区可能太大，导致处理速度慢。另一方面，如果它太高，您会得到很多小分区，导致数据获取效率低下并增加开销。&lt;/p&gt;
-&lt;p&gt;如果没有 AQE，Spark 可能会决定在本地分组操作后创建五个分区。然而，AQE 很聪明。它注意到其中三个分区非常小。AQE 不会通过单独处理每个小分区来浪费资源，而是将这些小分区合并 (组合) 为一个。现在，最终的聚合只需要对三个任务执行，而不是五个，使得查询更加高效。在后台，AQE 动态调整随机分区的数量并根据需要合并它们，从而优化查询执行计划&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;动态切换Join策略&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;当您在 Spark 中执行join连接时，可以采用不同的方法来组合数据。最有效的方法之一称为广播哈希join (broadcast hash join)其中连接的一侧足够小以适合放到内存里，从而使Join过程更快，类似hive中的mapjoin。现在，假设您正在运行join连接操作，并且最初，Spark 计划根据其对数据大小的估计使用某种连接策略。这就是 AQE 的用武之地。它不会盲目地坚持最初的计划。相反，它会在查询运行时关注数据的实际大小，动态调整join策略。&lt;/p&gt;
-&lt;p&gt;如果在执行过程中，AQE 注意到join一侧的数据大小比最初估计的要小得多，它可以动态地将ioin连接策略切换为更高效的broadcasthash join。这一点至关重要，因为有时初始化时估计可能会由于各种因素而出现偏差，例如各种filter或一组复杂的操作后数据量明显变小&lt;/p&gt;
-&lt;p&gt;Spark 计划使用sort merge join ，刚开始以为是大表Join。然而，AQE 观察到运行时的实际大小要小得多，这使得使用广播哈希连接更加高效。因此，AQE 可以智能地切换连接策略来优化性能。现在我们开启AQE后，运行涉及join的查询时，AQE 将根据实际数据大小动态调整联接策略，确保最佳性能。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;动态优化倾斜连接&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;我们知道当分区之间的数据分布不均匀时，就会出现数据倾斜。在 Spark 集群中，数据被划分为多个分区以进行并行处理。理想情况下每个分区的数据量大致相等，确保所有处理任务的工作负载均衡。然而，在数据倾斜的情况下，一个或几个分区可能包含比其他分区多得多的数据。数据倾斜对查询性能的影响: 任务相当存在数据倾斜时，与处理较少数据比，与倾斜分区相关的处理任务而要更长的时间才能完成。这种不平衡可能会导致性能瓶颈，因为某些任务会成为整个操作的瓶颈。这在join连接期间尤其成问题，其中涉及倾斜分在join连接期间尤其成问题，其中涉及倾斜分区的任务可能会滞后，从而降低整体查询性能。AQE通过其倾斜连接优化来解决这个问题AQE在运行时通过分析shuffle文件统计信息自动检测数据倾斜何时影响查询性能。一旦识别出倾斜，AQE就会动态调整方法。分割倾斜分区:AQE 不会让一些负载较重的分区成为处理瓶颈，而是智能地将这些倾斜的分区拆分为更小的子分区。现在，每个子分区包含更均衡的数据量，防止工作负载集中在少数任务上假设一个jin连接操作，其中join连接的一侧有一个分区 (我们称之为 P1) ，其中的数据明显多于其他分区:在 AQE 倾斜连接优化之前: 如果没有 AQEjoin连接操作可能会因负载过重的 P1分区而变慢，从而导致性能问题在AQE倾斜连接优化之后:AQE检测到倾斜并动态地将P1分区分割成更小、更均衡的子分区现在，工作负载的分布更加均匀，从而提高了查询性能。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;总结&lt;/strong&gt;
-Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态统计的依赖和解决运行时的挑战，AQE增强了Spark对不同数据条件的适应性。三个关键特性一合并shuffle分区、切换JOIN策略和优化倾斜连接。有助于大幅提高性能，使Spark SQL在各种工作负载下更具弹性和效率。随着AQE成为标准特性，用户可以减少很多手动调优技能的输出，降低使用成本。&lt;/p&gt;
-&lt;h3 id=&#34;说明yarn-cluster模式作业提交流程yarn-cluster与yarn-client的区别&#34;&gt;说明yarn-cluster模式作业提交流程，yarn-cluster与yarn-client的区别
-&lt;/h3&gt;&lt;p&gt;在Spark中，YARN是一种用于集群资源管理的框架，可以将Spark应用程序提交到YARN集群上进行执行。YARN提供了两种模式供Spark应用程序提交：yarn-cluster和yarn-client。&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;yarn-cluster模式作业提交流程：
-&lt;ul&gt;
-&lt;li&gt;当你在使用 &lt;code&gt;spark-submit&lt;/code&gt;命令提交Spark应用程序时，指定了 &lt;code&gt;--deploy-mode cluster&lt;/code&gt;参数，即使用yarn-cluster模式。&lt;/li&gt;
-&lt;li&gt;提交命令发送给YARN的ResourceManager，ResourceManager会为应用程序分配一个ApplicationMaster。&lt;/li&gt;
-&lt;li&gt;ApplicationMaster是一个专门负责管理应用程序执行的组件，它会向ResourceManager请求资源。&lt;/li&gt;
-&lt;li&gt;ResourceManager会为ApplicationMaster分配一定数量的资源，这些资源将用于启动Executor。&lt;/li&gt;
-&lt;li&gt;ApplicationMaster会与各个NodeManager通信，启动Executor，并将应用程序的代码和依赖文件分发到各个Executor所在的节点上。&lt;/li&gt;
-&lt;li&gt;Executor会根据指定的任务分配策略执行具体的任务，任务的执行结果会返回给ApplicationMaster。&lt;/li&gt;
-&lt;li&gt;ApplicationMaster会将任务的执行结果返回给Driver程序，Driver程序可以根据需要进行后续处理。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;li&gt;yarn-cluster与yarn-client的区别：
-&lt;ul&gt;
-&lt;li&gt;yarn-cluster模式下，Driver程序运行在集群中的一个Executor上，并且Driver程序与ApplicationMaster是独立的进程。这意味着Driver程序的执行不会受到本地环境的限制，可以充分利用集群资源。&lt;/li&gt;
-&lt;li&gt;yarn-client模式下，Driver程序运行在提交Spark应用程序的本地机器上，而不是集群中的一个Executor上。Driver程序与ApplicationMaster是同一个进程。这意味着Driver程序的执行受到本地环境的限制，例如可用的内存和CPU资源。&lt;/li&gt;
-&lt;li&gt;在yarn-cluster模式下，提交的应用程序可以在集群中长时间运行，即使与提交应用程序的客户端断开连接，应用程序仍然可以继续执行。而在yarn-client模式下，如果与客户端断开连接，应用程序会被终止。&lt;/li&gt;
-&lt;li&gt;yarn-cluster模式适用于长时间运行的应用程序，例如批处理作业。yarn-client模式适用于交互式应用程序，例如Spark Shell。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;Yarn Client模式(一般用于测试)&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Driver在任务提交的本地机器上运行&lt;/li&gt;
-&lt;li&gt;Driver启动后会向ResourceManager通讯申请启动ApplicationMaster&lt;/li&gt;
-&lt;li&gt;ResourceManager分配Container，在合适的NodeManager上启动ApplicationMaster，负责向ResourceManager申请Executor内存&lt;/li&gt;
-&lt;li&gt;ResourceManager接到ApplicationMaster的资源申请后会分配Container，然后ApplicationMaster在资源分配指定的NodeManager上驱动Executor进程&lt;/li&gt;
-&lt;li&gt;Executor进程启动后会向Driver反向注册，Executor全部注册完成之后，Driver开始执行Main函数&lt;/li&gt;
-&lt;li&gt;之后执行到Action算子，触发一个Job，并根据宽依赖开始划分Stage，每个Stage生成对应的TaskSet，之后将Task分发到各个Executor上执行&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Yarn Cluster模式&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;任务提交后，Client会先和ResourceManager通讯，申请启动ApplicationMaster&lt;/li&gt;
-&lt;li&gt;ResourceManager分配Container，在合适的NodeManager上启动ApplicationMaster，此时的ApplicationMaster就是Driver&lt;/li&gt;
-&lt;li&gt;Driver启动后会向ResourceManager申请Executor内存，ResourceManager接到ApplicationMaster的资源申请后会分配Container，然后在合适的NodeManager上启动Executor进程&lt;/li&gt;
-&lt;li&gt;Executor进程启动后会向Driver反向注册，Executor全部注册完成之后，Driver开始执行Main函数&lt;/li&gt;
-&lt;li&gt;之后执行到Action算子，触发一个Job，并根据宽依赖开始划分Stage，每个Stage生成对应的TaskSet，之后将Task分发到各个Executor上执行&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;总结：yarn-cluster模式下，Driver程序运行在集群中的一个Executor上，与ApplicationMaster是独立的进程；yarn-client模式下，Driver程序运行在本地机器上，与ApplicationMaster是同一个进程。&lt;/p&gt;
-&lt;h3 id=&#34;spark应用程序的执行过程是什么spark的执行流程&#34;&gt;Spark应用程序的执行过程是什么？spark的执行流程
-&lt;/h3&gt;&lt;p&gt;Spark应用程序的执行过程可以分为以下几个步骤：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;创建SparkContext&lt;/strong&gt; ：应用程序首先需要创建一个SparkContext对象，它是与Spark集群通信的入口点。SparkContext负责与集群管理器通信，并为应用程序分配资源。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;创建RDD&lt;/strong&gt; ：应用程序需要将数据加载到弹性分布式数据集（RDD）中。RDD是Spark的核心数据结构，它代表了分布在集群中的数据集合。RDD可以通过读取文件、从内存中的数据集创建、从其他RDD转换等方式来创建。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;转换操作&lt;/strong&gt; ：一旦RDD被创建，应用程序可以对RDD进行一系列的转换操作，例如map、filter、reduce等。这些转换操作会生成新的RDD，而不会立即执行计算。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;行动操作&lt;/strong&gt; ：当应用程序需要获取转换操作的结果时，需要执行行动操作。行动操作会触发Spark执行计划的生成和执行。常见的行动操作包括collect、count、save等，它们会返回计算结果给应用程序。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;作业划分&lt;/strong&gt; ：Spark将应用程序的行动操作划分为一系列的作业（jobs），每个作业由一组相关的转换操作组成。作业划分是为了提高并行度和数据本地性，以便更好地利用集群资源。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;任务划分&lt;/strong&gt; ：每个作业被划分为一系列的任务（tasks），每个任务处理数据的一部分。任务的划分是根据数据分区和可用资源来完成的。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;任务调度和执行&lt;/strong&gt; ：Spark将任务分发到集群中的执行器节点上执行。任务调度器负责将任务分配给可用的执行器节点，并考虑数据本地性以提高性能。执行器节点会加载数据到内存中，并执行任务操作。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;结果返回&lt;/strong&gt; ：一旦任务执行完成，执行器将结果返回给驱动程序。驱动程序可以将结果保存到内存、磁盘或其他外部存储中，也可以将结果返回给应用程序。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;容错和恢复&lt;/strong&gt; ：Spark具有容错机制，可以在节点故障时自动恢复。如果某个节点失败，Spark可以重新调度任务并在其他节点上执行。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;总的来说，Spark应用程序的执行过程包括创建SparkContext、创建RDD、转换操作、行动操作、作业划分、任务划分、任务调度和执行、结果返回以及容错和恢复等步骤。通过这些步骤，Spark能够以高效、可靠的方式处理大规模数据和复杂计算任务。&lt;/p&gt;
 &lt;h3 id=&#34;spark的优化怎么做spark做过哪些优化原理是什么&#34;&gt;Spark的优化怎么做？Spark做过哪些优化？原理是什么
 &lt;/h3&gt;&lt;p&gt;Spark的优化可以从多个方面进行，包括数据存储和压缩、数据分区和分桶、Shuffle操作的优化、内存管理和缓存、并行度和资源配置等。以下是一些常见的Spark优化技术和原理：&lt;/p&gt;
 &lt;ol&gt;
@@ -644,7 +564,7 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;/ol&gt;
 &lt;p&gt;Spark做出这些优化的目的是为了提高作业的执行效率和性能，减少资源的浪费和开销。这些优化的原理主要是通过减少磁盘IO、网络传输和计算开销，提高数据的局部性和并行度，充分利用内存和缓存等方式来优化Spark的执行过程，从而提高作业的整体性能。&lt;/p&gt;
 &lt;h3 id=&#34;spark中lineage的基本原理&#34;&gt;Spark中Lineage的基本原理
-&lt;/h3&gt;&lt;p&gt;在Spark中，Lineage（血统）是一种记录RDD（弹性分布式数据集）之间依赖关系的机制。它是Spark实现容错性和数据恢复的关键。当我们对RDD进行转换操作时，Spark并不会立即执行这些操作，而是将操作添加到RDD的Lineage中。这样做的好处是，当某个RDD分区数据丢失或节点失败时，Spark可以根据Lineage重新计算丢失的分区，而无需重新计算整个RDD。&lt;/p&gt;
+&lt;/h3&gt;&lt;p&gt;在Spark中，Lineage（血统）是一种记录RDD（弹性分布式数据集）之间依赖关系的机制。每一个 RDD 都是一个不可变的分布式可重算的数据集，其记录着确定性的操作继承关系（ lineage ），所以只要输入数据是可容错的，那么任意一个 RDD 的分区（ Partition ）出错或不可用，都是可以利用原始输入数据通过转换操作而重新算出的，它是Spark实现容错性和数据恢复的关键。当我们对RDD进行转换操作时，Spark并不会立即执行这些操作，而是将操作添加到RDD的Lineage中。这样做的好处是，当某个RDD分区数据丢失或节点失败时，Spark可以根据Lineage重新计算丢失的分区，而无需重新计算整个RDD。&lt;/p&gt;
 &lt;p&gt;Lineage的基本原理如下：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;&lt;strong&gt;RDD的创建&lt;/strong&gt; ：当我们创建一个RDD时，Spark会将其初始数据划分为一系列的分区，并将这些分区的元数据保存在Lineage中。&lt;/li&gt;
@@ -653,6 +573,126 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;&lt;strong&gt;容错性和数据恢复&lt;/strong&gt; ：当某个RDD分区数据丢失或节点失败时，Spark可以根据Lineage重新计算丢失的分区。它会遍历RDD的Lineage，根据依赖关系逐级计算缺失的分区，直到达到原始数据的来源。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;通过使用Lineage，Spark可以实现容错性和数据恢复。当节点失败或数据丢失时，Spark可以根据Lineage重新计算丢失的数据，而无需重新计算整个RDD，从而提高了计算效率和可靠性。&lt;/p&gt;
+&lt;p&gt;如果一个分区出错了：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;对于窄依赖，则只要把丢失的父 RDD 分区重算即可，不依赖于其他分区&lt;/li&gt;
+&lt;li&gt;对于宽依赖，则父 RDD 的所有分区都需要重算，代价昂贵&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;所以在长“血统”链特别是有宽依赖的时候，需要在适当的时机设置数据检查点&lt;/p&gt;
+&lt;p&gt;首先要明确一下 Spark 中 RDD 的容错机制。每一个 RDD 都是一个不可变的分布式可重算的数据集，其记录着确定性的操作继承关系（ lineage ），所以只要输入数据是可容错的，那么任意一个 RDD 的分区（ Partition ）出错或不可用，都是可以利用原始输入数据通过转换操作而重新算出的。如果一个分区出错了：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;对于窄依赖，则只要把丢失的父 RDD 分区重算即可，不依赖于其他分区&lt;/li&gt;
+&lt;li&gt;对于宽依赖，则父 RDD 的所有分区都需要重算，代价昂贵&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;所以在长“血统”链特别是有宽依赖的时候，需要在适当的时机设置数据检查点&lt;/p&gt;
+&lt;h3 id=&#34;谈一谈spark中的容错机制&#34;&gt;谈一谈Spark中的容错机制
+&lt;/h3&gt;&lt;p&gt;Spark是一个分布式计算框架，具备强大的容错机制，以确保在集群中发生故障时能够保持计算的正确性和可靠性。下面是Spark中的几个主要容错机制：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;数据容错&lt;/strong&gt; ：Spark通过将数据划分为一系列弹性分布式数据集（RDD）来实现数据容错。RDD是不可变的、可分区的数据集合，它可以在集群中的多个节点上进行并行计算。当节点发生故障时，Spark可以使用RDD的血统（lineage）信息重新计算丢失的数据分区，从而实现数据的容错。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;任务容错&lt;/strong&gt; ：Spark将计算任务划分为一系列的阶段（stage），每个阶段包含一组可以并行执行的任务。每个任务都会在执行过程中生成一系列的输出数据，这些输出数据会被持久化到稳定存储中。如果任务失败，Spark可以通过重新执行该任务来实现任务的容错。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;节点容错&lt;/strong&gt; ：Spark通过使用主从架构来实现节点容错。在集群中，有一个主节点（Driver）负责协调任务的执行和结果的收集，以及监控集群中的节点状态。如果主节点发生故障，Spark可以通过重新启动一个新的主节点来实现节点的容错。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;任务调度容错&lt;/strong&gt; ：Spark使用任务调度器来管理任务的执行顺序和资源分配。如果某个任务在执行过程中发生错误，任务调度器可以重新调度该任务，并将其分配给其他可用的节点进行执行。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;数据丢失容错&lt;/strong&gt; ：Spark在执行过程中会将数据缓存在内存中，以提高计算性能。为了防止数据丢失，Spark提供了可配置的数据持久化选项，可以将数据持久化到磁盘或其他外部存储系统中。这样即使发生节点故障，数据也可以从持久化存储中恢复。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;总的来说，Spark的容错机制主要依赖于RDD的血统信息、任务调度器、主从架构和数据持久化等技术手段，通过这些手段可以实现数据、任务、节点和数据丢失的容错处理，保证计算的正确性和可靠性。&lt;/p&gt;
+&lt;h3 id=&#34;说说spark数据倾斜&#34;&gt;说说Spark数据倾斜
+&lt;/h3&gt;&lt;p&gt;Spark数据倾斜是指在数据处理过程中，某些数据分区的负载远远超过其他分区，导致计算资源不均衡，从而影响整体性能。数据倾斜可能导致任务执行时间延长，资源浪费，甚至导致任务失败。下面是一些常见的数据倾斜情况和解决方法：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Key数据倾斜&lt;/strong&gt; ：当使用某个字段作为数据集的Key时，如果该字段的分布不均匀，就会导致Key数据倾斜。解决方法包括：&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;增加分区&lt;/strong&gt; ：通过增加数据集的分区数，可以将数据均匀地分布到更多的分区中，减少数据倾斜的可能性。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;使用哈希分区&lt;/strong&gt; ：使用哈希函数将Key映射到不同的分区，确保数据均匀分布。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;聚合合并&lt;/strong&gt; ：将具有相同Key的数据进行聚合操作，减少数据量，降低倾斜程度。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&#34;2&#34;&gt;
+&lt;li&gt;&lt;strong&gt;数据倾斜的Join操作&lt;/strong&gt; ：在进行Join操作时，如果连接字段的分布不均匀，就会导致数据倾斜。解决方法包括：&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;使用Broadcast Join&lt;/strong&gt; ：对于小表和大表进行Join操作时，可以将小表广播到每个节点上，避免数据倾斜。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;使用随机前缀&lt;/strong&gt; ：对于连接字段分布不均匀的情况，可以在连接字段上添加随机前缀，使连接字段的值更均匀分布。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&#34;3&#34;&gt;
+&lt;li&gt;&lt;strong&gt;数据倾斜的聚合操作&lt;/strong&gt; ：在进行聚合操作时，如果某些分组的数据量远远超过其他分组，就会导致数据倾斜。解决方法包括：&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;使用预聚合&lt;/strong&gt; ：对于可能导致数据倾斜的字段进行预聚合操作，将数据量较大的分组合并为一个分组，减少数据倾斜。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;使用多级聚合&lt;/strong&gt; ：将聚合操作拆分为多个阶段，逐步聚合，减少单个阶段的数据量。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&#34;4&#34;&gt;
+&lt;li&gt;&lt;strong&gt;数据倾斜的排序操作&lt;/strong&gt; ：在进行排序操作时，如果数据分布不均匀，就会导致数据倾斜。解决方法包括：&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;使用随机前缀&lt;/strong&gt; ：对于排序字段分布不均匀的情况，可以在排序字段上添加随机前缀，使排序字段的值更均匀分布。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;使用二次排序&lt;/strong&gt; ：对于多个字段进行排序时，可以使用二次排序算法，先按照一个字段排序，再按照另一个字段排序，减少数据倾斜。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;除了上述方法，还可以通过动态资源分配、任务重试、数据重分区等方式来应对数据倾斜问题。数据倾斜是Spark中常见的性能瓶颈之一，需要根据具体情况选择合适的解决方法。&lt;/p&gt;
+&lt;h2 id=&#34;基本&#34;&gt;基本
+&lt;/h2&gt;&lt;h3 id=&#34;在源码中是怎么判断属于shufflemap-stage或result-stage的&#34;&gt;在源码中是怎么判断属于ShuffleMap Stage或Result Stage的
+&lt;/h3&gt;&lt;p&gt;在Spark 中，任务的执行过程被划分为多个Stage，Stage分为 &lt;strong&gt;ShuffleMapStage&lt;/strong&gt; 和 &lt;strong&gt;ResultStage&lt;/strong&gt;。这两种Stage的划分是根据任务的依赖关系和执行目标来确定的。&lt;/p&gt;
+&lt;p&gt;ShuffleMapStage：负责为后续的 Shuffle 操作准备数据，输出是 Shuffle 数据，供下游阶段使用，通常对应宽依赖。&lt;/p&gt;
+&lt;p&gt;ResultStage：负责执行最终的计算并输出结果，输出是最终的计算结果，通常对应Action操作。&lt;/p&gt;
+&lt;p&gt;在 Spark 源码中，阶段划分的核心逻辑位于 DAGScheduler 类中&lt;/p&gt;
+&lt;p&gt;Stage创建阶段：入口方法是DAGScheduler.handleJobSubmitted，在 DAGScheduler.createResultStage 和 DAGScheduler.getOrCreateShuffleMapStage 方法中创建阶段。&lt;/p&gt;
+&lt;p&gt;判断阶段：如果任务是最终的计算任务（如 collect、count、saveAsTextFile 等），则创建 ResultStage；如果任务是为 Shuffle 操作准备数据（如 groupByKey、reduceByKey、join 等），则创建 ShuffleMapStage；&lt;/p&gt;
+&lt;h3 id=&#34;spark-join在什么情况下会变成窄依赖&#34;&gt;Spark join在什么情况下会变成窄依赖
+&lt;/h3&gt;&lt;h3 id=&#34;数据本地性是在哪个环节确定的&#34;&gt;数据本地性是在哪个环节确定的
+&lt;/h3&gt;&lt;h3 id=&#34;spark的数据本地性有哪几种&#34;&gt;Spark的数据本地性有哪几种
+&lt;/h3&gt;&lt;p&gt;Spark中的数据本地性有三种：
+  1）PROCESS_LOCAL是指读取缓存在本地节点的数据
+  2）NODE_LOCAL是指读取本地节点硬盘数据
+  3）ANY是指读取非本地节点数据
+  通常读取数据PROCESS_LOCAL&amp;gt;NODE_LOCAL&amp;gt;ANY，尽量使数据以PROCESS_LOCAL或NODE_LOCAL方式读取。其中PROCESS_LOCAL还和cache有关，如果RDD经常用的话将该RDD cache到内存中，注意，由于cache是lazy的，所以必须通过一个action的触发，才能真正的将该RDD cache到内存中。&lt;/p&gt;
+&lt;h3 id=&#34;说说spark提交作业参数&#34;&gt;说说Spark提交作业参数
+&lt;/h3&gt;&lt;p&gt;提交作业时的重要参数：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;executor_cores
+缺省值：1 in YARN mode, all the available cores on the worker in standalone and Mesos coarse-grained modes
+生产环境中不宜设置为1！否则 work 进程中线程数过少，一般 2~5 为宜&lt;/li&gt;
+&lt;li&gt;executor_memory
+缺省值：1g
+该参数与executor分配的core有关，分配的core越多 executor_memory 值就应该越大；
+core与memory的比值一般在 1:2 到 1:4 之间，即每个core可分配2~4G内存。如 executor_cores 为4，那么executor_memory 可以分配 8G ~ 16G；
+单个Executor内存大小一般在 20G 左右（经验值），单个JVM内存太高易导致GC代价过高，或资源浪费&lt;/li&gt;
+&lt;li&gt;executor_cores * num_executors
+表示的是能够并行执行Task的数目。不宜太小或太大！理想情况下，一般给每个core分配 2-3 个task，由此可反推 num_executors 的个数&lt;/li&gt;
+&lt;li&gt;driver-memory
+driver 不做任何计算和存储，只是下发任务与yarn资源管理器和task交互，一般设为 1-2G 即可；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;增加每个executor的内存量，增加了内存量以后，对性能的提升，有三点：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;如果需要对RDD进行cache，那么更多的内存，就可以缓存更多的数据，将更少的数据写入磁盘，甚至不写入磁盘。减少了磁盘IO&lt;/li&gt;
+&lt;li&gt;对于shuffle操作，reduce端，会需要内存来存放拉取的数据并进行聚合。如果内存不够，也会写入磁盘。如果给executor分配更多内存，会减少磁盘的写入操作，进而提升性能&lt;/li&gt;
+&lt;li&gt;task的执行，可能会创建很多对象。如果内存比较小，可能会频繁导致JVM堆内存满了，然后频繁GC，垃圾回收，minor GC和full GC。内存加大以后，带来更少的GC，垃圾回收，避免了速度变慢，性能提升；&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&#34;spark的宽窄依赖以及spark如何划分stage如何确定每个stage中task个数&#34;&gt;Spark的宽窄依赖，以及Spark如何划分Stage，如何确定每个Stage中Task个数
+&lt;/h3&gt;&lt;p&gt;RDD之间的依赖关系分为窄依赖（narrow dependency）和宽依赖（Wide Depencency，也称为Shuffle Depencency）&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;窄依赖&lt;/strong&gt; ：指父RDD的每个分区只被子RDD的一个分区所使用，子RDD分区通常对应常数个父RDD分区（O(1)，与数据规模无关）&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;宽依赖&lt;/strong&gt; ：是指父RDD的每个分区都可能被多个子RDD分区所使用，子RDD分区通常对应所有的父RDD分区（O(n),与数据规模有关）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;相比于宽依赖，窄依赖对优化很有利，主要基于以下几点：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;宽依赖往往对应着Shuffle操作，需要在运行过程中将同一个父RDD的分区传入到不同的子RDD分区中，中间可能涉及多个节点之间的数据传输；而窄依赖的每个父RDD的分区只会传入到一个子RDD分区中，通常可以在一个节点内完成转换&lt;/li&gt;
+&lt;li&gt;当RDD分区丢失时（某个节点故障），Spark会对数据进行重算&lt;/li&gt;
+&lt;li&gt;对于窄依赖，由于父RDD的一个分区只对应一个子RDD分区，这样只需要重算和子RDD分区对应的父RDD分区即可，所以这个重算对数据的利用率是100%的&lt;/li&gt;
+&lt;li&gt;对于宽依赖，重算的父RDD分区对应多个子RDD分区的，这样实际上父RDD中只有一部分的数据是被用于恢复这个丢失的子RDD分区的，另一部分对应子RDD的其他未丢失分区，这就造成了多余的计算；更一般的，宽依赖中子RDD分区通常来自多个父RDD分区，所有的父RDD分区都要进行重新计算&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Stage：根据RDD之间的依赖关系将Job划分成不同的Stage，遇到一个宽依赖则划分一个Stage。&lt;/p&gt;
+&lt;p&gt;Task：Stage是一个TaskSet，将Stage根据分区数划分成一个个的Task&lt;/p&gt;
+&lt;h3 id=&#34;aqe是什么&#34;&gt;AQE是什么
+&lt;/h3&gt;&lt;p&gt;Adaptive Query Execution (AQE) 就像 SparkSQL的智能助手，它解决了查询计划不那么完美的问题，它通过在sparksSQL查询运行时从去从数据中去学习并通过算法模型优化来实现这一点。AQE不依赖于数据的固定信息，而是在查询展开时收集实时细节。通过这样做，AQE 可以对查询计划进行即时改进，确保其运行更高效，确保最终的结果尽可能快捷。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;动态合并Shuffle分区&lt;/strong&gt;
+当 Spark 处理大型数据集时，它通常需要通过网络重新组织或打乱数据以执行某些操作，例如ioin连接或聚合。这个shuffle过程涉及到将数据划分为多个分区，而这个分区的效率极大地影响了查询性能，而AQE 在查询运行时动态调整随机分区的数量，假设您有一个大数据集，最初，Spark 决定使用一定数量的分区进行shuffle。这个数字可能很难得到正确的值，因为如果它太低，每个分区可能太大，导致处理速度慢。另一方面，如果它太高，您会得到很多小分区，导致数据获取效率低下并增加开销。&lt;/p&gt;
+&lt;p&gt;如果没有 AQE，Spark 可能会决定在本地分组操作后创建五个分区。然而，AQE 很聪明。它注意到其中三个分区非常小。AQE 不会通过单独处理每个小分区来浪费资源，而是将这些小分区合并 (组合) 为一个。现在，最终的聚合只需要对三个任务执行，而不是五个，使得查询更加高效。在后台，AQE 动态调整随机分区的数量并根据需要合并它们，从而优化查询执行计划&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;动态切换Join策略&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;当您在 Spark 中执行join连接时，可以采用不同的方法来组合数据。最有效的方法之一称为广播哈希join (broadcast hash join)其中连接的一侧足够小以适合放到内存里，从而使Join过程更快，类似hive中的mapjoin。现在，假设您正在运行join连接操作，并且最初，Spark 计划根据其对数据大小的估计使用某种连接策略。这就是 AQE 的用武之地。它不会盲目地坚持最初的计划。相反，它会在查询运行时关注数据的实际大小，动态调整join策略。&lt;/p&gt;
+&lt;p&gt;如果在执行过程中，AQE 注意到join一侧的数据大小比最初估计的要小得多，它可以动态地将ioin连接策略切换为更高效的broadcasthash join。这一点至关重要，因为有时初始化时估计可能会由于各种因素而出现偏差，例如各种filter或一组复杂的操作后数据量明显变小&lt;/p&gt;
+&lt;p&gt;Spark 计划使用sort merge join ，刚开始以为是大表Join。然而，AQE 观察到运行时的实际大小要小得多，这使得使用广播哈希连接更加高效。因此，AQE 可以智能地切换连接策略来优化性能。现在我们开启AQE后，运行涉及join的查询时，AQE 将根据实际数据大小动态调整联接策略，确保最佳性能。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;动态优化倾斜连接&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我们知道当分区之间的数据分布不均匀时，就会出现数据倾斜。在 Spark 集群中，数据被划分为多个分区以进行并行处理。理想情况下每个分区的数据量大致相等，确保所有处理任务的工作负载均衡。然而，在数据倾斜的情况下，一个或几个分区可能包含比其他分区多得多的数据。数据倾斜对查询性能的影响: 任务相当存在数据倾斜时，与处理较少数据比，与倾斜分区相关的处理任务而要更长的时间才能完成。这种不平衡可能会导致性能瓶颈，因为某些任务会成为整个操作的瓶颈。这在join连接期间尤其成问题，其中涉及倾斜分在join连接期间尤其成问题，其中涉及倾斜分区的任务可能会滞后，从而降低整体查询性能。AQE通过其倾斜连接优化来解决这个问题AQE在运行时通过分析shuffle文件统计信息自动检测数据倾斜何时影响查询性能。一旦识别出倾斜，AQE就会动态调整方法。分割倾斜分区:AQE 不会让一些负载较重的分区成为处理瓶颈，而是智能地将这些倾斜的分区拆分为更小的子分区。现在，每个子分区包含更均衡的数据量，防止工作负载集中在少数任务上假设一个jin连接操作，其中join连接的一侧有一个分区 (我们称之为 P1) ，其中的数据明显多于其他分区:在 AQE 倾斜连接优化之前: 如果没有 AQEjoin连接操作可能会因负载过重的 P1分区而变慢，从而导致性能问题在AQE倾斜连接优化之后:AQE检测到倾斜并动态地将P1分区分割成更小、更均衡的子分区现在，工作负载的分布更加均匀，从而提高了查询性能。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;总结&lt;/strong&gt;
+Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态统计的依赖和解决运行时的挑战，AQE增强了Spark对不同数据条件的适应性。三个关键特性一合并shuffle分区、切换JOIN策略和优化倾斜连接。有助于大幅提高性能，使Spark SQL在各种工作负载下更具弹性和效率。随着AQE成为标准特性，用户可以减少很多手动调优技能的输出，降低使用成本。&lt;/p&gt;
 &lt;h3 id=&#34;spark累加器有哪些特点&#34;&gt;Spark累加器有哪些特点
 &lt;/h3&gt;&lt;p&gt;Spark累加器是一种用于在分布式计算中进行累加操作的特殊变量。以下是Spark累加器的几个特点：&lt;/p&gt;
 &lt;ol&gt;
@@ -812,8 +852,7 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;p&gt;直接方式具有更低的延迟和更高的吞吐量，因为它直接连接到Kafka分区，避免了接收器线程的开销。同时，直接方式可以实现端到端的一次性语义，确保数据的精确处理。&lt;/p&gt;
 &lt;p&gt;接收器方式相对简单，适用于较低的数据吞吐量和较高的延迟容忍度。它使用接收器线程将数据存储在Spark的内存中，并由Spark Streaming进行处理。但是，由于接收器的存在，可能会引入一些额外的延迟，并且无法提供端到端的一次性语义。&lt;/p&gt;
 &lt;p&gt;根据具体的需求和应用场景，可以选择适合的方式来消费Kafka数据。如果对延迟和一次性语义有较高的要求，直接方式是更好的选择；如果对延迟和一次性语义要求较低，接收器方式可能更简单方便。&lt;/p&gt;
-&lt;h3 id=&#34;简要介绍下spark的内存管理&#34;&gt;简要介绍下Spark的内存管理
-&lt;/h3&gt;&lt;h3 id=&#34;说说对spark-shuffle的理解&#34;&gt;说说对Spark Shuffle的理解
+&lt;h3 id=&#34;说说对spark-shuffle的理解&#34;&gt;说说对Spark Shuffle的理解
 &lt;/h3&gt;&lt;p&gt;Spark中的Shuffle是指在数据重分区（Data Redistribution）的过程中，将数据从一个或多个输入分区重新分布到新的输出分区的操作。Shuffle是Spark中一种非常重要的操作，它在许多转换操作（如groupByKey、reduceByKey和join等）中都会被使用到。&lt;/p&gt;
 &lt;p&gt;Shuffle的原理可以分为三个主要步骤：Map阶段、Shuffle阶段和Reduce阶段。&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;1. Map阶段&lt;/strong&gt; ：&lt;/p&gt;
@@ -838,48 +877,6 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;基于Sort的Merge：在Reduce阶段，可以使用基于Sort的Merge算法对具有相同键的记录进行合并，减少计算的次数。&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;通过合理配置Shuffle相关的参数，使用适当的优化技术，可以提高Shuffle的性能，从而提升Spark应用程序的整体性能和可扩展性。&lt;/p&gt;
-&lt;h3 id=&#34;谈一谈spark中的容错机制&#34;&gt;谈一谈Spark中的容错机制
-&lt;/h3&gt;&lt;p&gt;Spark是一个分布式计算框架，具备强大的容错机制，以确保在集群中发生故障时能够保持计算的正确性和可靠性。下面是Spark中的几个主要容错机制：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;数据容错&lt;/strong&gt; ：Spark通过将数据划分为一系列弹性分布式数据集（RDD）来实现数据容错。RDD是不可变的、可分区的数据集合，它可以在集群中的多个节点上进行并行计算。当节点发生故障时，Spark可以使用RDD的血统（lineage）信息重新计算丢失的数据分区，从而实现数据的容错。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;任务容错&lt;/strong&gt; ：Spark将计算任务划分为一系列的阶段（stage），每个阶段包含一组可以并行执行的任务。每个任务都会在执行过程中生成一系列的输出数据，这些输出数据会被持久化到稳定存储中。如果任务失败，Spark可以通过重新执行该任务来实现任务的容错。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;节点容错&lt;/strong&gt; ：Spark通过使用主从架构来实现节点容错。在集群中，有一个主节点（Driver）负责协调任务的执行和结果的收集，以及监控集群中的节点状态。如果主节点发生故障，Spark可以通过重新启动一个新的主节点来实现节点的容错。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;任务调度容错&lt;/strong&gt; ：Spark使用任务调度器来管理任务的执行顺序和资源分配。如果某个任务在执行过程中发生错误，任务调度器可以重新调度该任务，并将其分配给其他可用的节点进行执行。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;数据丢失容错&lt;/strong&gt; ：Spark在执行过程中会将数据缓存在内存中，以提高计算性能。为了防止数据丢失，Spark提供了可配置的数据持久化选项，可以将数据持久化到磁盘或其他外部存储系统中。这样即使发生节点故障，数据也可以从持久化存储中恢复。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;总的来说，Spark的容错机制主要依赖于RDD的血统信息、任务调度器、主从架构和数据持久化等技术手段，通过这些手段可以实现数据、任务、节点和数据丢失的容错处理，保证计算的正确性和可靠性。&lt;/p&gt;
-&lt;h3 id=&#34;说说spark数据倾斜&#34;&gt;说说Spark数据倾斜
-&lt;/h3&gt;&lt;p&gt;Spark数据倾斜是指在数据处理过程中，某些数据分区的负载远远超过其他分区，导致计算资源不均衡，从而影响整体性能。数据倾斜可能导致任务执行时间延长，资源浪费，甚至导致任务失败。下面是一些常见的数据倾斜情况和解决方法：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;Key数据倾斜&lt;/strong&gt; ：当使用某个字段作为数据集的Key时，如果该字段的分布不均匀，就会导致Key数据倾斜。解决方法包括：&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;增加分区&lt;/strong&gt; ：通过增加数据集的分区数，可以将数据均匀地分布到更多的分区中，减少数据倾斜的可能性。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;使用哈希分区&lt;/strong&gt; ：使用哈希函数将Key映射到不同的分区，确保数据均匀分布。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;聚合合并&lt;/strong&gt; ：将具有相同Key的数据进行聚合操作，减少数据量，降低倾斜程度。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;ol start=&#34;2&#34;&gt;
-&lt;li&gt;&lt;strong&gt;数据倾斜的Join操作&lt;/strong&gt; ：在进行Join操作时，如果连接字段的分布不均匀，就会导致数据倾斜。解决方法包括：&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;使用Broadcast Join&lt;/strong&gt; ：对于小表和大表进行Join操作时，可以将小表广播到每个节点上，避免数据倾斜。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;使用随机前缀&lt;/strong&gt; ：对于连接字段分布不均匀的情况，可以在连接字段上添加随机前缀，使连接字段的值更均匀分布。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;ol start=&#34;3&#34;&gt;
-&lt;li&gt;&lt;strong&gt;数据倾斜的聚合操作&lt;/strong&gt; ：在进行聚合操作时，如果某些分组的数据量远远超过其他分组，就会导致数据倾斜。解决方法包括：&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;使用预聚合&lt;/strong&gt; ：对于可能导致数据倾斜的字段进行预聚合操作，将数据量较大的分组合并为一个分组，减少数据倾斜。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;使用多级聚合&lt;/strong&gt; ：将聚合操作拆分为多个阶段，逐步聚合，减少单个阶段的数据量。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;ol start=&#34;4&#34;&gt;
-&lt;li&gt;&lt;strong&gt;数据倾斜的排序操作&lt;/strong&gt; ：在进行排序操作时，如果数据分布不均匀，就会导致数据倾斜。解决方法包括：&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;使用随机前缀&lt;/strong&gt; ：对于排序字段分布不均匀的情况，可以在排序字段上添加随机前缀，使排序字段的值更均匀分布。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;使用二次排序&lt;/strong&gt; ：对于多个字段进行排序时，可以使用二次排序算法，先按照一个字段排序，再按照另一个字段排序，减少数据倾斜。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;除了上述方法，还可以通过动态资源分配、任务重试、数据重分区等方式来应对数据倾斜问题。数据倾斜是Spark中常见的性能瓶颈之一，需要根据具体情况选择合适的解决方法。&lt;/p&gt;
 &lt;h3 id=&#34;说说spark的优化&#34;&gt;说说Spark的优化
 &lt;/h3&gt;&lt;p&gt;Spark是一个基于内存的分布式计算框架，为了提高计算性能和资源利用率，它采用了多种优化技术。下面是Spark的一些优化策略：&lt;/p&gt;
 &lt;ol&gt;
@@ -1127,7 +1124,8 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;&lt;strong&gt;Spark过程中的reduce个数&lt;/strong&gt; ：在Spark中，reduce是指对数据进行聚合操作的阶段，通常是在MapReduce模型中的reduce阶段。在Spark中，reduce的个数由数据的分区数决定，每个分区都会有一个reduce任务。分区数可以通过调整RDD的分区策略或使用 &lt;code&gt;repartition&lt;/code&gt;、&lt;code&gt;coalesce&lt;/code&gt;等操作来进行控制。reduce的个数影响了并行计算的程度，可以根据数据量和计算资源进行调整。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;虽然HBase的预分区个数和Spark过程中的reduce个数可以相互关联，但它们并不是一一对应的关系。HBase的预分区个数主要用于数据的存储和负载均衡，而Spark的reduce个数主要用于计算的并行度控制。在实际应用中，可以根据数据的特点和计算需求来调整它们的个数，以达到最佳的性能和效果。&lt;/p&gt;
-&lt;h3 id=&#34;spark读取hdfs上的文件然后count有多少行的操作你可以说说过程吗那这个count是在内存中还是磁盘中计算的呢&#34;&gt;Spark读取hdfs上的文件，然后count有多少行的操作，你可以说说过程吗。那这个count是在内存中，还是磁盘中计算的呢
+&lt;h3 id=&#34;简要介绍下spark的内存管理&#34;&gt;简要介绍下Spark的内存管理
+&lt;/h3&gt;&lt;h3 id=&#34;spark读取hdfs上的文件然后count有多少行的操作你可以说说过程吗那这个count是在内存中还是磁盘中计算的呢&#34;&gt;Spark读取hdfs上的文件，然后count有多少行的操作，你可以说说过程吗。那这个count是在内存中，还是磁盘中计算的呢
 &lt;/h3&gt;&lt;h3 id=&#34;hbase-region多大会分区spark读取hbase数据是如何划分partition的&#34;&gt;hbase region多大会分区，spark读取hbase数据是如何划分partition的
 &lt;/h3&gt;&lt;h3 id=&#34;说说blockmanager怎么管理硬盘和内存的&#34;&gt;说说BlockManager怎么管理硬盘和内存的
 &lt;/h3&gt;&lt;h3 id=&#34;列举spark中常见的端口分别有什么功能&#34;&gt;列举Spark中常见的端口，分别有什么功能
@@ -1154,7 +1152,54 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;&lt;strong&gt;编程接口&lt;/strong&gt; ：MapReduce使用Java编程接口，而Spark支持多种编程语言接口，包括Java、Scala、Python和R，使得开发者可以使用自己熟悉的语言进行开发。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;总体而言，Spark相对于MapReduce来说更加灵活和高效，尤其适用于需要实时计算和复杂数据处理的场景。但对于一些传统的离线批处理任务，MapReduce仍然是一个可靠的选择。&lt;/p&gt;
-&lt;h2 id=&#34;实战&#34;&gt;实战
+&lt;h3 id=&#34;对rdddag和task的理解&#34;&gt;对RDD、DAG和Task的理解
+&lt;/h3&gt;&lt;h3 id=&#34;dag为什么适合spark&#34;&gt;DAG为什么适合Spark
+&lt;/h3&gt;&lt;h3 id=&#34;介绍下spark的dag以及它的生成过程&#34;&gt;介绍下Spark的DAG以及它的生成过程
+&lt;/h3&gt;&lt;h3 id=&#34;dagscheduler如何划分干了什么活&#34;&gt;DAGScheduler如何划分？干了什么活
+&lt;/h3&gt;&lt;h3 id=&#34;spark的容错机制&#34;&gt;Spark的容错机制
+&lt;/h3&gt;&lt;h3 id=&#34;rdd的容错&#34;&gt;RDD的容错
+&lt;/h3&gt;&lt;h3 id=&#34;executor内存分配&#34;&gt;Executor内存分配
+&lt;/h3&gt;&lt;h3 id=&#34;spark的batchsize怎么解决小文件合并问题&#34;&gt;Spark的batchsize，怎么解决小文件合并问题
+&lt;/h3&gt;&lt;h3 id=&#34;spark参数性能调优&#34;&gt;Spark参数(性能)调优
+&lt;/h3&gt;&lt;h3 id=&#34;介绍一下spark是怎么基于内存计算的&#34;&gt;介绍一下Spark是怎么基于内存计算的
+&lt;/h3&gt;&lt;h3 id=&#34;说下什么是rdd对rdd的理解rdd有哪些特点说下知道的rdd算子&#34;&gt;说下什么是RDD(对RDD的理解)，RDD有哪些特点？说下知道的RDD算子
+&lt;/h3&gt;&lt;h3 id=&#34;rdd底层原理&#34;&gt;RDD底层原理
+&lt;/h3&gt;&lt;h3 id=&#34;rdd属性&#34;&gt;RDD属性
+&lt;/h3&gt;&lt;h3 id=&#34;rdd的缓存级别&#34;&gt;RDD的缓存级别
+&lt;/h3&gt;&lt;h3 id=&#34;spark广播变量的实现和原理&#34;&gt;Spark广播变量的实现和原理
+&lt;/h3&gt;&lt;h3 id=&#34;reducebykey和groupbykey的区别和作用&#34;&gt;reduceByKey和groupByKey的区别和作用
+&lt;/h3&gt;&lt;h3 id=&#34;reducebykey和reduce的区别&#34;&gt;reduceByKey和reduce的区别
+&lt;/h3&gt;&lt;h3 id=&#34;使用reducebykey出现数据倾斜怎么办&#34;&gt;使用reduceByKey出现数据倾斜怎么办
+&lt;/h3&gt;&lt;h3 id=&#34;sparksql的执行原理&#34;&gt;SparkSQL的执行原理
+&lt;/h3&gt;&lt;h3 id=&#34;sparksql的优化&#34;&gt;SparkSQL的优化
+&lt;/h3&gt;&lt;h3 id=&#34;说下spark-checkpoint&#34;&gt;说下Spark checkpoint
+&lt;/h3&gt;&lt;h3 id=&#34;sparksql自定义函数怎么创建dataframe&#34;&gt;Sparksql自定义函数？怎么创建DataFrame
+&lt;/h3&gt;&lt;h3 id=&#34;hashpartitioner和rangepartitioner的实现&#34;&gt;HashPartitioner和RangePartitioner的实现
+&lt;/h3&gt;&lt;h3 id=&#34;dagschedulertaskschedulerschedulerbackend实现原理&#34;&gt;DAGScheduler、TaskScheduler、SchedulerBackend实现原理
+&lt;/h3&gt;&lt;h3 id=&#34;driver怎么管理executor&#34;&gt;Driver怎么管理executor
+&lt;/h3&gt;&lt;h3 id=&#34;spark的map和flatmap的区别&#34;&gt;Spark的map和flatmap的区别
+&lt;/h3&gt;&lt;h3 id=&#34;map和mappartition的区别&#34;&gt;map和mapPartition的区别
+&lt;/h3&gt;&lt;h3 id=&#34;spark的cache和persist的区别它们是transformation算子还是action算子&#34;&gt;Spark的cache和persist的区别？它们是transformation算子还是action算子？
+&lt;/h3&gt;&lt;h3 id=&#34;sparkstreaming的工作原理&#34;&gt;SparkStreaming的工作原理
+&lt;/h3&gt;&lt;h3 id=&#34;spark-streaming的dstream和dstreamgraph的区别&#34;&gt;Spark Streaming的DStream和DStreamGraph的区别
+&lt;/h3&gt;&lt;h3 id=&#34;spark输出文件的个数如何合并小文件&#34;&gt;Spark输出文件的个数，如何合并小文件
+&lt;/h3&gt;&lt;h3 id=&#34;spark的driver是怎么驱动作业流程的&#34;&gt;Spark的driver是怎么驱动作业流程的
+&lt;/h3&gt;&lt;h3 id=&#34;sparksql的劣势&#34;&gt;SparkSQL的劣势
+&lt;/h3&gt;&lt;h3 id=&#34;dag划分spark源码实现&#34;&gt;DAG划分Spark源码实现
+&lt;/h3&gt;&lt;h3 id=&#34;spark-steaming的双流join的过程怎么做的&#34;&gt;Spark Steaming的双流join的过程，怎么做的
+&lt;/h3&gt;&lt;h3 id=&#34;spark的block管理&#34;&gt;Spark的Block管理
+&lt;/h3&gt;&lt;h3 id=&#34;spark怎么保证数据不丢失&#34;&gt;Spark怎么保证数据不丢失
+&lt;/h3&gt;&lt;h3 id=&#34;sparksql如何使用udf&#34;&gt;SparkSQL如何使用UDF
+&lt;/h3&gt;&lt;h3 id=&#34;sparksql读取文件内存不够使用如何处理&#34;&gt;SparkSQL读取文件，内存不够使用，如何处理
+&lt;/h3&gt;&lt;h3 id=&#34;spark的lazy提现在哪里&#34;&gt;Spark的lazy提现在哪里
+&lt;/h3&gt;&lt;h3 id=&#34;spark中的并行度等于什么&#34;&gt;Spark中的并行度等于什么
+&lt;/h3&gt;&lt;h3 id=&#34;spark运行时并行度的设置&#34;&gt;Spark运行时并行度的设置
+&lt;/h3&gt;&lt;h3 id=&#34;sparksql的数据倾斜&#34;&gt;SparkSQL的数据倾斜
+&lt;/h3&gt;&lt;h3 id=&#34;spark的exactly-one&#34;&gt;Spark的exactly-one
+&lt;/h3&gt;&lt;h3 id=&#34;spark的rdd和partition的联系&#34;&gt;Spark的RDD和partition的联系
+&lt;/h3&gt;&lt;h3 id=&#34;spark3的特性&#34;&gt;Spark3的特性
+&lt;/h3&gt;&lt;h3 id=&#34;spakr计算的灵活性提现在哪里&#34;&gt;Spakr计算的灵活性提现在哪里
+&lt;/h3&gt;&lt;h2 id=&#34;实战&#34;&gt;实战
 &lt;/h2&gt;&lt;h3 id=&#34;spark数据倾斜问题如何定位解决方案&#34;&gt;Spark数据倾斜问题，如何定位，解决方案
 &lt;/h3&gt;&lt;h3 id=&#34;spark提交你的jar包时所用的命令是什么&#34;&gt;Spark提交你的jar包时所用的命令是什么
 &lt;/h3&gt;&lt;h3 id=&#34;spark-submit的时候如何引入外部jar包&#34;&gt;spark-submit的时候如何引入外部jar包
@@ -1194,17 +1239,100 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
         
         <guid>https://sherlock-lin.github.io/p/flink%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/</guid>
         <description>&lt;img src="https://sherlock-lin.github.io/p/flink%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/leaf-8687801_1280.jpg" alt="Featured image of post Flink面试一文通" /&gt;&lt;h2 id=&#34;高频&#34;&gt;高频
-&lt;/h2&gt;&lt;h3 id=&#34;flink架构&#34;&gt;Flink架构
-&lt;/h3&gt;&lt;h3 id=&#34;flink的窗口都有哪些什么区别如何定义&#34;&gt;Flink的窗口都有哪些，什么区别，如何定义
-&lt;/h3&gt;&lt;h3 id=&#34;说一说flink的checkpoint机制&#34;&gt;说一说Flink的checkpoint机制
-&lt;/h3&gt;&lt;h3 id=&#34;checkpoint底层如何实现的&#34;&gt;checkpoint底层如何实现的
-&lt;/h3&gt;&lt;h3 id=&#34;checkpoint和savepoint的区别&#34;&gt;checkpoint和savepoint的区别
+&lt;/h2&gt;&lt;h3 id=&#34;讲一下flink的运行架构&#34;&gt;讲一下Flink的运行架构
+&lt;/h3&gt;&lt;p&gt;Flink程序在运行时主要有TaskManager，JobManager，Client三种角色。当 Flink 集群启动后，⾸先会启动⼀个 JobManger 和⼀个或多个的 TaskManager。由 Client 提交任务给 JobManager，JobManager 再调度任务到各个 TaskManager 去执⾏，然后 TaskManager 将⼼跳和统计信息汇报给 JobManager。TaskManager 之间以流的形式进⾏数据的传输。上述三者均为独⽴的 JVM 进程。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;JobManager：扮演着集群中的管理者Master的角色，它是整个集群的协调者，负责接收Flink Job，协调检查点，Failover 故障恢复等，同时管理Flink集群中从节点TaskManager。&lt;/li&gt;
+&lt;li&gt;TaskManager：是实际负责执行计算的Worker，在其上执行Flink Job的一组Task，每个TaskManager负责管理其所在节点上的资源信息，如内存、磁盘、网络，在启动的时候将资源的状态向JobManager汇报。&lt;/li&gt;
+&lt;li&gt;Client：是Flink程序提交的客户端，当用户提交一个Flink程序时，会首先创建一个Client，该Client首先会对用户提交的Flink程序进行预处理，并提交到Flink集群中处理，所以Client需要从用户提交的Flink程序配置中获取JobManager的地址，并建立到JobManager的连接，将Flink Job提交给JobManager。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;flink-中对窗口的支持包括哪几种说说他们的使用场景什么区别以及如何定义&#34;&gt;Flink 中对窗口的支持包括哪几种，说说他们的使用场景，什么区别，以及如何定义
+&lt;/h3&gt;&lt;p&gt;Flink支持两种划分窗口的方式，按照time和count，session也是一种时间。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Tumbling Time Window（滚动时间窗口）：当达到一定时间后的，进行滑动，可以联想到以前用的诺基亚的滑盖手机，这个其实就是微批。用于处理实时数据流中的时间序列数据，如股票价格走势、实时监测流量等。假如我们需要统计每一分钟中用户购买的商品的总数，需要将用户的行为事件按每一分钟进 行切分，这种切分被成为翻滚时间窗口（Tumbling Time Window）。翻滚窗口能将数据流切分成 不重叠的窗口，每一个事件只能属于一个窗口。&lt;/li&gt;
+&lt;li&gt;Sliding Time Window（滑动时间窗口）：当达到一定时间后，进行翻滚，可以有重叠。用于处理时间序列数据的近期分析，如近 5 分钟用户购买商品总数等。我们可以每 30 秒计算一次最近一分钟用户购买的商品总数。这种窗口我们称为滑动时间窗 口（Sliding Time Window）。在滑窗中，一个元素可以对应多个窗口。&lt;/li&gt;
+&lt;li&gt;Tumbling Count Window（滚动计数窗口）：当达到一定条数的时候执行计算，无折叠。用于处理计数型数据，如统计网站访问量、分析用户购买行为等。当我们想要每 100 个用户购买行为事件统计购买总数，那么每当窗口中填满 100 个元素了， 就会对窗口进行计算，这种窗口我们称之为翻滚计数窗口（Tumbling Count Window），上图所 示窗口大小为 3 个。&lt;/li&gt;
+&lt;li&gt;Sliding Count Window（滑动计数窗口）：当达到一定数量后进行滑动。用于处理计数型数据的实时分析，如实时监测广告点击率、实时统计投票数等。&lt;/li&gt;
+&lt;li&gt;Session Window（会话窗口）：窗口数据没有固定的大小，根据用户传入的参数进行划分，窗口数据无叠加。用于处理用户交互事件流中的数据，如计算每个用户在活跃期间总共购买的商品数量等。类似于当用户退出的时候，计算这个用户之前的动作。在这种用户交互事件流中，我们首先想到的是将事件聚合到会话窗口中（一段用户持续活跃 的周期），由非活跃的间隙分隔开。如上图所示，就是需要计算每个用户在活跃期间总共购买的 商品数量，如果用户 30 秒没有活动则视为会话断开（假设 raw data stream 是单个用户的购买 行为流）。一般而言，window 是在无限的流上定义了一个有限的元素集合。这个集合可以是基于时间的，元素个数的，时间和个数结合的，会话间隙的，或者是自定义的。Flink 的 DataStream API 提供了简洁的算子来满足常用的窗口操作，同时提供了通用的窗口机制来允许用户自己定义 窗口分配逻辑。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;flink的checkpoint存在哪里&#34;&gt;Flink的Checkpoint存在哪里？
+&lt;/h3&gt;&lt;p&gt;Flink 的 Checkpoint 是 Flink 的核心组件之一，它用于记录应用程序在特定时刻的状态，以便在应用程序失败时进行恢复。Checkpoint 通常存储在 Flink 的存储系统中，可以是内存、文件系统或 RocksDB。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;内存&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Flink 的内存状态是存储在 Java 内存中的。当应用程序运行时，Flink 会将状态数据存储在内存中，并定期将这些状态数据持久化到外部存储系统中。如果应用程序在运行时出现故障，Flink 可以从内存状态中恢复应用程序的状态。&lt;/p&gt;
+&lt;ol start=&#34;2&#34;&gt;
+&lt;li&gt;文件系统&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Flink 也可以将状态数据存储在文件系统中。当应用程序运行时，Flink 会将状态数据写入分布式文件系统，如 HDFS 或 NFS。如果应用程序在运行时出现故障，Flink 可以从文件系统中恢复应用程序的状态。&lt;/p&gt;
+&lt;ol start=&#34;3&#34;&gt;
+&lt;li&gt;RocksDB&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Flink 还可以将状态数据存储在 RocksDB 中。RocksDB 是一种高性能、高可靠性的键值存储数据库，它支持高效的数据压缩和快速查找。当应用程序运行时，Flink 会将状态数据写入 RocksDB 数据库，并定期将这些状态数据持久化到外部存储系统中。如果应用程序在运行时出现故障，Flink 可以从 RocksDB 中恢复应用程序的状态。&lt;/p&gt;
+&lt;p&gt;总之，Flink 的 Checkpoint 可以存储在内存、文件系统或 RocksDB 中，具体存储位置由用户配置决定。Flink 提供了一些 API 来管理 Checkpoint，如 checkpointCoordinator.checkpoint() 方法和 checkpointCoordinator.restoreFromCheckpoint() 方法。使用这些 API，用户可以手动触发 Checkpoint，也可以在应用程序失败时自动恢复状态。&lt;/p&gt;
+&lt;h3 id=&#34;说一说flink的checkpoint机制&#34;&gt;说一说Flink的checkpoint机制
+&lt;/h3&gt;&lt;h3 id=&#34;说说flink-的容错机制flink是如何做到容错的&#34;&gt;说说Flink 的容错机制，Flink是如何做到容错的？
+&lt;/h3&gt;&lt;p&gt;Flink 是一个分布式流处理框架，它实现了容错机制以确保在节点故障时，数据不会丢失并且可以进行故障恢复。Flink 的容错机制主要依靠两个强大的机制：Checkpoint 和 State。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Checkpoint&lt;/strong&gt; ：是一种快照机制，它用于定期备份 Flink 程序中的状态，并将其存储在外部存储系统中。当节点发生故障时，Flink 可以使用 Checkpoint 来恢复程序的状态，并从故障点继续处理数据流。Checkpoint 的备份可以是全量的，也可以是增量的，这取决于 Checkpoint 的触发条件和备份策略。Flink 还支持 Exactly-Once 语义，这意味着在故障恢复时，Flink 可以确保每个事件都被处理了一次且仅一次。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;State&lt;/strong&gt; ：是 Flink 中的另一种重要机制，它用于存储计算过程中的中间状态。State 可以分为两种类型：Operator State 和 Keyed State。Operator State 是一种基于算子的状态，它存储在算子内部，并随着算子的执行而更新。Keyed State 是一种基于键的状态，它存储在 Stateful Function 内部，并使用键来标识状态的数据。Keyed State 可以具有过期时间（TTL），这使得 Flink 可以在状态过期时自动清理过期的状态数据。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在 Flink 中，Checkpoint 和 State 是相互依存的。Checkpoint 用于备份 State，并确保在节点故障时，可以恢复程序的状态。而 State 则用于存储计算过程中的中间状态，并支持 Exactly-Once 语义。Flink 通过这两个机制的结合，实现了强大的容错和故障恢复能力，使得 Flink 在分布式流处理中具有高度的可靠性和可用性。&lt;/p&gt;
+&lt;h3 id=&#34;flink分布式快照的原理是什么&#34;&gt;Flink分布式快照的原理是什么
+&lt;/h3&gt;&lt;p&gt;Flink的容错机制的核心部分是制作分布式数据流和操作算子状态的一致性快照。 这些快照充当一致性checkpoint，系统可以在发生故障时回滚。 Flink用于制作这些快照的机制在“分布式数据流的轻量级异步快照”中进行了描述。 它受到分布式快照的标准Chandy-Lamport算法的启发，专门针对Flink的执行模型而定制。&lt;/p&gt;
+&lt;p&gt;barriers在数据流源处被注入并行数据流中。快照n的barriers被插入的位置（我们称之为Sn）是快照所包含的数据在数据源中最大位置。&lt;/p&gt;
+&lt;p&gt;例如，在Apache Kafka中，此位置将是分区中最后一条记录的偏移量。 将该位置Sn报告给checkpoint协调器（Flink的JobManager）。&lt;/p&gt;
+&lt;p&gt;然后barriers向下游流动。当一个中间操作算子从其所有输入流中收到快照n的barriers时，它会为快照n发出barriers进入其所有输出流中。&lt;/p&gt;
+&lt;p&gt;一旦sink操作算子（流式DAG的末端）从其所有输入流接收到barriers n，它就向checkpoint协调器确认快照n完成。&lt;/p&gt;
+&lt;p&gt;在所有sink确认快照后，意味快照着已完成。一旦完成快照n，job将永远不再向数据源请求Sn之前的记录，因为此时这些记录（及其后续记录）将已经通过整个数据流拓扑，也即是已经被处理结束。&lt;/p&gt;
+&lt;h3 id=&#34;说说flink的几种时间语义&#34;&gt;说说Flink的几种时间语义
+&lt;/h3&gt;&lt;p&gt;Flink 支持三种时间语义：Event Time、Ingestion Time 和 Processing Time。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1. Event Time（事件时间）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Event Time 是事件创建的时间，它通常由事件中的时间戳描述。通常由事件生成器或者传感器生成。在 Flink 中，事件时间可以通过 water-mark 或者定时器来处理。例如，在采集日志数据时，每一条日志都会记录自己的生成时间，Flink 通过时间戳分配器访问事件时间戳。Event Time 是事件产生的时间，与数据处理的时间无关，因此它可以反映事件产生的实时性，但是对于数据处理的延迟和异步性无法体现。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;2. Ingestion Time（注入时间）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Ingestion Time 是数据进入 Flink 的时间。它是指数据被 Flink 算子处理的时间，与事件创建的时间无关。Ingestion Time 能够反映数据处理的延迟和异步性，但是无法反映事件产生的实时性。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;3. Processing Time（处理时间）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Processing Time 是每一个执行基于时间操作的算子的本地系统时间，与机器相关。它是指算子处理数据的时间，与事件创建的时间和数据进入 Flink 的时间无关。Processing Time 是默认的时间属性，除非明确指定时间语义为 Event Time 或 Ingestion Time。&lt;/p&gt;
+&lt;p&gt;在实际应用中，选择合适的时间语义可以影响 Flink 处理的数据流的正确性和效率。&lt;/p&gt;
+&lt;p&gt;例如，如果需要处理实时数据流，那么选择 Event Time 更为合适；&lt;/p&gt;
+&lt;p&gt;如果需要处理延迟数据流，那么选择 Ingestion Time 更为合适；&lt;/p&gt;
+&lt;p&gt;如果需要处理离线数据集，那么选择 Processing Time 更为合适。&lt;/p&gt;
+&lt;p&gt;同时，Flink 也提供了 WaterMark 机制来处理延迟数据和异步数据，以保证数据处理的正确性和可靠性。&lt;/p&gt;
+&lt;h3 id=&#34;说说flink中的watermark机制&#34;&gt;说说Flink中的Watermark机制
+&lt;/h3&gt;&lt;p&gt;Flink 中的 Watermark 机制是一种衡量 Event Time 进展的机制，可以用于处理乱序事件。在数据流处理过程中，由于网络延迟、背压等多种因素的影响，数据可能会乱序到达。为了正确处理这些乱序事件，Flink 引入了 Watermark 机制，结合窗口 (Window) 来实现。&lt;/p&gt;
+&lt;p&gt;Watermark 是一个时间戳，用于表示事件时间小于等于该时间戳的数据都已经到达。在 Flink 中，每个 Operator 都会维护一个当前的 Watermark，当一个事件到达时，如果它的时间戳小于等于当前 Watermark，那么该事件就会被认为是到达了，会被放入窗口中进行处理。窗口的执行是由 Watermark 触发的，当 Watermark 达到窗口的结束时间时，窗口就会触发并执行其中的计算逻辑。&lt;/p&gt;
+&lt;p&gt;为了实现窗口的正确处理，Flink 还引入了事件时间 (Event Time) 概念，每个事件都会携带一个时间戳，表示该事件产生的时间。在数据流处理过程中，Flink 会根据事件时间戳的顺序来处理事件，这样可以保证事件的正确顺序。但是，由于网络延迟、背压等原因，事件可能会乱序到达，这就需要使用 Watermark 机制来处理这些乱序事件。&lt;/p&gt;
+&lt;p&gt;总结起来，Flink 中的 Watermark 机制是用于处理乱序事件的一种机制，它可以设定延迟触发，用于表示事件时间小于等于该时间戳的数据都已经到达。通过结合窗口机制，Watermark 机制可以实现对乱序事件的正确处理，保证数据流的正确性和完整性。&lt;/p&gt;
+&lt;h3 id=&#34;说说flink的状态储存机制&#34;&gt;说说Flink的状态储存机制
+&lt;/h3&gt;&lt;p&gt;Flink 的状态储存是指在 Flink 程序运行过程中，用于存储和管理算子状态的数据结构和存储系统。Flink 提供了多种状态后端，以适应不同的应用场景和需求。这里将详细叙述 Flink 的状态储存，包括 1.13 版本之前的状态后端和 1.13 版本之后的状态后端。&lt;/p&gt;
+&lt;p&gt;1.13 版本之前：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;MemoryStateBackend&lt;/strong&gt; ：开发时使用。这是一种基于内存的状态后端，用于在开发过程中快速调试和测试 Flink 程序。由于它使用内存存储状态数据，因此适用于状态数据较小的场景。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;FsStateBackend&lt;/strong&gt; ：生产时使用，常用。这是一种基于文件系统的状态后端，将状态数据存储在磁盘上。FsStateBackend 提供了一种高可用性的状态备份和恢复机制，以确保在任务失败时能够恢复状态。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;RocksDBStateBackend&lt;/strong&gt; ：生产时使用，非常大的状态时用。这是一种基于 RocksDB 的状态后端，使用 RocksDB 数据库存储状态数据。RocksDB 是一种支持高效压缩和快速查找的键值存储系统，适用于处理大规模状态数据的场景。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;1.13 版本之后：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;HashMapStateBackend&lt;/strong&gt; ：即 MemoryStateBackend 和 FsStateBackend，根据 API 不同。从 1.13 版本开始，Flink 对状态后端进行了整合，将 MemoryStateBackend 和 FsStateBackend 合并为一个统一的 HashMapStateBackend。它使用 HashMap 数据结构存储状态数据，并提供了一些额外的功能，如快照、checkpoint 等。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;EmbeddedRocksDBStateBackend&lt;/strong&gt; ：生产时使用，非常大的状态时用。这是一种基于 RocksDB 的状态后端，但与 RocksDBStateBackend 不同的是，它将 RocksDB 数据库嵌入到 Flink 的 TaskManager 进程中。这样做的优点是在状态数据较大时，可以减少网络开销和提高访问性能。
+总之，Flink 的状态储存系统包括多种状态后端，以适应不同的应用场景和需求。开发者可以根据实际情况选择合适的状态后端，以实现高效、可靠的 Flink 程序。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;checkpoint和savepoint的区别&#34;&gt;checkpoint和savepoint的区别
 &lt;/h3&gt;&lt;h3 id=&#34;checkpoint工作流程&#34;&gt;Checkpoint工作流程
 &lt;/h3&gt;&lt;h3 id=&#34;checkpoint的作用&#34;&gt;Checkpoint的作用
 &lt;/h3&gt;&lt;h3 id=&#34;flink中checkpoint超时原因&#34;&gt;Flink中Checkpoint超时原因
 &lt;/h3&gt;&lt;h3 id=&#34;flink的exactly-once语义怎么保证&#34;&gt;Flink的Exactly Once语义怎么保证
 &lt;/h3&gt;&lt;h3 id=&#34;flink的端到端exactly-once&#34;&gt;Flink的端到端Exactly Once
-&lt;/h3&gt;&lt;h3 id=&#34;flink的水印watermark有哪几种&#34;&gt;Flink的水印(Watermark)有哪几种
+&lt;/h3&gt;&lt;h3 id=&#34;tasksolt是什么&#34;&gt;TaskSolt是什么
+&lt;/h3&gt;&lt;p&gt;TaskSlot 是 Flink 中用于控制 TaskManager 接收任务的数量的一个概念。它是一个抽象的概念，表示一个 TaskManager 能够处理的任务数量。在 Flink 中，TaskManager 是实际执行程序的工作节点，为了起到资源隔离和并行执行的作用，TaskManager 是一个 JVM 进程。通过 TaskSlot 的概念，可以控制 TaskManager 接收的任务数量，从而更好地利用集群资源。&lt;/p&gt;
+&lt;p&gt;当有一个 source 需要指定三个并行度时，它就需要使用三个 TaskSlot。这是因为 TaskSlot 的数量决定了 TaskManager 能够处理的任务数量。如果 source 需要三个并行度，那么 TaskManager 就需要三个 TaskSlot 来处理这三个并行度的任务。&lt;/p&gt;
+&lt;p&gt;还有一个需要主要的优化概念是，当算子的并行度相同，并且没有发生并行度改变、或者没有 shuffle 时，这些算子会合并在一起。这样做的目的是为了减少资源的消耗，提高计算效率。&lt;/p&gt;
+&lt;h3 id=&#34;flink的slots和并行度有什么关系&#34;&gt;Flink的Slots和并行度有什么关系
+&lt;/h3&gt;&lt;p&gt;Solt 是 TaskManager 中的概念，表示 TaskManager 的一个槽（Slot）。并行度是程序中的概念，表示程序并行执行的程度。在 Flink 中，Solt 和并行度有着密切的关系。&lt;/p&gt;
+&lt;p&gt;具体来说，Solt 是 TaskManager 的资源分配单位，它决定了 TaskManager 能够支持的并行度。一个 TaskManager 有多个 Solt，每个 Solt 可以分配给一个 Task，用于执行程序。因此，TaskManager 的并行度就等于其 Solt 的数量。&lt;/p&gt;
+&lt;p&gt;程序制定的并行度使用的是槽（Solt），也就是说，程序是通过分配 Solt 来控制并行度的。当程序需要更高的并行度时，它可以向 TaskManager 申请更多的 Solt，以便在同一时间内执行更多的 Task。&lt;/p&gt;
+&lt;p&gt;因此，Solt 和并行度之间的关系可以总结为：Solt 是 TaskManager 中的概念，它决定了 TaskManager 能够支持的并行度；并行度是程序中的概念，它是通过分配 Solt 来控制的。TaskManager 是提供方，提供 Solt 资源给程序使用；程序是使用方，通过分配 Solt 来控制并行度。&lt;/p&gt;
+&lt;h3 id=&#34;flink的水印watermark有哪几种&#34;&gt;Flink的水印(Watermark)有哪几种
 &lt;/h3&gt;&lt;h3 id=&#34;flink的时间语义&#34;&gt;Flink的时间语义
 &lt;/h3&gt;&lt;h3 id=&#34;flink相比其他流式处理框架的优点&#34;&gt;Flink相比其他流式处理框架的优点
 &lt;/h3&gt;&lt;h3 id=&#34;flink和spark的区别什么情况下使用flink有什么优点&#34;&gt;Flink和Spark的区别？什么情况下使用Flink？有什么优点？
@@ -1225,7 +1353,8 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;/h3&gt;&lt;h3 id=&#34;flink实时topn&#34;&gt;Flink实时topN
 &lt;/h3&gt;&lt;h3 id=&#34;savepoint知道是什么吗&#34;&gt;Savepoint知道是什么吗
 &lt;/h3&gt;&lt;h2 id=&#34;基本&#34;&gt;基本
-&lt;/h2&gt;&lt;h3 id=&#34;简单介绍一下-flink&#34;&gt;简单介绍一下 Flink
+&lt;/h2&gt;&lt;h3 id=&#34;checkpoint底层如何实现的&#34;&gt;checkpoint底层如何实现的
+&lt;/h3&gt;&lt;h3 id=&#34;简单介绍一下-flink&#34;&gt;简单介绍一下 Flink
 &lt;/h3&gt;&lt;p&gt;Flink 是一个框架和分布式处理引擎，用于对无界和有界数据流进行有状态计算。并且 Flink 提供了数据分布、容错机制以及资源管理等核心功能。Flink提供了诸多高抽象层的API以便用户编写分布式任务：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;strong&gt;DataSet API&lt;/strong&gt; ， 对静态数据进行批处理操作，将静态数据抽象成分布式的数据集，用户可以方便地使用Flink提供的各种操作符对分布式数据集进行处理，支持Java、Scala和Python。&lt;/li&gt;
@@ -1252,29 +1381,22 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;&lt;strong&gt;实时计算和决策&lt;/strong&gt; ：Flink 支持实时计算和决策，可以根据实时数据流进行实时决策和行动，适用于需要实时决策和行动的场景，如实时定价、实时广告投放等。&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;物联网应用&lt;/strong&gt; ：Flink 可以处理大规模的实时数据流，适用于处理物联网应用中的实时数据，如智能家居、智能城市、智能交通等场景。&lt;/li&gt;
 &lt;/ol&gt;
-&lt;h4 id=&#34;4flink编程模型是什么&#34;&gt;4、Flink编程模型是什么？
-&lt;/h4&gt;&lt;p&gt;其实就一句话，就是 Source-&amp;gt;Transformation-&amp;gt;Sink&lt;/p&gt;
+&lt;h3 id=&#34;flink编程模型是什么&#34;&gt;Flink编程模型是什么？
+&lt;/h3&gt;&lt;p&gt;其实就一句话，就是 Source-&amp;gt;Transformation-&amp;gt;Sink&lt;/p&gt;
 &lt;p&gt;Flink 编程模型是一种用于处理流式数据的编程模型，它包括三个核心概念：Source、Transformation 和 Sink。数据流从 Source 开始，经过多个 Transformation 操作，最终到达 Sink 结束。在这个过程中，数据可以被处理、过滤、转换、聚合等操作，以实现数据的实时处理和分析。&lt;/p&gt;
 &lt;p&gt;具体来说，Flink 编程模型中，开发者需要首先指定数据的 Source，即数据的来源，可以是文件、网络数据流、数据库等。然后，通过一系列 Transformation 操作对数据进行处理，例如过滤、映射、聚合、窗口等操作。这些 Transformation 操作可以组合使用，以实现复杂的数据处理和分析。最后，将处理后的数据发送到 Sink 端，即数据的去向，可以是文件、网络数据流、数据库等。&lt;/p&gt;
 &lt;p&gt;Flink 编程模型支持事件时间语义，即数据处理按照事件发生的时间进行排序和处理。同时，Flink 还支持窗口操作、状态管理和事件处理等功能，以实现更复杂的数据处理和分析场景。&lt;/p&gt;
-&lt;h4 id=&#34;5讲一下flink的运行架构flink集群有哪些角色各自有什么作用&#34;&gt;5、讲一下Flink的运行架构，Flink集群有哪些角色？各自有什么作用？
-&lt;/h4&gt;&lt;p&gt;Flink程序在运行时主要有TaskManager，JobManager，Client三种角色。当 Flink 集群启动后，⾸先会启动⼀个 JobManger 和⼀个或多个的 TaskManager。由 Client 提交任务给 JobManager，JobManager 再调度任务到各个 TaskManager 去执⾏，然后 TaskManager 将⼼跳和统计信息汇报给 JobManager。TaskManager 之间以流的形式进⾏数据的传输。上述三者均为独⽴的 JVM 进程。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;JobManager：扮演着集群中的管理者Master的角色，它是整个集群的协调者，负责接收Flink Job，协调检查点，Failover 故障恢复等，同时管理Flink集群中从节点TaskManager。&lt;/li&gt;
-&lt;li&gt;TaskManager：是实际负责执行计算的Worker，在其上执行Flink Job的一组Task，每个TaskManager负责管理其所在节点上的资源信息，如内存、磁盘、网络，在启动的时候将资源的状态向JobManager汇报。&lt;/li&gt;
-&lt;li&gt;Client：是Flink程序提交的客户端，当用户提交一个Flink程序时，会首先创建一个Client，该Client首先会对用户提交的Flink程序进行预处理，并提交到Flink集群中处理，所以Client需要从用户提交的Flink程序配置中获取JobManager的地址，并建立到JobManager的连接，将Flink Job提交给JobManager。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h4 id=&#34;6flink的集群部署模式有哪些&#34;&gt;6、Flink的集群部署模式有哪些？
-&lt;/h4&gt;&lt;p&gt;Flink的集群部署模式包括：&lt;/p&gt;
+&lt;h3 id=&#34;flink的集群部署模式有哪些&#34;&gt;Flink的集群部署模式有哪些？
+&lt;/h3&gt;&lt;p&gt;Flink的集群部署模式包括：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;单机模式：在单个机器上运行Flink集群，适用于开发和测试环境。&lt;/li&gt;
 &lt;li&gt;本地模式：在本地的多个线程上模拟Flink集群，适用于开发和调试任务。&lt;/li&gt;
 &lt;li&gt;分离式部署：将JobManager和TaskManager分别部署在不同的机器上，适用于生产环境和大规模任务的执行。&lt;/li&gt;
 &lt;li&gt;嵌入式模式：将Flink集成到现有的应用程序中，作为库来使用，适用于需要将流处理能力集成到其他应用中的场景。&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h4 id=&#34;7你们之前flink集群规模有多大&#34;&gt;7、你们之前Flink集群规模有多大？
-&lt;/h4&gt;&lt;h4 id=&#34;8说说flink集群优化&#34;&gt;8、说说Flink集群优化
-&lt;/h4&gt;&lt;p&gt;Flink 集群优化是提高 Flink 集群性能的关键步骤。&lt;/p&gt;
+&lt;h3 id=&#34;你们之前flink集群规模有多大&#34;&gt;你们之前Flink集群规模有多大？
+&lt;/h3&gt;&lt;h3 id=&#34;说说flink集群优化&#34;&gt;说说Flink集群优化
+&lt;/h3&gt;&lt;p&gt;Flink 集群优化是提高 Flink 集群性能的关键步骤。&lt;/p&gt;
 &lt;p&gt;以下是一些 Flink 集群优化的建议：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;taskmanager.heap.mb 调优：taskmanager.heap.mb 是 Flink 任务管理器堆内存的大小，默认为 1024MB。如果需要更高的内存，可以将其调整为 2048MB 或更高。这可以确保任务管理器有足够的内存来处理数据和执行任务。&lt;/li&gt;
@@ -1285,9 +1407,9 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;使用 Flink 的高级优化功能：Flink 还提供了许多高级优化功能，例如代码生成、优化器和迭代算子等。这些功能可以显著提高 Flink 集群的性能，但需要根据具体情况进行调整和使用。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;总结起来，Flink 集群优化需要综合考虑多个方面，包括内存管理、任务调度、网络配置、状态管理和高级优化功能等。通过调整这些参数和配置，可以显著提高 Flink 集群的性能和效率。&lt;/p&gt;
-&lt;h4 id=&#34;9公司怎么提交的实时任务有多少job-manager&#34;&gt;9、公司怎么提交的实时任务，有多少Job Manager？
-&lt;/h4&gt;&lt;h4 id=&#34;10flink的并行度了解吗flink的并行度设置是怎样的&#34;&gt;10、Flink的并行度了解吗？Flink的并行度设置是怎样的？
-&lt;/h4&gt;&lt;p&gt;Flink 程序由多个任务（Source、Transformation、Sink）组成。任务被分成多个并行实例来执行，每个并行实例处理任务的输入数据的子集。任务的并行实例的数量称之为并行度。&lt;/p&gt;
+&lt;h3 id=&#34;公司怎么提交的实时任务有多少job-manager&#34;&gt;公司怎么提交的实时任务，有多少Job Manager？
+&lt;/h3&gt;&lt;h3 id=&#34;flink的并行度了解吗flink的并行度设置是怎样的&#34;&gt;Flink的并行度了解吗？Flink的并行度设置是怎样的？
+&lt;/h3&gt;&lt;p&gt;Flink 程序由多个任务（Source、Transformation、Sink）组成。任务被分成多个并行实例来执行，每个并行实例处理任务的输入数据的子集。任务的并行实例的数量称之为并行度。&lt;/p&gt;
 &lt;p&gt;我们在实际生产环境中可以从四个不同层面设置并行度：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;操作算子层面 (Operator Level)：算子.setParallelism(3),实际算子时设置&lt;/li&gt;
@@ -1300,23 +1422,8 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;p&gt;在 flink-conf.yaml 中通过parallelism.default 配置项给所有 execution environments 指定系统级的默认parallelism；&lt;/p&gt;
 &lt;p&gt;在 ExecutionEnvironment 里头可以通过 setParallelism 来给 operators、data sources、data sinks 设置默认的 parallelism；&lt;/p&gt;
 &lt;p&gt;如果 operators、data sources、datasinks 自己有设置 parallelism 则会覆盖 ExecutionEnvironment 设置的 parallelism。&lt;/p&gt;
-&lt;h4 id=&#34;11flink的checkpoint存在哪里&#34;&gt;11、Flink的Checkpoint存在哪里？
-&lt;/h4&gt;&lt;p&gt;Flink 的 Checkpoint 是 Flink 的核心组件之一，它用于记录应用程序在特定时刻的状态，以便在应用程序失败时进行恢复。Checkpoint 通常存储在 Flink 的存储系统中，可以是内存、文件系统或 RocksDB。&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;内存&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;Flink 的内存状态是存储在 Java 内存中的。当应用程序运行时，Flink 会将状态数据存储在内存中，并定期将这些状态数据持久化到外部存储系统中。如果应用程序在运行时出现故障，Flink 可以从内存状态中恢复应用程序的状态。&lt;/p&gt;
-&lt;ol start=&#34;2&#34;&gt;
-&lt;li&gt;文件系统&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;Flink 也可以将状态数据存储在文件系统中。当应用程序运行时，Flink 会将状态数据写入分布式文件系统，如 HDFS 或 NFS。如果应用程序在运行时出现故障，Flink 可以从文件系统中恢复应用程序的状态。&lt;/p&gt;
-&lt;ol start=&#34;3&#34;&gt;
-&lt;li&gt;RocksDB&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;Flink 还可以将状态数据存储在 RocksDB 中。RocksDB 是一种高性能、高可靠性的键值存储数据库，它支持高效的数据压缩和快速查找。当应用程序运行时，Flink 会将状态数据写入 RocksDB 数据库，并定期将这些状态数据持久化到外部存储系统中。如果应用程序在运行时出现故障，Flink 可以从 RocksDB 中恢复应用程序的状态。&lt;/p&gt;
-&lt;p&gt;总之，Flink 的 Checkpoint 可以存储在内存、文件系统或 RocksDB 中，具体存储位置由用户配置决定。Flink 提供了一些 API 来管理 Checkpoint，如 checkpointCoordinator.checkpoint() 方法和 checkpointCoordinator.restoreFromCheckpoint() 方法。使用这些 API，用户可以手动触发 Checkpoint，也可以在应用程序失败时自动恢复状态。&lt;/p&gt;
-&lt;h4 id=&#34;12flink的checkpoint机制对比spark有什么不同和优势&#34;&gt;12、Flink的checkpoint机制对比spark有什么不同和优势？
-&lt;/h4&gt;&lt;p&gt;Flink 和 Spark 都是主流的大数据处理框架，它们都支持 Checkpoint 机制以保证实时数据的可靠性和容错性。然而，Flink 和 Spark 的 Checkpoint 机制在实现方式和功能上有一些不同之处。&lt;/p&gt;
+&lt;h3 id=&#34;flink的checkpoint机制对比spark有什么不同和优势&#34;&gt;Flink的checkpoint机制对比spark有什么不同和优势？
+&lt;/h3&gt;&lt;p&gt;Flink 和 Spark 都是主流的大数据处理框架，它们都支持 Checkpoint 机制以保证实时数据的可靠性和容错性。然而，Flink 和 Spark 的 Checkpoint 机制在实现方式和功能上有一些不同之处。&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;实现方式&lt;/li&gt;
 &lt;/ol&gt;
@@ -1334,8 +1441,8 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;/ol&gt;
 &lt;p&gt;Flink 的 Checkpoint 机制采用了轻量级的分布式快照技术，因此其性能影响相对较小。Spark 的 Checkpoint 机制需要将整个应用程序的状态数据都保存到外部存储系统中，因此其性能影响相对较大。&lt;/p&gt;
 &lt;p&gt;总的来说，Flink 的 Checkpoint 机制相对于 Spark 的 Checkpoint 机制更为复杂和强大，可以支持任意节点的故障恢复，并保证数据一致性。此外，Flink 的 Checkpoint 机制采用了轻量级的分布式快照技术，因此其性能影响相对较小。这些优势使得 Flink 在实时数据处理方面具有更好的可靠性和容错性。&lt;/p&gt;
-&lt;h4 id=&#34;13flink常用的算子有哪些&#34;&gt;13、Flink常用的算子有哪些？
-&lt;/h4&gt;&lt;p&gt;Flink 是一个流处理框架，提供了丰富的算子用于数据的处理和转换。以下是一些常见的算子：&lt;/p&gt;
+&lt;h3 id=&#34;flink常用的算子有哪些&#34;&gt;Flink常用的算子有哪些？
+&lt;/h3&gt;&lt;p&gt;Flink 是一个流处理框架，提供了丰富的算子用于数据的处理和转换。以下是一些常见的算子：&lt;/p&gt;
 &lt;p&gt;Map 算子：将一个数据流中的每个元素映射成另一个元素。Map 算子是 Flink 中最基本的算子之一，它接受一个映射函数作为参数，该函数将输入数据映射到输出数据。&lt;/p&gt;
 &lt;p&gt;Filter 算子：将一个数据流中的每个元素映射成多个元素。Filter 算子根据指定的条件过滤掉不符合条件的元素，只输出符合条件的元素。&lt;/p&gt;
 &lt;p&gt;KeyBy 算子：根据指定的 key 对数据流进行分组。KeyBy 算子将数据流中的元素按照指定的 key 进行分组，并将每个分组中的元素聚合在一起。&lt;/p&gt;
@@ -1344,21 +1451,12 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;p&gt;Aggregate 算子：对数据流中的元素进行聚合操作。Aggregate 算子与 Reduce 算子类似，但它可以指定多个聚合函数，同时支持局部聚合和全局聚合。&lt;/p&gt;
 &lt;p&gt;Join 算子：对数据流中的元素进行连接操作。Join 算子可以指定连接的方式、连接的键和连接的条件等参数，将两个数据流连接在一起。&lt;/p&gt;
 &lt;p&gt;除了上述算子之外，Flink 还提供了很多其他算子，例如 Union、HashJoin、Sort、Limit 等，以实现更复杂的数据处理和分析场景。&lt;/p&gt;
-&lt;h4 id=&#34;14flink的流式处理如何处理延迟&#34;&gt;14、Flink的流式处理如何处理延迟？
-&lt;/h4&gt;&lt;p&gt;Flink的流式处理可以通过以下方式处理延迟：&lt;/p&gt;
+&lt;h3 id=&#34;flink的流式处理如何处理延迟&#34;&gt;Flink的流式处理如何处理延迟？
+&lt;/h3&gt;&lt;p&gt;Flink的流式处理可以通过以下方式处理延迟：&lt;/p&gt;
 &lt;p&gt;事件时间处理：Flink支持事件时间处理，可以处理乱序事件，根据事件时间对数据进行排序和处理，从而解决延迟问题。&lt;/p&gt;
 &lt;p&gt;窗口操作：Flink的窗口操作可以根据事件时间或处理时间对数据流进行划分和处理，可以根据需要设定窗口大小和滑动间隔来控制延迟的处理。&lt;/p&gt;
-&lt;h4 id=&#34;15flink-中对窗口的支持包括哪几种说说他们的使用场景&#34;&gt;15、Flink 中对窗口的支持包括哪几种？说说他们的使用场景
-&lt;/h4&gt;&lt;p&gt;Flink支持两种划分窗口的方式，按照time和count，session也是一种时间。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Tumbling Time Window（滚动时间窗口）：当达到一定时间后的，进行滑动，可以联想到以前用的诺基亚的滑盖手机，这个其实就是微批。用于处理实时数据流中的时间序列数据，如股票价格走势、实时监测流量等。假如我们需要统计每一分钟中用户购买的商品的总数，需要将用户的行为事件按每一分钟进 行切分，这种切分被成为翻滚时间窗口（Tumbling Time Window）。翻滚窗口能将数据流切分成 不重叠的窗口，每一个事件只能属于一个窗口。&lt;/li&gt;
-&lt;li&gt;Sliding Time Window（滑动时间窗口）：当达到一定时间后，进行翻滚，可以有重叠。用于处理时间序列数据的近期分析，如近 5 分钟用户购买商品总数等。我们可以每 30 秒计算一次最近一分钟用户购买的商品总数。这种窗口我们称为滑动时间窗 口（Sliding Time Window）。在滑窗中，一个元素可以对应多个窗口。&lt;/li&gt;
-&lt;li&gt;Tumbling Count Window（滚动计数窗口）：当达到一定条数的时候执行计算，无折叠。用于处理计数型数据，如统计网站访问量、分析用户购买行为等。当我们想要每 100 个用户购买行为事件统计购买总数，那么每当窗口中填满 100 个元素了， 就会对窗口进行计算，这种窗口我们称之为翻滚计数窗口（Tumbling Count Window），上图所 示窗口大小为 3 个。&lt;/li&gt;
-&lt;li&gt;Sliding Count Window（滑动计数窗口）：当达到一定数量后进行滑动。用于处理计数型数据的实时分析，如实时监测广告点击率、实时统计投票数等。&lt;/li&gt;
-&lt;li&gt;Session Window（会话窗口）：窗口数据没有固定的大小，根据用户传入的参数进行划分，窗口数据无叠加。用于处理用户交互事件流中的数据，如计算每个用户在活跃期间总共购买的商品数量等。类似于当用户退出的时候，计算这个用户之前的动作。在这种用户交互事件流中，我们首先想到的是将事件聚合到会话窗口中（一段用户持续活跃 的周期），由非活跃的间隙分隔开。如上图所示，就是需要计算每个用户在活跃期间总共购买的 商品数量，如果用户 30 秒没有活动则视为会话断开（假设 raw data stream 是单个用户的购买 行为流）。一般而言，window 是在无限的流上定义了一个有限的元素集合。这个集合可以是基于时间的，元素个数的，时间和个数结合的，会话间隙的，或者是自定义的。Flink 的 DataStream API 提供了简洁的算子来满足常用的窗口操作，同时提供了通用的窗口机制来允许用户自己定义 窗口分配逻辑。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h4 id=&#34;16flink支持哪些第三方集成&#34;&gt;16、Flink支持哪些第三方集成？
-&lt;/h4&gt;&lt;p&gt;Flink支持与多种第三方工具和框架的集成，包括：&lt;/p&gt;
+&lt;h3 id=&#34;flink支持哪些第三方集成&#34;&gt;Flink支持哪些第三方集成？
+&lt;/h3&gt;&lt;p&gt;Flink支持与多种第三方工具和框架的集成，包括：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;strong&gt;Apache Kafka&lt;/strong&gt; ：Flink可以与Kafka进行无缝集成，作为数据源和数据接收器。&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;Apache Hadoop&lt;/strong&gt; ：Flink可以与Hadoop集成，可以读取Hadoop文件系统中的数据，也可以将处理结果写入Hadoop文件系统。&lt;/li&gt;
@@ -1366,13 +1464,13 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;&lt;strong&gt;Apache HBase&lt;/strong&gt; ：Flink可以与HBase集成，可以读取和写入HBase中的数据。&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;Elasticsearch&lt;/strong&gt; ：Flink可以与Elasticsearch进行集成，可以将处理结果写入Elasticsearch进行实时搜索和分析。&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h4 id=&#34;17flink的source和sink有哪些&#34;&gt;17、Flink的source和sink有哪些？
-&lt;/h4&gt;&lt;p&gt;Flink支持多种数据源和数据接收器，包括：&lt;/p&gt;
+&lt;h3 id=&#34;flink的source和sink有哪些&#34;&gt;Flink的source和sink有哪些？
+&lt;/h3&gt;&lt;p&gt;Flink支持多种数据源和数据接收器，包括：&lt;/p&gt;
 &lt;p&gt;数据源：可以从文件系统、Kafka、消息队列等数据源读取数据，并将其转化为数据流进行处理。&lt;/p&gt;
 &lt;p&gt;数据接收器：可以将处理结果输出到文件系统、数据库、Kafka等数据接收器中，或者发送给下游处理环节。&lt;/p&gt;
 &lt;p&gt;Flink内置了一些基本数据源和接收器，它们始终可用。该预定义的数据源包括文件、目录和Socket,并可以加载集合和迭代器的数据。该预定义的数据接收器支持写入文件，输出信息和异常 。&lt;/p&gt;
-&lt;h4 id=&#34;18flink支持哪些批处理操作&#34;&gt;18、Flink支持哪些批处理操作？
-&lt;/h4&gt;&lt;p&gt;Flink支持多种批处理操作，包括：&lt;/p&gt;
+&lt;h3 id=&#34;flink支持哪些批处理操作&#34;&gt;Flink支持哪些批处理操作？
+&lt;/h3&gt;&lt;p&gt;Flink支持多种批处理操作，包括：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;Map：对数据集中的每个元素应用指定的函数。&lt;/li&gt;
 &lt;li&gt;Reduce：对数据集进行归约操作，将数据归约为一个结果。&lt;/li&gt;
@@ -1380,8 +1478,8 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;Join：将两个数据集按照指定的键进行连接操作。&lt;/li&gt;
 &lt;li&gt;GroupBy：根据指定的键对数据集进行分组操作。&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h4 id=&#34;19flink的流处理和批处理如何切换&#34;&gt;19、Flink的流处理和批处理如何切换？
-&lt;/h4&gt;&lt;p&gt;Flink 可以无缝地在流处理和批处理之间切换，这主要归功于其基于事件时间的窗口处理机制和灵活的作业调度策略。Flink 提供了两种作业类型：批处理作业和流处理作业。&lt;/p&gt;
+&lt;h3 id=&#34;flink的流处理和批处理如何切换&#34;&gt;Flink的流处理和批处理如何切换？
+&lt;/h3&gt;&lt;p&gt;Flink 可以无缝地在流处理和批处理之间切换，这主要归功于其基于事件时间的窗口处理机制和灵活的作业调度策略。Flink 提供了两种作业类型：批处理作业和流处理作业。&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;1. 批处理作业&lt;/strong&gt; ：&lt;/p&gt;
 &lt;p&gt;批处理作业将数据作为有界数据集进行处理，类似于传统的批处理作业。在批处理模式下，Flink 会将数据按照批次进行划分，然后对每个批次进行离线处理。批处理作业通常用于处理历史数据或者定期生成统计报告等场景。&lt;/p&gt;
 &lt;p&gt;要运行批处理作业，用户需要将数据作为批量文件上传到 Flink 的分布式文件系统（如 HDFS 或本地文件系统），然后通过 Flink 作业的方式进行处理。在批处理作业中，用户可以指定数据的截止时间（截止时间之前的数据会被处理），以及作业的并发度等参数。&lt;/p&gt;
@@ -1389,8 +1487,8 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;p&gt;流处理作业将数据作为无界数据流进行处理，实时处理数据并生成实时结果。在流处理模式下，Flink 会实时地接收数据，并将其分配给不同的 Task 以进行处理。流处理作业通常用于实时数据处理、实时分析和实时监控等场景。&lt;/p&gt;
 &lt;p&gt;要运行流处理作业，用户需要将数据源（如 Kafka、Flume 等）与 Flink 集群配置好，然后通过 Flink 作业的方式进行处理。在流处理作业中，用户可以指定数据处理的时间窗口、触发器等参数，以实现实时数据处理的需求。&lt;/p&gt;
 &lt;p&gt;在 Flink 中，批处理作业和流处理作业之间的切换可以通过修改作业的配置文件实现。例如，修改 &lt;code&gt;batch.file.path&lt;/code&gt; 和 &lt;code&gt;streaming.file.path&lt;/code&gt; 参数，以指定批处理作业和流处理作业的输入数据路径。此外，用户还可以通过 Flink Web UI 查看和管理作业的状态，以确保作业的正确运行。&lt;/p&gt;
-&lt;h4 id=&#34;20为什么使用-flink-替代-spark&#34;&gt;20、为什么使用 Flink 替代 Spark？
-&lt;/h4&gt;&lt;p&gt;Flink 相对于 Spark 的优势主要体现在以下几个方面：&lt;/p&gt;
+&lt;h3 id=&#34;为什么使用-flink-替代-spark&#34;&gt;为什么使用 Flink 替代 Spark？
+&lt;/h3&gt;&lt;p&gt;Flink 相对于 Spark 的优势主要体现在以下几个方面：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;低延迟和高吞吐量：Flink 是基于事件驱动的流式计算框架，能够支持低延迟和高吞吐量的数据处理。Flink 的低延迟特性得益于其基于时间窗口的调度机制，可以支持毫秒级的延迟时间。同时，Flink 的高吞吐量也是其优势之一，能够支持每秒千万级别的数据处理。&lt;/li&gt;
 &lt;li&gt;对流式数据应用场景更好的支持：Flink 专注于流式数据处理，能够更好地支持流式数据的应用场景，如实时计算、实时监控、实时推荐等。而 Spark 更适合于批量数据的处理，如离线分析、批量报告等。&lt;/li&gt;
@@ -1398,15 +1496,8 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;保证 exactly-once 的状态一致性：Flink 可以保证 exactly-once 的状态一致性，即每个事件都会被处理一次且仅一次。而 Spark 在处理数据时存在重复处理的问题，需要进行额外的优化和配置才能保证状态一致性。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;综上所述，Flink 相对于 Spark 在低延迟、高吞吐量、流式数据应用场景支持、处理乱序数据和保证状态一致性等方面具有优势，因此被越来越多的公司和开发者所采用。&lt;/p&gt;
-&lt;h4 id=&#34;21说说flink-的容错机制flink是如何做到容错的&#34;&gt;21、说说Flink 的容错机制，Flink是如何做到容错的？
-&lt;/h4&gt;&lt;p&gt;Flink 是一个分布式流处理框架，它实现了容错机制以确保在节点故障时，数据不会丢失并且可以进行故障恢复。Flink 的容错机制主要依靠两个强大的机制：Checkpoint 和 State。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;Checkpoint&lt;/strong&gt; ：是一种快照机制，它用于定期备份 Flink 程序中的状态，并将其存储在外部存储系统中。当节点发生故障时，Flink 可以使用 Checkpoint 来恢复程序的状态，并从故障点继续处理数据流。Checkpoint 的备份可以是全量的，也可以是增量的，这取决于 Checkpoint 的触发条件和备份策略。Flink 还支持 Exactly-Once 语义，这意味着在故障恢复时，Flink 可以确保每个事件都被处理了一次且仅一次。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;State&lt;/strong&gt; ：是 Flink 中的另一种重要机制，它用于存储计算过程中的中间状态。State 可以分为两种类型：Operator State 和 Keyed State。Operator State 是一种基于算子的状态，它存储在算子内部，并随着算子的执行而更新。Keyed State 是一种基于键的状态，它存储在 Stateful Function 内部，并使用键来标识状态的数据。Keyed State 可以具有过期时间（TTL），这使得 Flink 可以在状态过期时自动清理过期的状态数据。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;在 Flink 中，Checkpoint 和 State 是相互依存的。Checkpoint 用于备份 State，并确保在节点故障时，可以恢复程序的状态。而 State 则用于存储计算过程中的中间状态，并支持 Exactly-Once 语义。Flink 通过这两个机制的结合，实现了强大的容错和故障恢复能力，使得 Flink 在分布式流处理中具有高度的可靠性和可用性。&lt;/p&gt;
-&lt;h4 id=&#34;22flink是如何做到高效的网络数据交换的&#34;&gt;22、Flink是如何做到高效的网络数据交换的？
-&lt;/h4&gt;&lt;p&gt;Flink 在网络数据交换方面做到了高效，主要归功于以下几个方面：&lt;/p&gt;
+&lt;h3 id=&#34;flink是如何做到高效的网络数据交换的&#34;&gt;Flink是如何做到高效的网络数据交换的
+&lt;/h3&gt;&lt;p&gt;Flink 在网络数据交换方面做到了高效，主要归功于以下几个方面：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;&lt;strong&gt;分布式数据交换&lt;/strong&gt; ：Flink 使用了基于 JobGraph 的分布式计算模型，数据可以在不同的 Task 中进行交互。这种分布式数据交换使得 Flink 能够充分利用集群中的多个节点来处理大规模的数据流，从而提高了整个系统的并行度和吞吐量。&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;TaskManager 负责数据交互&lt;/strong&gt; ：在 Flink 中，TaskManager 负责管理 Task 的执行和数据交互。TaskManager 会从缓冲区（Buffer）中收集 Records，然后将其发送到其他 Task 中。这种集中式的数据管理方式可以减少网络连接次数，从而提高了网络吞吐量。&lt;/li&gt;
@@ -1415,8 +1506,8 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;&lt;strong&gt;自适应网络拓扑&lt;/strong&gt; ：Flink 支持自适应网络拓扑，它可以根据集群中节点的数量和位置动态地调整数据交换的路由策略。这种自适应网络拓扑可以提高系统的性能和可靠性，因为它能够更好地利用集群中的网络资源。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;综上所述，Flink 在网络数据交换方面实现了高效，主要通过分布式数据交换、TaskManager 负责数据交互、批次封装、网络拥塞控制和自适应网络拓扑等机制来实现。这些机制使得 Flink 在处理大规模数据流时具有高吞吐量、高并发度和高可靠性。&lt;/p&gt;
-&lt;h4 id=&#34;23flink程序在面对数据高峰期时如何处理&#34;&gt;23、Flink程序在面对数据高峰期时如何处理？
-&lt;/h4&gt;&lt;p&gt;当 Flink 程序面对数据高峰期时，一种常用的方法是使用大容量的 Kafka 作为数据源，将数据先放到消息队列中，然后再使用 Flink 进行消费。这种方法可以有效地削峰平谷，减缓数据流量对 Flink 程序的影响，从而提高程序的稳定性和可靠性。&lt;/p&gt;
+&lt;h3 id=&#34;flink程序在面对数据高峰期时如何处理&#34;&gt;Flink程序在面对数据高峰期时如何处理
+&lt;/h3&gt;&lt;p&gt;当 Flink 程序面对数据高峰期时，一种常用的方法是使用大容量的 Kafka 作为数据源，将数据先放到消息队列中，然后再使用 Flink 进行消费。这种方法可以有效地削峰平谷，减缓数据流量对 Flink 程序的影响，从而提高程序的稳定性和可靠性。&lt;/p&gt;
 &lt;p&gt;不过，使用 Kafka 作为数据源会影响一点实时性。因为 Kafka 是一个异步的消息队列，数据在队列中需要等待消费者消费，所以会存在一定的延迟。为了解决这个问题，可以采用以下方法：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;调整 Kafka 的参数，如增大 Kafka 的缓存大小、增加 Kafka 的并发消费者数量等，以提高 Kafka 的吞吐量和处理能力。&lt;/li&gt;
@@ -1424,15 +1515,8 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;采用 Flink 中的 Stateful Functions 或 Checkpointing 功能，以保持数据的一致性和可靠性。Stateful Functions 可以让 Flink 程序对数据的处理具有状态感知能力，从而更好地处理数据流中的事件。而 Checkpointing 功能可以让 Flink 程序在处理数据时，定期将中间状态持久化到外部存储系统中，以便在程序失败时进行恢复。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;综上所述，使用 Kafka 作为数据源可以有效地处理数据高峰期，但需要注意 Kafka 和 Flink 的配置优化，以及数据处理的实时性和一致性问题。&lt;/p&gt;
-&lt;h4 id=&#34;24flink分布式快照的原理是什么&#34;&gt;24、Flink分布式快照的原理是什么？
-&lt;/h4&gt;&lt;p&gt;Flink的容错机制的核心部分是制作分布式数据流和操作算子状态的一致性快照。 这些快照充当一致性checkpoint，系统可以在发生故障时回滚。 Flink用于制作这些快照的机制在“分布式数据流的轻量级异步快照”中进行了描述。 它受到分布式快照的标准Chandy-Lamport算法的启发，专门针对Flink的执行模型而定制。&lt;/p&gt;
-&lt;p&gt;barriers在数据流源处被注入并行数据流中。快照n的barriers被插入的位置（我们称之为Sn）是快照所包含的数据在数据源中最大位置。&lt;/p&gt;
-&lt;p&gt;例如，在Apache Kafka中，此位置将是分区中最后一条记录的偏移量。 将该位置Sn报告给checkpoint协调器（Flink的JobManager）。&lt;/p&gt;
-&lt;p&gt;然后barriers向下游流动。当一个中间操作算子从其所有输入流中收到快照n的barriers时，它会为快照n发出barriers进入其所有输出流中。&lt;/p&gt;
-&lt;p&gt;一旦sink操作算子（流式DAG的末端）从其所有输入流接收到barriers n，它就向checkpoint协调器确认快照n完成。&lt;/p&gt;
-&lt;p&gt;在所有sink确认快照后，意味快照着已完成。一旦完成快照n，job将永远不再向数据源请求Sn之前的记录，因为此时这些记录（及其后续记录）将已经通过整个数据流拓扑，也即是已经被处理结束。&lt;/p&gt;
-&lt;h4 id=&#34;25flink跟spark-streaming的区别&#34;&gt;25、Flink跟Spark Streaming的区别
-&lt;/h4&gt;&lt;p&gt;这个问题是一个非常宏观的问题，因为两个框架的不同点非常之多。但是在面试时有非常重要的一点一定要回答出来：Flink 是标准的实时处理引擎，基于事件驱动。而 Spark Streaming 是微批（Micro-Batch）的模型。&lt;/p&gt;
+&lt;h3 id=&#34;flink跟spark-streaming的区别&#34;&gt;Flink跟Spark Streaming的区别
+&lt;/h3&gt;&lt;p&gt;这个问题是一个非常宏观的问题，因为两个框架的不同点非常之多。但是在面试时有非常重要的一点一定要回答出来：Flink 是标准的实时处理引擎，基于事件驱动。而 Spark Streaming 是微批（Micro-Batch）的模型。&lt;/p&gt;
 &lt;p&gt;下面我们就分几个方面介绍两个框架的主要区别：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;架构模型Spark Streaming 在运行时的主要角色包括：Master、Worker、Driver、Executor，Flink 在运行时主要包含：Jobmanager、Taskmanager和Slot。&lt;/li&gt;
@@ -1440,33 +1524,15 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;时间机制Spark Streaming 支持的时间机制有限，只支持处理时间。 Flink 支持了流处理程序在时间上的三个定义：处理时间、事件时间、注入时间。同时也支持 watermark 机制来处理滞后数据。&lt;/li&gt;
 &lt;li&gt;容错机制对于 Spark Streaming 任务，我们可以设置 checkpoint，然后假如发生故障并重启，我们可以从上次 checkpoint 之处恢复，但是这个行为只能使得数据不丢失，可能会重复处理，不能做到恰好一次处理语义。Flink 则使用两阶段提交协议来解决这个问题。&lt;/li&gt;
 &lt;/ol&gt;
-&lt;h4 id=&#34;26说说flink的几种时间语义&#34;&gt;26、说说Flink的几种时间语义
-&lt;/h4&gt;&lt;p&gt;Flink 支持三种时间语义：Event Time、Ingestion Time 和 Processing Time。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;1. Event Time（事件时间）&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Event Time 是事件创建的时间，它通常由事件中的时间戳描述。通常由事件生成器或者传感器生成。在 Flink 中，事件时间可以通过 water-mark 或者定时器来处理。例如，在采集日志数据时，每一条日志都会记录自己的生成时间，Flink 通过时间戳分配器访问事件时间戳。Event Time 是事件产生的时间，与数据处理的时间无关，因此它可以反映事件产生的实时性，但是对于数据处理的延迟和异步性无法体现。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;2. Ingestion Time（注入时间）&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Ingestion Time 是数据进入 Flink 的时间。它是指数据被 Flink 算子处理的时间，与事件创建的时间无关。Ingestion Time 能够反映数据处理的延迟和异步性，但是无法反映事件产生的实时性。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;3. Processing Time（处理时间）&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Processing Time 是每一个执行基于时间操作的算子的本地系统时间，与机器相关。它是指算子处理数据的时间，与事件创建的时间和数据进入 Flink 的时间无关。Processing Time 是默认的时间属性，除非明确指定时间语义为 Event Time 或 Ingestion Time。&lt;/p&gt;
-&lt;p&gt;在实际应用中，选择合适的时间语义可以影响 Flink 处理的数据流的正确性和效率。&lt;/p&gt;
-&lt;p&gt;例如，如果需要处理实时数据流，那么选择 Event Time 更为合适；&lt;/p&gt;
-&lt;p&gt;如果需要处理延迟数据流，那么选择 Ingestion Time 更为合适；&lt;/p&gt;
-&lt;p&gt;如果需要处理离线数据集，那么选择 Processing Time 更为合适。&lt;/p&gt;
-&lt;p&gt;同时，Flink 也提供了 WaterMark 机制来处理延迟数据和异步数据，以保证数据处理的正确性和可靠性。&lt;/p&gt;
-&lt;h4 id=&#34;27说说flink中的watermark机制&#34;&gt;27、说说Flink中的Watermark机制
-&lt;/h4&gt;&lt;p&gt;Flink 中的 Watermark 机制是一种衡量 Event Time 进展的机制，可以用于处理乱序事件。在数据流处理过程中，由于网络延迟、背压等多种因素的影响，数据可能会乱序到达。为了正确处理这些乱序事件，Flink 引入了 Watermark 机制，结合窗口 (Window) 来实现。&lt;/p&gt;
-&lt;p&gt;Watermark 是一个时间戳，用于表示事件时间小于等于该时间戳的数据都已经到达。在 Flink 中，每个 Operator 都会维护一个当前的 Watermark，当一个事件到达时，如果它的时间戳小于等于当前 Watermark，那么该事件就会被认为是到达了，会被放入窗口中进行处理。窗口的执行是由 Watermark 触发的，当 Watermark 达到窗口的结束时间时，窗口就会触发并执行其中的计算逻辑。&lt;/p&gt;
-&lt;p&gt;为了实现窗口的正确处理，Flink 还引入了事件时间 (Event Time) 概念，每个事件都会携带一个时间戳，表示该事件产生的时间。在数据流处理过程中，Flink 会根据事件时间戳的顺序来处理事件，这样可以保证事件的正确顺序。但是，由于网络延迟、背压等原因，事件可能会乱序到达，这就需要使用 Watermark 机制来处理这些乱序事件。&lt;/p&gt;
-&lt;p&gt;总结起来，Flink 中的 Watermark 机制是用于处理乱序事件的一种机制，它可以设定延迟触发，用于表示事件时间小于等于该时间戳的数据都已经到达。通过结合窗口机制，Watermark 机制可以实现对乱序事件的正确处理，保证数据流的正确性和完整性。&lt;/p&gt;
-&lt;h4 id=&#34;28flink怎么做压力测试和监控&#34;&gt;28、Flink怎么做压力测试和监控？
-&lt;/h4&gt;&lt;p&gt;产生的数据流的速度如果过快，而下游的算子消费不过来的话，会产生背压。背压的监控可以使用Flink Web UI来可视化监控Metrics，一旦报警就能知道。一般情况下可能由于sink这个操作符没有优化好，做一下优化就可以了。&lt;/p&gt;
+&lt;h3 id=&#34;flink怎么做压力测试和监控&#34;&gt;Flink怎么做压力测试和监控
+&lt;/h3&gt;&lt;p&gt;产生的数据流的速度如果过快，而下游的算子消费不过来的话，会产生背压。背压的监控可以使用Flink Web UI来可视化监控Metrics，一旦报警就能知道。一般情况下可能由于sink这个操作符没有优化好，做一下优化就可以了。&lt;/p&gt;
 &lt;p&gt;设置watermark的最大延迟时间这个参数，如果设置的过大，可能会造成内存的压力。可以设置最大延迟时间小一些，然后把迟到的元素发送到测输出流中，晚一点更新结果。&lt;/p&gt;
 &lt;p&gt;还有就是滑动窗口的长度如果过大，而滑动距离很短的话，Flink的性能也会下降的厉害。可以通过分片的方法，将每个元素只存入一个“重叠窗口”，这样就可以减少窗口处理中状态的写入。&lt;/p&gt;
-&lt;h4 id=&#34;29flink是通过什么机制实现的背压机制&#34;&gt;29、Flink是通过什么机制实现的背压机制？
-&lt;/h4&gt;&lt;p&gt;Flink在运行时主要由operators和streams两大构件组成。每个operator会消费中间状态的流，并在流上进行转换，然后生成新的流。对于Flink的网络机制一种形象的类比是，Flink使用了高效有界的分布式阻塞队列，就像Java通过的阻塞队列（BlockingQueue）一样。使用BlockingQueue的话，一个较慢的接受者会降低发送者的发送速率，因为一旦队列满了（有界队列）发送者会被阻塞。&lt;/p&gt;
+&lt;h3 id=&#34;flink是通过什么机制实现的背压机制&#34;&gt;Flink是通过什么机制实现的背压机制
+&lt;/h3&gt;&lt;p&gt;Flink在运行时主要由operators和streams两大构件组成。每个operator会消费中间状态的流，并在流上进行转换，然后生成新的流。对于Flink的网络机制一种形象的类比是，Flink使用了高效有界的分布式阻塞队列，就像Java通过的阻塞队列（BlockingQueue）一样。使用BlockingQueue的话，一个较慢的接受者会降低发送者的发送速率，因为一旦队列满了（有界队列）发送者会被阻塞。&lt;/p&gt;
 &lt;p&gt;在Flink中，这些分布式阻塞队列就是这些逻辑流，而队列容量通过缓冲池（LocalBufferPool）实现的。每个被生产和消费的流都会被分配一个缓冲池。缓冲池管理者一组缓冲（Buffer），缓冲在被消费后可以被回收循环利用。&lt;/p&gt;
-&lt;h4 id=&#34;30flink是如何处理反压的如何监控和发现&#34;&gt;30、Flink是如何处理反压的？如何监控和发现？
-&lt;/h4&gt;&lt;p&gt;Flink 的反压（Backpressure）是指当一个 Operator 的输出速度比其下游 Operator 的输入速度慢时，下游 Operator 可能会积累一定数量的数据，导致处理速度变慢，甚至堵塞。为了解决这个问题，Flink 引入了反压机制，以便及时发现并解决数据处理速度不匹配的问题。&lt;/p&gt;
+&lt;h3 id=&#34;flink是如何处理反压的如何监控和发现&#34;&gt;Flink是如何处理反压的？如何监控和发现？
+&lt;/h3&gt;&lt;p&gt;Flink 的反压（Backpressure）是指当一个 Operator 的输出速度比其下游 Operator 的输入速度慢时，下游 Operator 可能会积累一定数量的数据，导致处理速度变慢，甚至堵塞。为了解决这个问题，Flink 引入了反压机制，以便及时发现并解决数据处理速度不匹配的问题。&lt;/p&gt;
 &lt;p&gt;Flink 在处理反压问题时，并没有使用复杂的机制，而是采用了一种简单而高效的方法。Flink 在数据传输过程中使用了分布式阻塞队列，从而有效地解决了反压问题。&lt;/p&gt;
 &lt;p&gt;在 Flink 中，当一个算子的输出速度比下游算子快时，Flink 会使用分布式阻塞队列来缓存输出数据。这样可以避免上游算子过快地生成数据，导致下游算子无法及时处理，从而形成反压。当下游算子需要数据时，它会从队列中取出数据并进行处理。当队列中的数据达到一定阈值时，上游算子会收到通知，从而减缓数据生成速度。这样一来，Flink 就通过分布式阻塞队列实现了反压的缓解。&lt;/p&gt;
 &lt;p&gt;另外，Flink 通过每个 TaskManager 和 JobManager 之间的通信来实现反压的缓解。当下游处理任务时间太长时，Flink 会检测到这种情况，并认为这是一个反压信号。此时，Flink 会将这个反压信号传递给上游任务的管理器。&lt;/p&gt;
@@ -1486,8 +1552,8 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;&lt;strong&gt;自定义监控与报警&lt;/strong&gt; ：为了更加实时和准确地监控反压状态，用户可以编写自定义的监控与报警脚本。这些脚本可以定期获取 Flink 集群的状态信息，并根据预设的规则发送告警通知。例如，当发现某个 Operator 的反压状态为 HIGH 时，可以自动发送告警邮件给相关人员。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;总之，Flink 通过 Web UI、命令行工具、第三方监控工具以及自定义监控与报警等多种方式，帮助用户实时监控和发现反压问题，从而确保数据处理的高效和稳定。&lt;/p&gt;
-&lt;h4 id=&#34;31flink中的window出现了数据倾斜你有什么解决办法&#34;&gt;31、Flink中的Window出现了数据倾斜，你有什么解决办法？
-&lt;/h4&gt;&lt;p&gt;Flink 中的窗口操作是一种基于时间窗口的数据处理方式，可以用于统计分析、监控、实时计算等应用场景。然而，当数据量过大或者数据发送速度不均匀时，可能会导致窗口中堆积的数据量相差过多，即出现了数据倾斜的情况。&lt;/p&gt;
+&lt;h3 id=&#34;flink中的window出现了数据倾斜你有什么解决办法&#34;&gt;Flink中的Window出现了数据倾斜，你有什么解决办法？
+&lt;/h3&gt;&lt;p&gt;Flink 中的窗口操作是一种基于时间窗口的数据处理方式，可以用于统计分析、监控、实时计算等应用场景。然而，当数据量过大或者数据发送速度不均匀时，可能会导致窗口中堆积的数据量相差过多，即出现了数据倾斜的情况。&lt;/p&gt;
 &lt;p&gt;数据倾斜会对 Flink 的性能产生负面影响，因为窗口计算需要对所有数据进行聚合操作，而数据倾斜会导致部分窗口的数据量过大，从而增加计算时间和资源消耗。为了解决数据倾斜问题，可以采用以下几种方法：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;&lt;strong&gt;在数据进入窗口之前做预聚合&lt;/strong&gt; ：这种方法可以在数据进入窗口之前，先进行一定的聚合操作，使得每个窗口中的数据量相对均匀。具体的做法可以是在数据源处进行预聚合，或者在 Flink 中使用 DataStream API 中的窗口聚合函数（如 Tumbling Windows 和 Sliding Windows）进行预聚合。&lt;/li&gt;
@@ -1496,14 +1562,14 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;&lt;strong&gt;使用 Flink 的 Ttl 操作&lt;/strong&gt; ：Flink 中的 Ttl 操作可以在数据到达窗口时，根据数据的时间戳进行淘汰操作，从而避免数据倾斜。具体的做法是设置一个 Ttl 时间，当数据到达窗口时，如果数据的时间戳已经超过了 Ttl 时间，则将该数据淘汰，从而避免数据倾斜。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;综上所述，解决 Flink 中的窗口数据倾斜问题需要根据具体情况进行分析和处理。可以采用预聚合、重新设计窗口聚合的 key、调整窗口参数或者使用 Flink 的 Ttl 操作等方法来避免数据倾斜，从而提高 Flink 的性能和可靠性。&lt;/p&gt;
-&lt;h4 id=&#34;32使用keyby算子时某一个key的数据量过大导致数据倾斜怎么处理&#34;&gt;32、使用KeyBy算子时，某一个Key的数据量过大，导致数据倾斜，怎么处理？
-&lt;/h4&gt;&lt;p&gt;当使用 KeyBy 算子时，如果某个 Key 的数据量过大，会导致数据倾斜，影响计算效率。为了解决这个问题，可以考虑以下方法：&lt;/p&gt;
+&lt;h3 id=&#34;使用keyby算子时某一个key的数据量过大导致数据倾斜怎么处理&#34;&gt;使用KeyBy算子时，某一个Key的数据量过大，导致数据倾斜，怎么处理？
+&lt;/h3&gt;&lt;p&gt;当使用 KeyBy 算子时，如果某个 Key 的数据量过大，会导致数据倾斜，影响计算效率。为了解决这个问题，可以考虑以下方法：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;将 Key 进行散列，将 Key 转换为 Key-随机数的形式，这样可以保证数据散列，对打散后的数据进行聚合统计。这时，我们会得到原始的 Key 加上随机数的统计结果。&lt;/li&gt;
 &lt;li&gt;将散列的 Key 去除拼接的随机数，得到原始的 Key，然后进行二次 KeyBy 进行结果统计。这样可以保证数据倾斜不会影响最终的结果。&lt;/li&gt;
 &lt;/ol&gt;
-&lt;h4 id=&#34;33flink在使用聚合函数之后出现数据热点怎么解决&#34;&gt;33、Flink在使用聚合函数之后出现数据热点怎么解决
-&lt;/h4&gt;&lt;p&gt;Flink 在使用聚合函数之后出现数据热点的问题，主要是由于某些聚合函数的计算量比较大，导致数据处理速度较慢，从而产生了数据积压和延迟。这种情况下，可以通过以下几种方法来解决数据热点问题：&lt;/p&gt;
+&lt;h3 id=&#34;flink在使用聚合函数之后出现数据热点怎么解决&#34;&gt;Flink在使用聚合函数之后出现数据热点怎么解决
+&lt;/h3&gt;&lt;p&gt;Flink 在使用聚合函数之后出现数据热点的问题，主要是由于某些聚合函数的计算量比较大，导致数据处理速度较慢，从而产生了数据积压和延迟。这种情况下，可以通过以下几种方法来解决数据热点问题：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;&lt;strong&gt;增加计算资源&lt;/strong&gt; ：增加计算节点和内存资源，提高 Flink 集群的计算能力，从而加快数据处理速度，降低数据积压和延迟。&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;调整聚合函数参数&lt;/strong&gt; ：有些聚合函数的计算量比较大，可以考虑调整聚合函数的参数，减少计算量，从而提高数据处理速度。例如，可以调整窗口的大小或者滑动间隔等参数。&lt;/li&gt;
@@ -1512,8 +1578,8 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;&lt;strong&gt;调整数据源参数&lt;/strong&gt; ：在某些情况下，数据源的参数设置可能导致数据热点问题。可以调整数据源的参数，例如发送数据的间隔时间、数据压缩等方式，从而降低数据热点问题。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;综上所述，解决 Flink 中的数据热点问题需要根据具体情况进行分析和处理。可以采用增加计算资源、调整聚合函数参数、使用批量处理、采用数据重复消除策略或者调整数据源参数等方法来解决数据热点问题，从而提高 Flink 的性能和可靠性。&lt;/p&gt;
-&lt;h4 id=&#34;34flink-任务延迟高想解决这个问题你会如何入手&#34;&gt;34、Flink 任务延迟高，想解决这个问题，你会如何入手？
-&lt;/h4&gt;&lt;p&gt;如果 Flink 任务延迟高，需要从以下几个方面入手进行优化：&lt;/p&gt;
+&lt;h3 id=&#34;flink-任务延迟高想解决这个问题你会如何入手&#34;&gt;Flink 任务延迟高，想解决这个问题，你会如何入手？
+&lt;/h3&gt;&lt;p&gt;如果 Flink 任务延迟高，需要从以下几个方面入手进行优化：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;&lt;strong&gt;资源调优&lt;/strong&gt; ：首先检查 Flink 集群的资源使用情况，如果发现某些节点资源使用率过高，可以考虑增加节点数量或者调整节点的资源配置，如增加内存、CPU 等。此外，还可以调整任务管理器的资源分配策略，如优先使用空闲节点等。&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;算子调优&lt;/strong&gt; ：如果任务延迟高，可以考虑调整算子的参数，如窗口时长、并发数等。窗口时长越短，计算量越大，可能会导致延迟增加，因此需要根据具体情况进行调整。同时，可以考虑使用更高效的算子，如 Reducer 的并行度可以调整为 taskNumber 的因子等。&lt;/li&gt;
@@ -1522,8 +1588,8 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;&lt;strong&gt;错误处理&lt;/strong&gt; ：如果任务出现错误，可能会导致延迟增加。因此，需要设置正确的错误处理策略，如使用 try-catch 语句、设置错误处理延迟等，以避免错误导致的延迟增加。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;综上所述，要解决 Flink 任务延迟高的问题，需要从资源调优、算子调优、数据优化、任务调度优化和错误处理等方面入手，以提高 Flink 任务的性能和可靠性。&lt;/p&gt;
-&lt;h4 id=&#34;35flink是如何保证exactly-once语义的&#34;&gt;35、Flink是如何保证Exactly-once语义的？
-&lt;/h4&gt;&lt;p&gt;&lt;strong&gt;如果下级存储支持事务&lt;/strong&gt; ：&lt;/p&gt;
+&lt;h3 id=&#34;flink是如何保证exactly-once语义的&#34;&gt;Flink是如何保证Exactly-once语义的？
+&lt;/h3&gt;&lt;p&gt;&lt;strong&gt;如果下级存储支持事务&lt;/strong&gt; ：&lt;/p&gt;
 &lt;p&gt;Flink可以通过实现两阶段提交和状态保存来实现端到端的一致性语义。&lt;/p&gt;
 &lt;p&gt;分为以下几个步骤：&lt;/p&gt;
 &lt;ol&gt;
@@ -1536,30 +1602,16 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;p&gt;&lt;strong&gt;下级存储不支持事务&lt;/strong&gt; ：&lt;/p&gt;
 &lt;p&gt;端到端的exactly-once对sink的要求比较高，具体的实现主要有幂等写入和事务性写入两种方式。幂等写入的场景依赖于业务逻辑，更常见的是用事务性写入。而事务性写入又有预写日志（WAL）和两阶段提交（2PC）两种方式。&lt;/p&gt;
 &lt;p&gt;如果外部系统不支持事务，那么可以使用预写日志的方式，把结果数据当成状态保存，然后在收到checkpoint完成的通知时，一次性写入sink系统。&lt;/p&gt;
-&lt;h4 id=&#34;36说说flink的状态&#34;&gt;36、说说Flink的状态
-&lt;/h4&gt;&lt;p&gt;在 Flink 中，状态是指在实时计算过程中，用于存储和处理数据的一种机制。状态可以分为两种基本类型：KeyedState 和 OperatorState。&lt;/p&gt;
+&lt;h3 id=&#34;说说flink的状态&#34;&gt;说说Flink的状态
+&lt;/h3&gt;&lt;p&gt;在 Flink 中，状态是指在实时计算过程中，用于存储和处理数据的一种机制。状态可以分为两种基本类型：KeyedState 和 OperatorState。&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;strong&gt;KeyedState&lt;/strong&gt; ：是基于键（Key）的状态，通常和 KeyedStream 的操作相关。KeyedState 包含两种基本的状态：ValueState 和 MapState。ValueState 用于存储单一值的状态，而 MapState 用于存储映射关系。在实际生产中，通常使用 KeyedState 中的 ValueState 和 MapState。&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;OperatorState&lt;/strong&gt; ：是基于算子（Operator）的状态，通常和非 KeyedStream 的操作相关。OperatorState 可以存储算子的内部状态，例如窗口状态、累加器等。&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;KeyedState 和 OperatorState 都是 Flink 中的状态类型，它们在实时计算中起到了重要的作用。KeyedState 通常用于处理基于键的数据，例如对某个键进行计数、聚合等操作；而 OperatorState 通常用于处理非基于键的数据，例如对数据进行窗口操作、排序等操作。&lt;/p&gt;
 &lt;p&gt;在学习 Flink 中的状态时，需要了解状态的基本概念、分类、使用方式以及状态管理的相关概念。同时，需要掌握如何在程序中使用 KeyedState 和 OperatorState，以便在实时计算中处理数据。&lt;/p&gt;
-&lt;h4 id=&#34;37说说flink的状态储存机制&#34;&gt;37、说说Flink的状态储存机制
-&lt;/h4&gt;&lt;p&gt;Flink 的状态储存是指在 Flink 程序运行过程中，用于存储和管理算子状态的数据结构和存储系统。Flink 提供了多种状态后端，以适应不同的应用场景和需求。这里将详细叙述 Flink 的状态储存，包括 1.13 版本之前的状态后端和 1.13 版本之后的状态后端。&lt;/p&gt;
-&lt;p&gt;1.13 版本之前：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;MemoryStateBackend&lt;/strong&gt; ：开发时使用。这是一种基于内存的状态后端，用于在开发过程中快速调试和测试 Flink 程序。由于它使用内存存储状态数据，因此适用于状态数据较小的场景。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;FsStateBackend&lt;/strong&gt; ：生产时使用，常用。这是一种基于文件系统的状态后端，将状态数据存储在磁盘上。FsStateBackend 提供了一种高可用性的状态备份和恢复机制，以确保在任务失败时能够恢复状态。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;RocksDBStateBackend&lt;/strong&gt; ：生产时使用，非常大的状态时用。这是一种基于 RocksDB 的状态后端，使用 RocksDB 数据库存储状态数据。RocksDB 是一种支持高效压缩和快速查找的键值存储系统，适用于处理大规模状态数据的场景。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;1.13 版本之后：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;HashMapStateBackend&lt;/strong&gt; ：即 MemoryStateBackend 和 FsStateBackend，根据 API 不同。从 1.13 版本开始，Flink 对状态后端进行了整合，将 MemoryStateBackend 和 FsStateBackend 合并为一个统一的 HashMapStateBackend。它使用 HashMap 数据结构存储状态数据，并提供了一些额外的功能，如快照、checkpoint 等。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;EmbeddedRocksDBStateBackend&lt;/strong&gt; ：生产时使用，非常大的状态时用。这是一种基于 RocksDB 的状态后端，但与 RocksDBStateBackend 不同的是，它将 RocksDB 数据库嵌入到 Flink 的 TaskManager 进程中。这样做的优点是在状态数据较大时，可以减少网络开销和提高访问性能。
-总之，Flink 的状态储存系统包括多种状态后端，以适应不同的应用场景和需求。开发者可以根据实际情况选择合适的状态后端，以实现高效、可靠的 Flink 程序。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h4 id=&#34;38介绍一下flink的cep机制&#34;&gt;38、介绍一下Flink的CEP机制
-&lt;/h4&gt;&lt;p&gt;Flink 的 CEP（Complex Event Processing，复杂事件处理）机制主要用于处理实时数据流中的复杂事件，以便实时地计算和响应这些事件。与传统的批处理方式不同，CEP 机制可以处理实时数据流中的事件，并根据事件的复杂逻辑进行实时计算和响应。&lt;/p&gt;
+&lt;h3 id=&#34;介绍一下flink的cep机制&#34;&gt;介绍一下Flink的CEP机制
+&lt;/h3&gt;&lt;p&gt;Flink 的 CEP（Complex Event Processing，复杂事件处理）机制主要用于处理实时数据流中的复杂事件，以便实时地计算和响应这些事件。与传统的批处理方式不同，CEP 机制可以处理实时数据流中的事件，并根据事件的复杂逻辑进行实时计算和响应。&lt;/p&gt;
 &lt;p&gt;Flink CEP 是在 Flink 中实现的复杂事件处理（CEP）库。CEP 允许在无休止的事件流中检测事件模式，让我们有机会掌握数据中重要的部分。一个或多个由简单事件构成的事件流通过一定的规则匹配，然后输出用户想得到的数据——满足规则的复杂事件。&lt;/p&gt;
 &lt;p&gt;Flink 的 CEP 机制主要依赖于两个核心组件：Flink 的流处理框架和 CEP 库。Flink 的流处理框架提供了低延迟、高吞吐量的数据流处理能力，可以处理海量的实时数据。而 CEP 库则提供了处理复杂事件的逻辑，可以实现事件的过滤、聚合、路由等功能。通过这两个组件的结合，Flink 能够实现对实时数据流中复杂事件的实时处理和响应。&lt;/p&gt;
 &lt;p&gt;Flink 的 CEP 机制具有以下特点：&lt;/p&gt;
@@ -1571,8 +1623,8 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;&lt;strong&gt;流式处理&lt;/strong&gt; ：Flink 的 CEP 机制采用流式处理的方式处理实时数据流，可以实时地计算和响应事件，不需要先收集所有数据再进行批处理。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;Flink 的 CEP 机制在实际应用中可以广泛应用于金融、物联网、物流等行业，例如：实时计算股票交易数据、实时监测传感器数据、实时路由物流信息等。了解 Flink 的 CEP 机制有助于更好地应对实时数据流中的复杂事件处理需求。&lt;/p&gt;
-&lt;h4 id=&#34;39flink-cep-编程中当状态没有到达的时候会将数据保存在哪里&#34;&gt;39、Flink CEP 编程中当状态没有到达的时候会将数据保存在哪里？
-&lt;/h4&gt;&lt;p&gt;在 Flink CEP 编程中，当状态没有到达的时候，数据通常会被保存在内存中。这是因为在流式处理中，CEP 需要支持 EventTime，也就需要支持数据的迟到现象，这就需要使用 Watermark 机制来处理。对于未匹配成功的事件序列的处理，和迟到数据是类似的。在 Flink CEP 的处理逻辑中，状态没有满足的和迟到的数据，都会存储在一个 Map 数据结构中。&lt;/p&gt;
+&lt;h3 id=&#34;flink-cep-编程中当状态没有到达的时候会将数据保存在哪里&#34;&gt;Flink CEP 编程中当状态没有到达的时候会将数据保存在哪里
+&lt;/h3&gt;&lt;p&gt;在 Flink CEP 编程中，当状态没有到达的时候，数据通常会被保存在内存中。这是因为在流式处理中，CEP 需要支持 EventTime，也就需要支持数据的迟到现象，这就需要使用 Watermark 机制来处理。对于未匹配成功的事件序列的处理，和迟到数据是类似的。在 Flink CEP 的处理逻辑中，状态没有满足的和迟到的数据，都会存储在一个 Map 数据结构中。&lt;/p&gt;
 &lt;p&gt;这种内存存储数据的方式在处理延迟数据时是必要的，但也确实可能会对内存造成一定的损伤。为了降低内存占用，可以采取以下策略：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;&lt;strong&gt;合理设置状态的时间间隔&lt;/strong&gt; ：根据业务需求和数据处理的实际情况，合理设置状态的时间间隔，以减少内存中存储的数据量。&lt;/li&gt;
@@ -1581,8 +1633,8 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;&lt;strong&gt;合理设置 Flink 的并行度&lt;/strong&gt; ：根据实际硬件资源情况和数据处理需求，合理设置 Flink 的并行度，以平衡内存占用和处理速度之间的关系。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;在 Flink CEP 编程中，当状态没有到达的时候，数据会被保存在内存中。为了降低内存占用，可以采取合理设置状态时间间隔、使用外部状态存储、优化 CEP 算法以及合理设置 Flink 并行度等策略。&lt;/p&gt;
-&lt;h4 id=&#34;40flink的并行度是什么flink的并行度设置是怎么样的&#34;&gt;40、Flink的并行度是什么？Flink的并行度设置是怎么样的？
-&lt;/h4&gt;&lt;p&gt;Flink 的并行度是指在执行算子时，可以同时处理的数据流分片的数量。通过设置并行度，可以充分利用集群中的多个 TaskSlots（任务槽）来执行多个数据流分片，从而提高计算性能。并行度这个概念很好理解，例如 Kafka Source，它的并行度默认就是它的分区数量。&lt;/p&gt;
+&lt;h3 id=&#34;flink的并行度是什么flink的并行度设置是怎么样的&#34;&gt;Flink的并行度是什么？Flink的并行度设置是怎么样的？
+&lt;/h3&gt;&lt;p&gt;Flink 的并行度是指在执行算子时，可以同时处理的数据流分片的数量。通过设置并行度，可以充分利用集群中的多个 TaskSlots（任务槽）来执行多个数据流分片，从而提高计算性能。并行度这个概念很好理解，例如 Kafka Source，它的并行度默认就是它的分区数量。&lt;/p&gt;
 &lt;p&gt;Flink 的并行度设置可以通过算子内部的参数或者外部的配置进行调整。&lt;/p&gt;
 &lt;p&gt;下面是一些常见的设置方法：&lt;/p&gt;
 &lt;ol&gt;
@@ -1592,8 +1644,8 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 一般情况下，我们应该根据数据量来设置并行度。对于源算子（如 Kafka Source、HDFS Source 等），它们的并行度通常可以与分区数量保持一致，因为源算子通常不会产生太多的数据量。对于中间算子（如 Map、Filter 等），并行度可以根据数据量的大小进行适当调整。对于聚合算子（如 Reduce、Aggregate 等）和连接算子（如 Join 等），并行度通常需要根据数据量的大小和算子的压力来综合考虑。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;合理地设置并行度可以充分发挥 Flink 的并行计算优势，提高数据处理的性能。&lt;/p&gt;
-&lt;h4 id=&#34;41说说flink的分区策略&#34;&gt;41、说说Flink的分区策略
-&lt;/h4&gt;&lt;p&gt;Flink 提供了多种分区策略以满足不同数据处理的需求。以下是详细的叙述：&lt;/p&gt;
+&lt;h3 id=&#34;说说flink的分区策略&#34;&gt;说说Flink的分区策略
+&lt;/h3&gt;&lt;p&gt;Flink 提供了多种分区策略以满足不同数据处理的需求。以下是详细的叙述：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;&lt;strong&gt;GlobalPartitioner&lt;/strong&gt; ：将数据发到下游算子的第一个实例。这种分区器适用于数据处理过程中只需要一个实例处理的情况。&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;ShufflePartitioner&lt;/strong&gt; ：将数据随机分发到下游算子。这种分区器适用于数据处理过程中需要对数据进行随机分发的情况，例如数据去重或数据混淆等。&lt;/li&gt;
@@ -1606,24 +1658,15 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;&lt;strong&gt;CustomPartitionerWrapper&lt;/strong&gt; ：用户自定义分区器。这种分区器需要用户自己实现 Partitioner 接口，来定义自己的分区逻辑。适用于数据处理过程中需要根据特定逻辑进行数据分区的情况。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;Flink 提供了多种内置的分区器以满足常见的数据处理需求，同时也支持用户自定义分区器以满足特定需求。&lt;/p&gt;
-&lt;h4 id=&#34;42tasksolt是什么&#34;&gt;42、TaskSolt是什么？
-&lt;/h4&gt;&lt;p&gt;TaskSlot 是 Flink 中用于控制 TaskManager 接收任务的数量的一个概念。它是一个抽象的概念，表示一个 TaskManager 能够处理的任务数量。在 Flink 中，TaskManager 是实际执行程序的工作节点，为了起到资源隔离和并行执行的作用，TaskManager 是一个 JVM 进程。通过 TaskSlot 的概念，可以控制 TaskManager 接收的任务数量，从而更好地利用集群资源。&lt;/p&gt;
-&lt;p&gt;当有一个 source 需要指定三个并行度时，它就需要使用三个 TaskSlot。这是因为 TaskSlot 的数量决定了 TaskManager 能够处理的任务数量。如果 source 需要三个并行度，那么 TaskManager 就需要三个 TaskSlot 来处理这三个并行度的任务。&lt;/p&gt;
-&lt;p&gt;还有一个需要主要的优化概念是，当算子的并行度相同，并且没有发生并行度改变、或者没有 shuffle 时，这些算子会合并在一起。这样做的目的是为了减少资源的消耗，提高计算效率。&lt;/p&gt;
-&lt;h4 id=&#34;43flink的slots和并行度有什么关系&#34;&gt;43、Flink的Slots和并行度有什么关系？
-&lt;/h4&gt;&lt;p&gt;Solt 是 TaskManager 中的概念，表示 TaskManager 的一个槽（Slot）。并行度是程序中的概念，表示程序并行执行的程度。在 Flink 中，Solt 和并行度有着密切的关系。&lt;/p&gt;
-&lt;p&gt;具体来说，Solt 是 TaskManager 的资源分配单位，它决定了 TaskManager 能够支持的并行度。一个 TaskManager 有多个 Solt，每个 Solt 可以分配给一个 Task，用于执行程序。因此，TaskManager 的并行度就等于其 Solt 的数量。&lt;/p&gt;
-&lt;p&gt;程序制定的并行度使用的是槽（Solt），也就是说，程序是通过分配 Solt 来控制并行度的。当程序需要更高的并行度时，它可以向 TaskManager 申请更多的 Solt，以便在同一时间内执行更多的 Task。&lt;/p&gt;
-&lt;p&gt;因此，Solt 和并行度之间的关系可以总结为：Solt 是 TaskManager 中的概念，它决定了 TaskManager 能够支持的并行度；并行度是程序中的概念，它是通过分配 Solt 来控制的。TaskManager 是提供方，提供 Solt 资源给程序使用；程序是使用方，通过分配 Solt 来控制并行度。&lt;/p&gt;
-&lt;h4 id=&#34;44说说flink的资源调度&#34;&gt;44、说说Flink的资源调度
-&lt;/h4&gt;&lt;p&gt;Flink 的资源调度是基于 TaskManager 和 Task slot 的概念进行的。TaskManager 是 Flink 中最小的调度单元，负责管理和调度任务。而 Task slot 则是 TaskManager 中最细粒度的资源，代表了一个固定大小的资源子集。每个 TaskManager 会将其所占有的资源平分给它的 slot。通过调整 task slot 的数量，用户可以定义 task 之间是如何相互隔离的。&lt;/p&gt;
+&lt;h3 id=&#34;说说flink的资源调度&#34;&gt;说说Flink的资源调度
+&lt;/h3&gt;&lt;p&gt;Flink 的资源调度是基于 TaskManager 和 Task slot 的概念进行的。TaskManager 是 Flink 中最小的调度单元，负责管理和调度任务。而 Task slot 则是 TaskManager 中最细粒度的资源，代表了一个固定大小的资源子集。每个 TaskManager 会将其所占有的资源平分给它的 slot。通过调整 task slot 的数量，用户可以定义 task 之间是如何相互隔离的。&lt;/p&gt;
 &lt;p&gt;每个 TaskManager 有一个 slot，也就意味着每个 task 运行在独立的 JVM 中。这样做的好处是，任务之间的隔离更加明确，一个任务出现问题不会影响到其他任务。同时，独立的 JVM 可以提供更好的资源管理和垃圾回收。&lt;/p&gt;
 &lt;p&gt;而当 TaskManager 拥有多个 slot 时，多个 task 可以运行在同一个 JVM 中。这样做的好处是，可以共享 TCP 连接（基于多路复用）和心跳消息，从而减少数据的网络传输。此外，同一个 JVM 进程中的 task 还可以共享一些数据结构，从而减少每个 task 的消耗。&lt;/p&gt;
 &lt;p&gt;在 Flink 中，每个 slot 可以接受单个 task，也可以接受多个连续 task 组成的 pipeline。例如，FlatMap 函数占用一个 taskslot，而 key Agg 函数和 sink 函数共用一个 taskslot。这种灵活的资源调度方式可以根据不同的任务需求进行优化和配置，提高系统的资源利用率和性能。&lt;/p&gt;
 &lt;p&gt;总之，Flink 的资源调度是通过 TaskManager 和 Task slot 的概念来实现的，通过调整 task slot 的数量和分配方式，可以满足不同任务的需求，提高系统的资源利用率和性能。&lt;/p&gt;
 &lt;p&gt;如下图所示，FlatMap函数占用一个taskslot，而key Agg函数和sink函数共用一个taskslot：&lt;/p&gt;
-&lt;h4 id=&#34;45flink中有没有重启策略&#34;&gt;45、Flink中有没有重启策略？
-&lt;/h4&gt;&lt;p&gt;Flink 中的重启策略用于在程序运行过程中发生故障时，如何重新启动算子以恢复程序的运行。重启策略可以在 flink-conf.yaml 中配置，也可以在应用代码中动态指定。&lt;/p&gt;
+&lt;h3 id=&#34;flink中有没有重启策略&#34;&gt;Flink中有没有重启策略
+&lt;/h3&gt;&lt;p&gt;Flink 中的重启策略用于在程序运行过程中发生故障时，如何重新启动算子以恢复程序的运行。重启策略可以在 flink-conf.yaml 中配置，也可以在应用代码中动态指定。&lt;/p&gt;
 &lt;p&gt;以下是 Flink 中常见的四种重启策略：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;&lt;strong&gt;故障延迟重启策略&lt;/strong&gt; （Failure Delay Restart Strategy）：当一个算子失败时，该策略会等待一个固定的时间间隔（即延迟时间）后，重新启动该算子。如果在延迟时间内，同一个算子再次失败，则会重新计算延迟时间，并将其设置为之前的两倍。这个过程会一直重复，直到延迟时间达到一个最大的值（通常是 60 秒），此时 Flink 会放弃重启该算子，并将其标记为永久失败。&lt;/li&gt;
@@ -1632,31 +1675,28 @@ Spark 3.0中的AQE标志着查询优化的重大飞跃。通过减少对静态�
 &lt;li&gt;&lt;strong&gt;Fallback 重启策略&lt;/strong&gt; （Fallback Restart Strategy）：当一个算子失败时，该策略会尝试重新启动该算子，如果重启失败，则会 fallback 到之前的版本，即不会重新启动该算子。这个策略适用于那些可能因为程序升级导致失败的算子，以便在重启失败时能够回滚到之前的版本。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;如果没有启用 checkpointing，则使用无重启（no restart）策略。如果启用了 checkpointing，但没有配置重启策略，则使用固定间隔（fixed-delay）策略。在固定间隔策略中，Flink 会等待一个固定的时间间隔后，重新启动失败的算子。这个时间间隔可以通过 flink-conf.yaml 中的 restart.delay 配置项来设置。&lt;/p&gt;
-&lt;h4 id=&#34;46flink假如遇到程序异常重启怎么办&#34;&gt;46、Flink假如遇到程序异常重启怎么办？
-&lt;/h4&gt;&lt;h4 id=&#34;47flink-的分布式缓存有什么作用如何使用&#34;&gt;47、Flink 的分布式缓存有什么作用？如何使用？
-&lt;/h4&gt;&lt;h4 id=&#34;48说说flink中的广播变量使用广播变量的时候需要注意什么&#34;&gt;48、说说Flink中的广播变量，使用广播变量的时候需要注意什么？
-&lt;/h4&gt;&lt;h4 id=&#34;49说说flink-operator-chains&#34;&gt;49、说说Flink Operator Chains
-&lt;/h4&gt;&lt;h4 id=&#34;50flink什么情况下才会把operator-chain在一起形成算子链&#34;&gt;50、Flink什么情况下才会把Operator chain在一起形成算子链？
-&lt;/h4&gt;&lt;h4 id=&#34;51flink序列化如何实现&#34;&gt;51、Flink序列化如何实现
-&lt;/h4&gt;&lt;h4 id=&#34;52flink需要依赖于hadoop吗&#34;&gt;52、Flink需要依赖于Hadoop吗？
-&lt;/h4&gt;&lt;h4 id=&#34;53flink组件栈有哪些&#34;&gt;53、Flink组件栈有哪些
-&lt;/h4&gt;&lt;h4 id=&#34;54flink支持哪些机器学习和图处理库&#34;&gt;54、Flink支持哪些机器学习和图处理库？
-&lt;/h4&gt;&lt;h4 id=&#34;55说说flink-运行时组件&#34;&gt;55、说说Flink 运行时组件
-&lt;/h4&gt;&lt;h4 id=&#34;56flink的api可分为哪几层&#34;&gt;56、Flink的API可分为哪几层？
-&lt;/h4&gt;&lt;h4 id=&#34;57flink中应用在table-api中的udf有几种&#34;&gt;57、Flink中应用在table API中的UDF有几种？
-&lt;/h4&gt;&lt;h4 id=&#34;58说说flink-sql的实现原理&#34;&gt;58、说说Flink SQL的实现原理
-&lt;/h4&gt;&lt;h4 id=&#34;59说说flink任务提交流程&#34;&gt;59、说说Flink任务提交流程
-&lt;/h4&gt;&lt;h4 id=&#34;60flink-on-yarn常见的提交模式有哪些分别有什么优缺点&#34;&gt;60、Flink-On-Yarn常见的提交模式有哪些，分别有什么优缺点？
-&lt;/h4&gt;&lt;h4 id=&#34;61说说flink的执行图&#34;&gt;61、说说Flink的执行图
-&lt;/h4&gt;&lt;h4 id=&#34;62说说flink的cbo逻辑执行计划和物理执行计划&#34;&gt;62、说说Flink的CBO，逻辑执行计划和物理执行计划
-&lt;/h4&gt;&lt;h4 id=&#34;63什么是flink的全局快照为什么需要全局快照&#34;&gt;63、什么是Flink的全局快照？为什么需要全局快照？
-&lt;/h4&gt;&lt;h4 id=&#34;64flink维表关联怎么做&#34;&gt;64、Flink维表关联怎么做
-&lt;/h4&gt;&lt;h4 id=&#34;65flink如何海量key去重&#34;&gt;65、Flink如何海量key去重
-&lt;/h4&gt;&lt;h4 id=&#34;66说说flink的rpc&#34;&gt;66、说说Flink的RPC
-&lt;/h4&gt;&lt;h4 id=&#34;参考&#34;&gt;参考
-&lt;/h4&gt;&lt;p&gt;&lt;a class=&#34;link&#34; href=&#34;https://www.cnblogs.com/crazymakercircle/p/17619152.html&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
-    &gt;1. 史上最全Flink面试题，高薪必备，大数据面试宝典&lt;/a&gt;&lt;/p&gt;
-</description>
+&lt;h3 id=&#34;flink假如遇到程序异常重启怎么办&#34;&gt;Flink假如遇到程序异常重启怎么办
+&lt;/h3&gt;&lt;h3 id=&#34;flink-的分布式缓存有什么作用如何使用&#34;&gt;Flink 的分布式缓存有什么作用？如何使用？
+&lt;/h3&gt;&lt;h3 id=&#34;说说flink中的广播变量使用广播变量的时候需要注意什么&#34;&gt;说说Flink中的广播变量，使用广播变量的时候需要注意什么
+&lt;/h3&gt;&lt;h3 id=&#34;说说flink-operator-chains&#34;&gt;说说Flink Operator Chains
+&lt;/h3&gt;&lt;h3 id=&#34;flink什么情况下才会把operator-chain在一起形成算子链&#34;&gt;Flink什么情况下才会把Operator chain在一起形成算子链
+&lt;/h3&gt;&lt;h3 id=&#34;flink序列化如何实现&#34;&gt;Flink序列化如何实现
+&lt;/h3&gt;&lt;h3 id=&#34;flink需要依赖于hadoop吗&#34;&gt;Flink需要依赖于Hadoop吗
+&lt;/h3&gt;&lt;h3 id=&#34;flink组件栈有哪些&#34;&gt;Flink组件栈有哪些
+&lt;/h3&gt;&lt;h3 id=&#34;flink支持哪些机器学习和图处理库&#34;&gt;Flink支持哪些机器学习和图处理库
+&lt;/h3&gt;&lt;h3 id=&#34;说说flink-运行时组件&#34;&gt;说说Flink 运行时组件
+&lt;/h3&gt;&lt;h3 id=&#34;flink的api可分为哪几层&#34;&gt;Flink的API可分为哪几层
+&lt;/h3&gt;&lt;h3 id=&#34;flink中应用在table-api中的udf有几种&#34;&gt;Flink中应用在table API中的UDF有几种
+&lt;/h3&gt;&lt;h3 id=&#34;说说flink-sql的实现原理&#34;&gt;说说Flink SQL的实现原理
+&lt;/h3&gt;&lt;h3 id=&#34;说说flink任务提交流程&#34;&gt;说说Flink任务提交流程
+&lt;/h3&gt;&lt;h3 id=&#34;flink-on-yarn常见的提交模式有哪些分别有什么优缺点&#34;&gt;Flink-On-Yarn常见的提交模式有哪些，分别有什么优缺点？
+&lt;/h3&gt;&lt;h3 id=&#34;说说flink的执行图&#34;&gt;说说Flink的执行图
+&lt;/h3&gt;&lt;h3 id=&#34;说说flink的cbo逻辑执行计划和物理执行计划&#34;&gt;说说Flink的CBO，逻辑执行计划和物理执行计划
+&lt;/h3&gt;&lt;h3 id=&#34;什么是flink的全局快照为什么需要全局快照&#34;&gt;什么是Flink的全局快照？为什么需要全局快照？
+&lt;/h3&gt;&lt;h3 id=&#34;flink维表关联怎么做&#34;&gt;Flink维表关联怎么做
+&lt;/h3&gt;&lt;h3 id=&#34;flink如何海量key去重&#34;&gt;Flink如何海量key去重
+&lt;/h3&gt;&lt;h3 id=&#34;说说flink的rpc&#34;&gt;说说Flink的RPC
+&lt;/h3&gt;</description>
         </item>
         <item>
         <title>二叉树遍历一文通</title>
