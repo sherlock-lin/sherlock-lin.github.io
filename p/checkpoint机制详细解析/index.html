@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="介绍 checkpoint机制是Flink可靠性的基石，可以保证Flink集群在某个算子因为某些原因(如 异常退出)出现故障时，能够将整个应用流图的状态恢复到故障之前的某一状态，保 证应用流图状态的一致性。Flink的checkpoint机制原理来自“Chandy-Lamport algorithm”算法。\n">
+<title>Checkpoint机制详细解析</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="Checkpoint机制详细解析">
+<meta property='og:description' content="介绍 checkpoint机制是Flink可靠性的基石，可以保证Flink集群在某个算子因为某些原因(如 异常退出)出现故障时，能够将整个应用流图的状态恢复到故障之前的某一状态，保 证应用流图状态的一致性。Flink的checkpoint机制原理来自“Chandy-Lamport algorithm”算法。\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2025-03-18T17:53:25&#43;08:00'/><meta property='article:modified_time' content='2025-03-18T17:53:25&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/trees-8686902_1280%202.jpg' />
+<meta name="twitter:title" content="Checkpoint机制详细解析">
+<meta name="twitter:description" content="介绍 checkpoint机制是Flink可靠性的基石，可以保证Flink集群在某个算子因为某些原因(如 异常退出)出现故障时，能够将整个应用流图的状态恢复到故障之前的某一状态，保 证应用流图状态的一致性。Flink的checkpoint机制原理来自“Chandy-Lamport algorithm”算法。\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/trees-8686902_1280%202.jpg' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/cs_hu10005534405353342465.jpg" width="300"
+                            height="294" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">🥳</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#介绍">介绍</a></li>
+    <li><a href="#checkpoint持久化">Checkpoint持久化</a>
+      <ol>
+        <li><a href="#memstatebackend">MemStateBackend</a></li>
+        <li><a href="#fsstatebackend">FsStateBackend</a></li>
+        <li><a href="#rocksdbstatebackend">RocksDBStateBackend</a></li>
+        <li><a href="#语法">语法</a></li>
+        <li><a href="#修改state-backend的两种方式">修改State Backend的两种方式</a></li>
+        <li><a href="#checkpoint的高级选项">Checkpoint的高级选项</a></li>
+      </ol>
+    </li>
+    <li><a href="#flink的重启策略">Flink的重启策略</a></li>
+    <li><a href="#源码实现">源码实现</a>
+      <ol>
+        <li><a href="#整体设计">整体设计</a></li>
+        <li><a href="#checkpoint触发过程">Checkpoint触发过程</a></li>
+        <li><a href="#对齐barrier触发ck操作">对齐Barrier触发CK操作</a></li>
+        <li><a href="#checkpointcoordinator持久化ck元数据和算子状态">CheckpointCoordinator持久化CK元数据和算子状态</a></li>
+      </ol>
+    </li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/">
+                <img src="/p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/trees-8686902_1280%202_hu14601024129030027031.jpg"
+                        srcset="/p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/trees-8686902_1280%202_hu14601024129030027031.jpg 800w, /p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/trees-8686902_1280%202_hu9104617349249575197.jpg 1600w"
+                        width="800" 
+                        height="548" 
+                        loading="lazy"
+                        alt="Featured image of post Checkpoint机制详细解析" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/flink/" style="background-color: #2a9d8f; color: #fff;">
+                Flink
+            </a>
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/">Checkpoint机制详细解析</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2025-03-18</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 22 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="介绍">介绍
+</h2><p>checkpoint机制是Flink可靠性的基石，可以保证Flink集群在某个算子因为某些原因(如 异常退出)出现故障时，能够将整个应用流图的状态恢复到故障之前的某一状态，保 证应用流图状态的一致性。Flink的checkpoint机制原理来自“Chandy-Lamport algorithm”算法。</p>
+<p>每个需要checkpoint的应用在启动时，Flink的JobManager为其创建一个 CheckpointCoordinator(检查点协调器)，CheckpointCoordinator全权负责本应用的快照制作。</p>
+<p><img src="/p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/l4a4dnc6ri.png"
+	width="551"
+	height="781"
+	srcset="/p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/l4a4dnc6ri_hu5485193840350262993.png 480w, /p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/l4a4dnc6ri_hu7532491345884234892.png 1024w"
+	loading="lazy"
+	
+		alt="img"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="70"
+		data-flex-basis="169px"
+	
+></p>
+<ol>
+<li>CheckpointCoordinator(检查点协调器) 周期性的向该流应用的所有source算子发送 barrier(屏障)。</li>
+<li>当某个source算子收到一个barrier时，便暂停数据处理过程，然后将自己的当前状态制作成快照，并保存到指定的持久化存储中，最后向CheckpointCoordinator报告自己快照制作情况，同时向自身所有下游算子广播该barrier，恢复数据处理</li>
+<li>下游算子收到barrier之后，会暂停自己的数据处理过程，然后将自身的相关状态制作成快照，并保存到指定的持久化存储中，最后向CheckpointCoordinator报告自身快照情况，同时向自身所有下游算子广播该barrier，恢复数据处理。</li>
+<li>每个算子按照步骤3不断制作快照并向下游广播，直到最后barrier传递到sink算子，快照制作完成。</li>
+<li>当CheckpointCoordinator收到所有算子的报告之后，认为该周期的快照制作成功; 否则，如果在规定的时间内没有收到所有算子的报告，则认为本次checkpoint制作失败。</li>
+</ol>
+<p>如果一个算子有两个输入源，则暂时阻塞先收到barrier的输入源，等到第二个输入源相 同编号的barrier到来时，再制作自身快照并向下游广播该barrier。具体如下图所示：</p>
+<p><img src="/p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/64sypptl9m.png"
+	width="331"
+	height="632"
+	srcset="/p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/64sypptl9m_hu11974403002214642931.png 480w, /p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/64sypptl9m_hu17437284674398408106.png 1024w"
+	loading="lazy"
+	
+		alt="img"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="52"
+		data-flex-basis="125px"
+	
+></p>
+<ol>
+<li>假设算子C有A和B两个输入源。</li>
+<li>在第i个快照周期中，由于某些原因(如处理时延、网络时延等)输入源A发出的 barrier 先到来，这时算子C暂时将输入源A的输入通道阻塞，仅收输入源B的数据。</li>
+<li>当输入源B发出的barrier到来时，算子C制作自身快照并向 CheckpointCoordinator 报告自身的快照制作情况，然后将两个barrier合并为一个，向下游所有的算子广播。</li>
+<li>当由于某些原因出现故障时，CheckpointCoordinator通知流图上所有算子统一恢复到某个周期的checkpoint状态，然后恢复数据流处理。分布式checkpoint机制保证了数据仅被处理一次(Exactly Once)。</li>
+</ol>
+<h2 id="checkpoint持久化">Checkpoint持久化
+</h2><h3 id="memstatebackend">MemStateBackend
+</h3><p>该持久化存储主要将快照数据保存到JobManager的内存中，仅适合作为测试以及快照的数据量非常小时使用，并不推荐用作大规模商业部署。</p>
+<p><strong>MemoryStateBackend 的局限性</strong>：</p>
+<p>默认情况下，每个状态的大小限制为 5 MB。可以在MemoryStateBackend的构造函数中增加此值。</p>
+<p>无论配置的最大状态大小如何，状态都不能大于akka帧的大小（请参阅配置）。</p>
+<p>聚合状态必须适合 JobManager 内存。</p>
+<p><strong>建议MemoryStateBackend 用于</strong>：</p>
+<p>本地开发和调试。</p>
+<p>状态很少的作业，例如仅包含一次记录功能的作业（Map，FlatMap，Filter，…），kafka的消费者需要很少的状态。</p>
+<h3 id="fsstatebackend">FsStateBackend
+</h3><p>该持久化存储主要将快照数据保存到文件系统中，目前支持的文件系统主要是 HDFS和本地文件。如果使用HDFS，则初始化FsStateBackend时，需要传入以 “hdfs://”开头的路径(即: new FsStateBackend(&ldquo;hdfs:///hacluster/checkpoint&rdquo;))， 如果使用本地文件，则需要传入以“file://”开头的路径(即:new FsStateBackend(&ldquo;file:///Data&rdquo;))。在分布式情况下，不推荐使用本地文件。如果某 个算子在节点A上失败，在节点B上恢复，使用本地文件时，在B上无法读取节点 A上的数据，导致状态恢复失败。</p>
+<p>建议FsStateBackend：</p>
+<p>具有大状态，长窗口，大键 / 值状态的作业。</p>
+<p>所有高可用性设置。</p>
+<h3 id="rocksdbstatebackend">RocksDBStateBackend
+</h3><p>RocksDBStatBackend介于本地文件和HDFS之间，平时使用RocksDB的功能，将数 据持久化到本地文件中，当制作快照时，将本地数据制作成快照，并持久化到 FsStateBackend中(FsStateBackend不必用户特别指明，只需在初始化时传入HDFS 或本地路径即可，如new RocksDBStateBackend(&ldquo;hdfs:///hacluster/checkpoint&rdquo;)或new RocksDBStateBackend(&ldquo;file:///Data&rdquo;))。</p>
+<p>如果用户使用自定义窗口(window)，不推荐用户使用RocksDBStateBackend。在自定义窗口中，状态以ListState的形式保存在StatBackend中，如果一个key值中有多个value值，则RocksDB读取该种ListState非常缓慢，影响性能。用户可以根据应用的具体情况选择FsStateBackend+HDFS或RocksStateBackend+HDFS。</p>
+<h3 id="语法">语法
+</h3><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">val</span><span class="w"> </span><span class="n">env</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">StreamExecutionEnvironment</span><span class="p">.</span><span class="na">getExecutionEnvironment</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">// start a checkpoint every 1000 ms</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">env</span><span class="p">.</span><span class="na">enableCheckpointing</span><span class="p">(</span><span class="n">1000</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">// advanced options:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">// 设置checkpoint的执行模式，最多执行一次或者至少执行一次</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">env</span><span class="p">.</span><span class="na">getCheckpointConfig</span><span class="p">.</span><span class="na">setCheckpointingMode</span><span class="p">(</span><span class="n">CheckpointingMode</span><span class="p">.</span><span class="na">EXACTLY_ONCE</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">// 设置checkpoint的超时时间</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">env</span><span class="p">.</span><span class="na">getCheckpointConfig</span><span class="p">.</span><span class="na">setCheckpointTimeout</span><span class="p">(</span><span class="n">60000</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">// 如果在只做快照过程中出现错误，是否让整体任务失败：true是  false不是</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">env</span><span class="p">.</span><span class="na">getCheckpointConfig</span><span class="p">.</span><span class="na">setFailTasksOnCheckpointingErrors</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//设置同一时间有多少 个checkpoint可以同时执行 </span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">env</span><span class="p">.</span><span class="na">getCheckpointConfig</span><span class="p">.</span><span class="na">setMaxConcurrentCheckpoints</span><span class="p">(</span><span class="n">1</span><span class="p">)</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="修改state-backend的两种方式">修改State Backend的两种方式
+</h3><p><strong>第一种：单任务调整</strong></p>
+<p>改当前任务代码</p>
+<p>env.setStateBackend(new FsStateBackend(&ldquo;hdfs://namenode:9000/flink/checkpoints&rdquo;)); 或者new MemoryStateBackend() 或者new RocksDBStateBackend(filebackend, true);【需要添加第三方依赖】</p>
+<p><strong>第二种：全局调整</strong></p>
+<p>修改flink-conf.yaml</p>
+<p>state.backend: filesystem state.checkpoints.dir: hdfs://namenode:9000/flink/checkpoints</p>
+<p>注意：state.backend的值可以是下面几种：jobmanager(MemoryStateBackend), filesystem(FsStateBackend), rocksdb(RocksDBStateBackend)</p>
+<h3 id="checkpoint的高级选项">Checkpoint的高级选项
+</h3><p>默认checkpoint功能是disabled的，想要使用的时候需要先启用checkpoint开启之后，默认的checkPointMode是Exactly-once</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="c1">//配置一秒钟开启一个checkpoint</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">env</span><span class="p">.</span><span class="na">enableCheckpointing</span><span class="p">(</span><span class="n">1000</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//指定checkpoint的执行模式</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//两种可选：</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//CheckpointingMode.EXACTLY_ONCE：默认值</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//CheckpointingMode.AT_LEAST_ONCE</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">env</span><span class="p">.</span><span class="na">getCheckpointConfig</span><span class="p">.</span><span class="na">setCheckpointingMode</span><span class="p">(</span><span class="n">CheckpointingMode</span><span class="p">.</span><span class="na">EXACTLY_ONCE</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">一般情况下选择CheckpointingMode</span><span class="p">.</span><span class="na">EXACTLY_ONCE</span><span class="err">，</span><span class="n">除非场景要求极低的延迟</span><span class="err">（</span><span class="n">几毫秒</span><span class="err">）</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">注意</span><span class="err">：</span><span class="n">如果需要保证EXACTLY_ONCE</span><span class="err">，</span><span class="n">source和sink要求必须同时保证EXACTLY_ONCE</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//如果程序被cancle，保留以前做的checkpoint</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">env</span><span class="p">.</span><span class="na">getCheckpointConfig</span><span class="p">.</span><span class="na">enableExternalizedCheckpoints</span><span class="p">(</span><span class="n">ExternalizedCheckpointCleanup</span><span class="p">.</span><span class="na">RETAIN_ON_CANCELLATION</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">默认情况下</span><span class="err">，</span><span class="n">检查点不被保留</span><span class="err">，</span><span class="n">仅用于在故障中恢复作业</span><span class="err">，</span><span class="n">可以启用外部持久化检查点</span><span class="err">，</span><span class="n">同时指定保留策略</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">ExternalizedCheckpointCleanup</span><span class="p">.</span><span class="na">RETAIN_ON_CANCELLATION</span><span class="p">:</span><span class="n">在作业取消时保留检查点</span><span class="err">，</span><span class="n">注意</span><span class="err">，</span><span class="n">在这种情况下</span><span class="err">，</span><span class="n">您必须在取消后手动清理检查点状态</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">ExternalizedCheckpointCleanup</span><span class="p">.</span><span class="na">DELETE_ON_CANCELLATION</span><span class="err">：</span><span class="n">当作业在被cancel时</span><span class="err">，</span><span class="n">删除检查点</span><span class="err">，</span><span class="n">检查点仅在作业失败时可用</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//设置checkpoint超时时间</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">env</span><span class="p">.</span><span class="na">getCheckpointConfig</span><span class="p">.</span><span class="na">setCheckpointTimeout</span><span class="p">(</span><span class="n">60000</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//Checkpointing的超时时间，超时时间内没有完成则被终止</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//设置同一个时间是否可以有多个checkpoint执行</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">env</span><span class="p">.</span><span class="na">getCheckpointConfig</span><span class="p">.</span><span class="na">setMaxConcurrentCheckpoints</span><span class="p">(</span><span class="n">1</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">指定运行中的checkpoint最多可以有多少个</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">env</span><span class="p">.</span><span class="na">getCheckpointConfig</span><span class="p">.</span><span class="na">setFailOnCheckpointingErrors</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">用于指定在checkpoint发生异常的时候</span><span class="err">，</span><span class="n">是否应该fail该task</span><span class="err">，</span><span class="n">默认是true</span><span class="err">，</span><span class="n">如果设置为false</span><span class="err">，</span><span class="n">则task会拒绝checkpoint然后继续运行</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="flink的重启策略">Flink的重启策略
+</h2><p>Flink支持不同的重启策略，这些重启策略控制着job失败后如何重启。集群可以通过默认的重启策略来重启，这个默认的重启策略通常在未指定重启策略的情况下使用，而如果Job提交的时候指定了重启策略，这个重启策略就会覆盖掉集群的默认重启策略。</p>
+<ul>
+<li>fixed-delay: 在Job最终宣告失败之前，Flink尝试执行的次数</li>
+<li>failure-rate: 失败率重启策略在Job失败后会重启，但是超过失败率后，Job会最终被认定失败。在两个连续的重启尝试之间，重启策略会等待一个固定的时间</li>
+<li>None: Job直接失败，不会尝试进行重启</li>
+</ul>
+<p>默认的重启策略是通过Flink的 flink-conf.yaml 来指定的，这个配置参数 restart-strategy 定义了哪种策略会被采用。如果checkpoint未启动，就会采用 no restart 策略，如果启动了checkpoint机制，但是未指定重启策略的话，就会采用 fixed-delay 策略，重试 Integer.MAX_VALUE 次。请参考下面的可用重启策略来了解哪些值是支持的。</p>
+<p>每个重启策略都有自己的参数来控制它的行为，这些值也可以在配置文件中设置，每个重启策略的描述都包含着各自的配置值信息。</p>
+<p>除了定义一个默认的重启策略之外，你还可以为每一个Job指定它自己的重启策略，这个重启策略可以在 ExecutionEnvironment 中调用 setRestartStrategy() 方法来程序化地调用，注意这种方式同样适用于 StreamExecutionEnvironment。</p>
+<p>下面的例子展示了如何为Job设置一个固定延迟重启策略，一旦有失败，系统就会尝试每10秒重启一次，重启3次。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">val</span><span class="w"> </span><span class="n">env</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ExecutionEnvironment</span><span class="p">.</span><span class="na">getExecutionEnvironment</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">env</span><span class="p">.</span><span class="na">setRestartStrategy</span><span class="p">(</span><span class="n">RestartStrategies</span><span class="p">.</span><span class="na">fixedDelayRestart</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">3</span><span class="p">,</span><span class="w"> </span><span class="c1">// 重启次数</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">Time</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="n">10</span><span class="p">,</span><span class="w"> </span><span class="n">TimeUnit</span><span class="p">.</span><span class="na">SECONDS</span><span class="p">)</span><span class="w"> </span><span class="c1">// 延迟时间间隔</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">))</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>固定延迟重启策略会尝试一个给定的次数来重启Job，如果超过了最大的重启次数，Job最终将失败。在连续的两次重启尝试之间，重启策略会等待一个固定的时间。重启策略可以配置flink-conf.yaml的下面配置参数来启用，作为默认的重启策略:</p>
+<p>restart-strategy: fixed-delay //failure-rate、None</p>
+<p>restart-strategy.fixed-delay.attempts: 3 	//在Job最终宣告失败之前，Flink尝试执行的次数</p>
+<p>restart-strategy.fixed-delay.delay: 10 s	//延迟重启意味着一个执行失败之后，并不会立即重启，而是要等待一段时间。</p>
+<h2 id="源码实现">源码实现
+</h2><h3 id="整体设计">整体设计
+</h3><p>Checkpoint执行过程分为：启动、执行以及确认完成三个阶段。</p>
+<ol>
+<li>CheckpointCoordinator控制Checkpoint执行：JM端的CheckpointCoordinator组件会周期性的向数据源发送执行CK的请求，数据源节点将数据源消费的offset发送给JM，存储到CK的元数据信息中。同时向下广播barrier。</li>
+<li>中间算子对齐barrier：中间算子在StreamTaskNetworkInput组件中读取数据并对齐各个channel的barrier。barrier对齐后，触发StreamTask的CK操作。将状态数据快照存储到外部持久化介质中，并向JM发送ack响应（会携带该task的状态信息）。</li>
+<li>CK完成后向Task发送通知：当JM接收到所有sink节点的ack消息后，JM确认本次CK操作完成(JM将CK元数据和算子状态序列化到远程持久化存储或内存之后)，向所有Task实例发送本次CK完成的消息。</li>
+</ol>
+<p>在执行Checkpoint的过程中，JM会对job中所有的快照进行统一协调和管理。在创建ExecutionGrap时会创建对应的组件。
+在ExecutionGrap创建过程中会生成CompletedCheckpointStore、CheckpointStatsTracker 、CheckpointCoordinator组件用于监控和管理Job中的CK操作。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ExecutionGraphBuilder</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="n">ExecutionGraph</span><span class="w"> </span><span class="nf">buildGraph</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="nd">@Nullable</span><span class="w"> </span><span class="n">ExecutionGraph</span><span class="w"> </span><span class="n">prior</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">JobGraph</span><span class="w"> </span><span class="n">jobGraph</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">Configuration</span><span class="w"> </span><span class="n">jobManagerConfig</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">ScheduledExecutorService</span><span class="w"> </span><span class="n">futureExecutor</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">Executor</span><span class="w"> </span><span class="n">ioExecutor</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">SlotProvider</span><span class="w"> </span><span class="n">slotProvider</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">ClassLoader</span><span class="w"> </span><span class="n">classLoader</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">CheckpointRecoveryFactory</span><span class="w"> </span><span class="n">recoveryFactory</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">Time</span><span class="w"> </span><span class="n">rpcTimeout</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">RestartStrategy</span><span class="w"> </span><span class="n">restartStrategy</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">MetricGroup</span><span class="w"> </span><span class="n">metrics</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">BlobWriter</span><span class="w"> </span><span class="n">blobWriter</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">Time</span><span class="w"> </span><span class="n">allocationTimeout</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">Logger</span><span class="w"> </span><span class="n">log</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">ShuffleMaster</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">shuffleMaster</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">JobMasterPartitionTracker</span><span class="w"> </span><span class="n">partitionTracker</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">FailoverStrategy</span><span class="p">.</span><span class="na">Factory</span><span class="w"> </span><span class="n">failoverStrategyFactory</span><span class="p">)</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">JobExecutionException</span><span class="p">,</span><span class="w"> </span><span class="n">JobException</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//。。。</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">JobCheckpointingSettings</span><span class="w"> </span><span class="n">snapshotSettings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">jobGraph</span><span class="p">.</span><span class="na">getCheckpointingSettings</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">snapshotSettings</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//获取source节点，这些节点通过CheckpointCoordinator主动触发CK</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">List</span><span class="o">&lt;</span><span class="n">ExecutionJobVertex</span><span class="o">&gt;</span><span class="w"> </span><span class="n">triggerVertices</span><span class="w"> </span><span class="o">=</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">idToVertex</span><span class="p">(</span><span class="n">snapshotSettings</span><span class="p">.</span><span class="na">getVerticesToTrigger</span><span class="p">(),</span><span class="w"> </span><span class="n">executionGraph</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//ackVertices、confirmVertices存储了StreamGrap的全部节点，所有节点都需要返回Ack确认信息并确认CK执行成功。</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">List</span><span class="o">&lt;</span><span class="n">ExecutionJobVertex</span><span class="o">&gt;</span><span class="w"> </span><span class="n">ackVertices</span><span class="w"> </span><span class="o">=</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">idToVertex</span><span class="p">(</span><span class="n">snapshotSettings</span><span class="p">.</span><span class="na">getVerticesToAcknowledge</span><span class="p">(),</span><span class="w"> </span><span class="n">executionGraph</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">List</span><span class="o">&lt;</span><span class="n">ExecutionJobVertex</span><span class="o">&gt;</span><span class="w"> </span><span class="n">confirmVertices</span><span class="w"> </span><span class="o">=</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">idToVertex</span><span class="p">(</span><span class="n">snapshotSettings</span><span class="p">.</span><span class="na">getVerticesToConfirm</span><span class="p">(),</span><span class="w"> </span><span class="n">executionGraph</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//存储CK的元数据信息</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">CompletedCheckpointStore</span><span class="w"> </span><span class="n">completedCheckpoints</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//通过counter保证只存储固定数量的CompletedCheckpoint</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">CheckpointIDCounter</span><span class="w"> </span><span class="n">checkpointIdCounter</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//。。。</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//用于监控和追踪CK执行和更新的情况，WebUI显示的CK数据主要就来自于该tracker</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">CheckpointStatsTracker</span><span class="w"> </span><span class="n">checkpointStatsTracker</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">CheckpointStatsTracker</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">historySize</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">ackVertices</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">snapshotSettings</span><span class="p">.</span><span class="na">getCheckpointCoordinatorConfiguration</span><span class="p">(),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">metrics</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//。。。</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//在作业执行调度中开启CK，期间会创建CheckpointCoordinator组件</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">executionGraph</span><span class="p">.</span><span class="na">enableCheckpointing</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">chkConfig</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">triggerVertices</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">ackVertices</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">confirmVertices</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">hooks</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">checkpointIdCounter</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">completedCheckpoints</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">rootBackend</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">checkpointStatsTracker</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">	</span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">enableCheckpointing</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">CheckpointCoordinatorConfiguration</span><span class="w"> </span><span class="n">chkConfig</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">List</span><span class="o">&lt;</span><span class="n">ExecutionJobVertex</span><span class="o">&gt;</span><span class="w"> </span><span class="n">verticesToTrigger</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">List</span><span class="o">&lt;</span><span class="n">ExecutionJobVertex</span><span class="o">&gt;</span><span class="w"> </span><span class="n">verticesToWaitFor</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">List</span><span class="o">&lt;</span><span class="n">ExecutionJobVertex</span><span class="o">&gt;</span><span class="w"> </span><span class="n">verticesToCommitTo</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">List</span><span class="o">&lt;</span><span class="n">MasterTriggerRestoreHook</span><span class="o">&lt;?&gt;&gt;</span><span class="w"> </span><span class="n">masterHooks</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">CheckpointIDCounter</span><span class="w"> </span><span class="n">checkpointIDCounter</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">CompletedCheckpointStore</span><span class="w"> </span><span class="n">checkpointStore</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">StateBackend</span><span class="w"> </span><span class="n">checkpointStateBackend</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">CheckpointStatsTracker</span><span class="w"> </span><span class="n">statsTracker</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//。。。</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//timer定时器用于CheckpointCoordinator定时触发Source节点的CK操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointCoordinatorTimer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Executors</span><span class="p">.</span><span class="na">newSingleThreadScheduledExecutor</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">new</span><span class="w"> </span><span class="n">DispatcherThreadFactory</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">Thread</span><span class="p">.</span><span class="na">currentThread</span><span class="p">().</span><span class="na">getThreadGroup</span><span class="p">(),</span><span class="w"> </span><span class="s">&#34;Checkpoint Timer&#34;</span><span class="p">));</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">// CK协调器，用于创建和保持检查点状态等功能，协调和管理Job中的Checkpoint</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">checkpointCoordinator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">CheckpointCoordinator</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">jobInformation</span><span class="p">.</span><span class="na">getJobId</span><span class="p">(),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">chkConfig</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">tasksToTrigger</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">tasksToWaitFor</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">tasksToCommitTo</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointIDCounter</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointStore</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointStateBackend</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">ioExecutor</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">new</span><span class="w"> </span><span class="n">ScheduledExecutorServiceAdapter</span><span class="p">(</span><span class="n">checkpointCoordinatorTimer</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">SharedStateRegistry</span><span class="p">.</span><span class="na">DEFAULT_FACTORY</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">failureManager</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="c1">//注册JobStatusListener监听器，当JobStatus变为running时，通过监听器启动CheckpointCoordinator</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">chkConfig</span><span class="p">.</span><span class="na">getCheckpointInterval</span><span class="p">()</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">Long</span><span class="p">.</span><span class="na">MAX_VALUE</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">registerJobStatusListener</span><span class="p">(</span><span class="n">checkpointCoordinator</span><span class="p">.</span><span class="na">createActivatorDeactivator</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="checkpoint触发过程">Checkpoint触发过程
+</h3><p>CK的触发过程有两种方式：一种时source算子通过CheckpointCoordinator组件进行协调和控制，CheckpointCoordinator通过定时器的方式定时触发source算子节点的CK操作。另一种是下游算子节点根据上游算子节点发送的barrier事件控制CK的触发时机。</p>
+<p><strong>CheckpointCoordinator触发算子Checkpoint操作</strong></p>
+<p>CheckpointCoordinator负责Source算子节点CK操作以及整个作业的CK管理，并且CheckpointCoordinator组件会接收TaskManager在CK执行完成之后返回的Ack信息。CheckpointCoordinator用过监听器启动，当JobStatus变为RUNNING状态时启动CheckpointCoordinator。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">CheckpointCoordinatorDeActivator</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">JobStatusListener</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="nd">@Override</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">jobStatusChanges</span><span class="p">(</span><span class="n">JobID</span><span class="w"> </span><span class="n">jobId</span><span class="p">,</span><span class="w"> </span><span class="n">JobStatus</span><span class="w"> </span><span class="n">newJobStatus</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">timestamp</span><span class="p">,</span><span class="w"> </span><span class="n">Throwable</span><span class="w"> </span><span class="n">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">newJobStatus</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">JobStatus</span><span class="p">.</span><span class="na">RUNNING</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">// 启动CK调度程序</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">coordinator</span><span class="p">.</span><span class="na">startCheckpointScheduler</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">// 停止CK调度</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">coordinator</span><span class="p">.</span><span class="na">stopCheckpointScheduler</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>CheckpointCoordinator通过定时器周期性的触发ScheduledTrigger线程</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">CheckpointCoordinator</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ScheduledExecutor</span><span class="w"> </span><span class="n">timer</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="c1">//通过timer定时器周期性触发ScheduledTrigger线程</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="kd">private</span><span class="w"> </span><span class="n">ScheduledFuture</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">scheduleTriggerWithDelay</span><span class="p">(</span><span class="kt">long</span><span class="w"> </span><span class="n">initDelay</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">return</span><span class="w"> </span><span class="n">timer</span><span class="p">.</span><span class="na">scheduleAtFixedRate</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">new</span><span class="w"> </span><span class="n">ScheduledTrigger</span><span class="p">(),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">initDelay</span><span class="p">,</span><span class="w"> </span><span class="n">baseInterval</span><span class="p">,</span><span class="w"> </span><span class="n">TimeUnit</span><span class="p">.</span><span class="na">MILLISECONDS</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ScheduledTrigger</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">Runnable</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="nd">@Override</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">run</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">try</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="c1">//调用triggerCheckpoint方法触发CK操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">triggerCheckpoint</span><span class="p">(</span><span class="n">System</span><span class="p">.</span><span class="na">currentTimeMillis</span><span class="p">(),</span><span class="w"> </span><span class="kc">true</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">Exception</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">LOG</span><span class="p">.</span><span class="na">error</span><span class="p">(</span><span class="s">&#34;Exception while triggering checkpoint for job {}.&#34;</span><span class="p">,</span><span class="w"> </span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>CheckpointCoordinator.triggerCheckpoint()方法的逻辑比较多，主要包括以下步骤：</p>
+<ol>
+<li>
+<p>CK操作前的检查操作：</p>
+<p>检查CK的执行环节和参数、构建CK操作对应Task节点实例的Execution集合、构建需要发送Ack消息的ExecutionVertex集合。</p>
+</li>
+<li>
+<p>创建PendingCheckpoint</p>
+<p>从开始执行CK操作直到所有Task实例返回Ack确认成功消息，CK会一直处于Pending状态，确保Ck能被成功执行。PendingCheckpoint存储了ID、ackTasks、快照存储位置等信息</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//定义CK过程中状态快照数据存放位置</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="kd">final</span><span class="w"> </span><span class="n">CheckpointStorageLocation</span><span class="w"> </span><span class="n">checkpointStorageLocation</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="kd">final</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">checkpointID</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">try</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">// CK的唯一标记，HA集群会通过Zookeeper实现checkpointID计数</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">checkpointIdCounter</span><span class="p">.</span><span class="na">getAndIncrement</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointStorageLocation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">props</span><span class="p">.</span><span class="na">isSavepoint</span><span class="p">()</span><span class="w"> </span><span class="o">?</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">checkpointStorage</span><span class="p">.</span><span class="na">initializeLocationForSavepoint</span><span class="p">(</span><span class="n">checkpointID</span><span class="p">,</span><span class="w"> </span><span class="n">externalSavepointLocation</span><span class="p">)</span><span class="w"> </span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">checkpointStorage</span><span class="p">.</span><span class="na">initializeLocationForCheckpoint</span><span class="p">(</span><span class="n">checkpointID</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">Throwable</span><span class="w"> </span><span class="n">t</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="kt">int</span><span class="w"> </span><span class="n">numUnsuccessful</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">numUnsuccessfulCheckpointsTriggers</span><span class="p">.</span><span class="na">incrementAndGet</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">LOG</span><span class="p">.</span><span class="na">warn</span><span class="p">(</span><span class="s">&#34;Failed to trigger checkpoint for job {} ({} consecutive failed attempts so far).&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">job</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">numUnsuccessful</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">t</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">CheckpointException</span><span class="p">(</span><span class="n">CheckpointFailureReason</span><span class="p">.</span><span class="na">EXCEPTION</span><span class="p">,</span><span class="w"> </span><span class="n">t</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="kd">final</span><span class="w"> </span><span class="n">PendingCheckpoint</span><span class="w"> </span><span class="n">checkpoint</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">PendingCheckpoint</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">job</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointID</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">timestamp</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">ackTasks</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">masterHooks</span><span class="p">.</span><span class="na">keySet</span><span class="p">(),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">props</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointStorageLocation</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">executor</span><span class="p">);</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>CK操作的触发和完成</p>
+<p>会遍历所有Source算子的Execution节点，触发节点所在TaskExecutor的CK操作。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">		</span><span class="n">Execution</span><span class="o">[]</span><span class="w"> </span><span class="n">executions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Execution</span><span class="o">[</span><span class="n">tasksToTrigger</span><span class="p">.</span><span class="na">length</span><span class="o">]</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//。。。</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//触发所有Source算子的CK操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">Execution</span><span class="w"> </span><span class="n">execution</span><span class="p">:</span><span class="w"> </span><span class="n">executions</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">props</span><span class="p">.</span><span class="na">isSynchronous</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">execution</span><span class="p">.</span><span class="na">triggerSynchronousSavepoint</span><span class="p">(</span><span class="n">checkpointID</span><span class="p">,</span><span class="w"> </span><span class="n">timestamp</span><span class="p">,</span><span class="w"> </span><span class="n">checkpointOptions</span><span class="p">,</span><span class="w"> </span><span class="n">advanceToEndOfTime</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">execution</span><span class="p">.</span><span class="na">triggerCheckpoint</span><span class="p">(</span><span class="n">checkpointID</span><span class="p">,</span><span class="w"> </span><span class="n">timestamp</span><span class="p">,</span><span class="w"> </span><span class="n">checkpointOptions</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//返回CK中的CompletionFuture对象</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">numUnsuccessfulCheckpointsTriggers</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">0</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">return</span><span class="w"> </span><span class="n">checkpoint</span><span class="p">.</span><span class="na">getCompletionFuture</span><span class="p">();</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>之后的会通过Execution的LogicalSlot拿到对于的TaskManagerGateway，然后通过TaskManagerGateway调用TaskExecutor.triggerCheckpoint()。
+再从TaskExecutor的taskSlotTable中拿到对于的Task线程，最后调用StreamTask.triggerCheckpointAsync()方法执行CK操作。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">通过Execution的Slot资源获取到TaskManger对应的网关</span><span class="err">，</span><span class="n">通过RPC调用触发对应Task的CK操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">Execution</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">AccessExecution</span><span class="p">,</span><span class="w"> </span><span class="n">Archiveable</span><span class="o">&lt;</span><span class="n">ArchivedExecution</span><span class="o">&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">LogicalSlot</span><span class="p">.</span><span class="na">Payload</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="kd">private</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">triggerCheckpointHelper</span><span class="p">(</span><span class="kt">long</span><span class="w"> </span><span class="n">checkpointId</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">timestamp</span><span class="p">,</span><span class="w"> </span><span class="n">CheckpointOptions</span><span class="w"> </span><span class="n">checkpointOptions</span><span class="p">,</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="n">advanceToEndOfEventTime</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="kd">final</span><span class="w"> </span><span class="n">CheckpointType</span><span class="w"> </span><span class="n">checkpointType</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">checkpointOptions</span><span class="p">.</span><span class="na">getCheckpointType</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">advanceToEndOfEventTime</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">!</span><span class="p">(</span><span class="n">checkpointType</span><span class="p">.</span><span class="na">isSynchronous</span><span class="p">()</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">checkpointType</span><span class="p">.</span><span class="na">isSavepoint</span><span class="p">()))</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&#34;Only synchronous savepoints are allowed to advance the watermark to MAX.&#34;</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//获取当前Execution分配的LogicalSlot资源</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="kd">final</span><span class="w"> </span><span class="n">LogicalSlot</span><span class="w"> </span><span class="n">slot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">assignedResource</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">slot</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//通过LogicalSlot获取到TaskManager对应的网关</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="kd">final</span><span class="w"> </span><span class="n">TaskManagerGateway</span><span class="w"> </span><span class="n">taskManagerGateway</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">slot</span><span class="p">.</span><span class="na">getTaskManagerGateway</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//RPC调用TaskManager触发对应Task的CK操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">taskManagerGateway</span><span class="p">.</span><span class="na">triggerCheckpoint</span><span class="p">(</span><span class="n">attemptId</span><span class="p">,</span><span class="w"> </span><span class="n">getVertex</span><span class="p">().</span><span class="na">getJobId</span><span class="p">(),</span><span class="w"> </span><span class="n">checkpointId</span><span class="p">,</span><span class="w"> </span><span class="n">timestamp</span><span class="p">,</span><span class="w"> </span><span class="n">checkpointOptions</span><span class="p">,</span><span class="w"> </span><span class="n">advanceToEndOfEventTime</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">LOG</span><span class="p">.</span><span class="na">debug</span><span class="p">(</span><span class="s">&#34;The execution has no slot assigned. This indicates that the execution is no longer running.&#34;</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">StreamTask触发CK操作</span><span class="err">：</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="kd">public</span><span class="w"> </span><span class="kd">abstract</span><span class="w"> </span><span class="kd">class</span> <span class="nc">StreamTask</span><span class="o">&lt;</span><span class="n">OUT</span><span class="p">,</span><span class="w"> </span><span class="n">OP</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">StreamOperator</span><span class="o">&lt;</span><span class="n">OUT</span><span class="o">&gt;&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="kd">extends</span><span class="w"> </span><span class="n">AbstractInvokable</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="kd">implements</span><span class="w"> </span><span class="n">AsyncExceptionHandler</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="nd">@Override</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="kd">public</span><span class="w"> </span><span class="n">Future</span><span class="o">&lt;</span><span class="n">Boolean</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">triggerCheckpointAsync</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">CheckpointMetaData</span><span class="w"> </span><span class="n">checkpointMetaData</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">CheckpointOptions</span><span class="w"> </span><span class="n">checkpointOptions</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="kt">boolean</span><span class="w"> </span><span class="n">advanceToEndOfEventTime</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//将CK操作封装为Mail，发送到StreamTask的MailBox中进行调度</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">return</span><span class="w"> </span><span class="n">mailboxProcessor</span><span class="p">.</span><span class="na">getMainMailboxExecutor</span><span class="p">().</span><span class="na">submit</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="p">()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">triggerCheckpoint</span><span class="p">(</span><span class="n">checkpointMetaData</span><span class="p">,</span><span class="w"> </span><span class="n">checkpointOptions</span><span class="p">,</span><span class="w"> </span><span class="n">advanceToEndOfEventTime</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="s">&#34;checkpoint %s with %s&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointMetaData</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointOptions</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ol>
+<h3 id="对齐barrier触发ck操作">对齐Barrier触发CK操作
+</h3><p>StreamTask的Barrier对齐是通过CheckpointInputGate(封装的InputGate，具有barrier对齐功能)读取网络数据时触发的，这里过具体流程我们在上一节StreamTask数据流中已经介绍过了。
+当所有channel的barrier对齐之后就会触发StreamTask.performCheckpoint()方法，生成当前Task的快照。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">	</span><span class="kd">private</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="nf">performCheckpoint</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">CheckpointMetaData</span><span class="w"> </span><span class="n">checkpointMetaData</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">CheckpointOptions</span><span class="w"> </span><span class="n">checkpointOptions</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">CheckpointMetrics</span><span class="w"> </span><span class="n">checkpointMetrics</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="kt">boolean</span><span class="w"> </span><span class="n">advanceToEndOfTime</span><span class="p">)</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">Exception</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">LOG</span><span class="p">.</span><span class="na">debug</span><span class="p">(</span><span class="s">&#34;Starting checkpoint ({}) {} on task {}&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointMetaData</span><span class="p">.</span><span class="na">getCheckpointId</span><span class="p">(),</span><span class="w"> </span><span class="n">checkpointOptions</span><span class="p">.</span><span class="na">getCheckpointType</span><span class="p">(),</span><span class="w"> </span><span class="n">getName</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="kd">final</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">checkpointId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">checkpointMetaData</span><span class="p">.</span><span class="na">getCheckpointId</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">isRunning</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">actionExecutor</span><span class="p">.</span><span class="na">runThrowing</span><span class="p">(()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">checkpointOptions</span><span class="p">.</span><span class="na">getCheckpointType</span><span class="p">().</span><span class="na">isSynchronous</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">setSynchronousSavepointId</span><span class="p">(</span><span class="n">checkpointId</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">advanceToEndOfTime</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="n">advanceToEndOfEventTime</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="c1">// 一下所有操作应该是原子性的</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="c1">// Step (1): 执行一些预屏障工作，一般是不执行或执行一些轻量级的工作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">operatorChain</span><span class="p">.</span><span class="na">prepareSnapshotPreBarrier</span><span class="p">(</span><span class="n">checkpointId</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="c1">// Step (2): 将barrier向下游广播出去</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">operatorChain</span><span class="p">.</span><span class="na">broadcastCheckpointBarrier</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="n">checkpointId</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="n">checkpointMetaData</span><span class="p">.</span><span class="na">getTimestamp</span><span class="p">(),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="n">checkpointOptions</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="c1">// Step (3): 对所有算子进行快照操作，该步骤是异步操作，不影响数据流的正常处理</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">checkpointState</span><span class="p">(</span><span class="n">checkpointMetaData</span><span class="p">,</span><span class="w"> </span><span class="n">checkpointOptions</span><span class="p">,</span><span class="w"> </span><span class="n">checkpointMetrics</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="p">});</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">return</span><span class="w"> </span><span class="kc">true</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">actionExecutor</span><span class="p">.</span><span class="na">runThrowing</span><span class="p">(()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="c1">// Task没有处于RUNNING状态，向下游广播CancelCheckpointMarker事件，取消此次CK</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="kd">final</span><span class="w"> </span><span class="n">CancelCheckpointMarker</span><span class="w"> </span><span class="n">message</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">CancelCheckpointMarker</span><span class="p">(</span><span class="n">checkpointMetaData</span><span class="p">.</span><span class="na">getCheckpointId</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">recordWriter</span><span class="p">.</span><span class="na">broadcastEvent</span><span class="p">(</span><span class="n">message</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="p">});</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>接下来我们讲解StreamTask执行快照操作的具体过程。</p>
+<ol>
+<li>
+<p>CheckpointingOperation 执行CK操作</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kd">public</span><span class="w"> </span><span class="kd">abstract</span><span class="w"> </span><span class="kd">class</span> <span class="nc">StreamTask</span><span class="o">&lt;</span><span class="n">OUT</span><span class="p">,</span><span class="w"> </span><span class="n">OP</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">StreamOperator</span><span class="o">&lt;</span><span class="n">OUT</span><span class="o">&gt;&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="kd">extends</span><span class="w"> </span><span class="n">AbstractInvokable</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="kd">implements</span><span class="w"> </span><span class="n">AsyncExceptionHandler</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="kd">private</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">checkpointState</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">CheckpointMetaData</span><span class="w"> </span><span class="n">checkpointMetaData</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">CheckpointOptions</span><span class="w"> </span><span class="n">checkpointOptions</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">CheckpointMetrics</span><span class="w"> </span><span class="n">checkpointMetrics</span><span class="p">)</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">Exception</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//创建CheckpointStreamFactory实例，用于具体的状态存储，</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//有Memory和FS两种实现，分别支持内存和文件文件类型系统的数据流输出</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">CheckpointStreamFactory</span><span class="w"> </span><span class="n">storage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">checkpointStorage</span><span class="p">.</span><span class="na">resolveCheckpointStorageLocation</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">checkpointMetaData</span><span class="p">.</span><span class="na">getCheckpointId</span><span class="p">(),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">checkpointOptions</span><span class="p">.</span><span class="na">getTargetLocation</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">// CheckpointingOperation 封装了CK执行的具体操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">CheckpointingOperation</span><span class="w"> </span><span class="n">checkpointingOperation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">CheckpointingOperation</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">this</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointMetaData</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointOptions</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">storage</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointMetrics</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//执行CK操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">checkpointingOperation</span><span class="p">.</span><span class="na">executeCheckpointing</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="kd">class</span> <span class="nc">CheckpointingOperation</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">executeCheckpointing</span><span class="p">()</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">Exception</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//对StreamTask的所有算子创建执行快照操作的OperatorSnapshotFutures对象，</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//并将所有算子的快照操作存储在operatorSnapshotsInProgress集合中</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">StreamOperator</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">op</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">allOperators</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointStreamOperator</span><span class="p">(</span><span class="n">op</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//。。。</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//AsyncCheckpointRunnable线程执行具体快照操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">AsyncCheckpointRunnable</span><span class="w"> </span><span class="n">asyncCheckpointRunnable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">AsyncCheckpointRunnable</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">owner</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">operatorSnapshotsInProgress</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointMetaData</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointMetrics</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">startAsyncPartNano</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//通过StreamTask的asyncOperationsThreadPool线程池，异步执行operatorSnapshotsInProgress集合中所有算子的快照操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">owner</span><span class="p">.</span><span class="na">cancelables</span><span class="p">.</span><span class="na">registerCloseable</span><span class="p">(</span><span class="n">asyncCheckpointRunnable</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">owner</span><span class="p">.</span><span class="na">asyncOperationsThreadPool</span><span class="p">.</span><span class="na">execute</span><span class="p">(</span><span class="n">asyncCheckpointRunnable</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="kd">private</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">checkpointStreamOperator</span><span class="p">(</span><span class="n">StreamOperator</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">op</span><span class="p">)</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">Exception</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="kc">null</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">op</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="c1">//将当前算子的快照操作封装到OperatorSnapshotFutures中</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">OperatorSnapshotFutures</span><span class="w"> </span><span class="n">snapshotInProgress</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">op</span><span class="p">.</span><span class="na">snapshotState</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="n">checkpointMetaData</span><span class="p">.</span><span class="na">getCheckpointId</span><span class="p">(),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="n">checkpointMetaData</span><span class="p">.</span><span class="na">getTimestamp</span><span class="p">(),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="n">checkpointOptions</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="n">storageLocation</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">operatorSnapshotsInProgress</span><span class="p">.</span><span class="na">put</span><span class="p">(</span><span class="n">op</span><span class="p">.</span><span class="na">getOperatorID</span><span class="p">(),</span><span class="w"> </span><span class="n">snapshotInProgress</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>将算子中的状态快照操作封装到OperatorSnapshotFutures 中</p>
+<p>从此处我们可以看出，原生状态和管理状态的状态生成过程不同。</p>
+<p>(1)原生状态主要通过从snapshotContext中获取原生状态的快照操作；</p>
+<p>(2)管理状态主要通过operatorStateBackend&amp;keyedStateBackend进行状态管理，并根据StateBackend的不同实现将状态写入内存或外部文件系统中。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kd">public</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">OperatorSnapshotFutures</span><span class="w"> </span><span class="nf">snapshotState</span><span class="p">(</span><span class="kt">long</span><span class="w"> </span><span class="n">checkpointId</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">timestamp</span><span class="p">,</span><span class="w"> </span><span class="n">CheckpointOptions</span><span class="w"> </span><span class="n">checkpointOptions</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">CheckpointStreamFactory</span><span class="w"> </span><span class="n">factory</span><span class="p">)</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">Exception</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//1.如果有keyedStateBackend ，获取对于的KeyGroupRange </span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">KeyGroupRange</span><span class="w"> </span><span class="n">keyGroupRange</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">keyedStateBackend</span><span class="w"> </span><span class="o">?</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">keyedStateBackend</span><span class="p">.</span><span class="na">getKeyGroupRange</span><span class="p">()</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">KeyGroupRange</span><span class="p">.</span><span class="na">EMPTY_KEY_GROUP_RANGE</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//2.OperatorSnapshotFutures 对象，封装当前算子的状态快照操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">OperatorSnapshotFutures</span><span class="w"> </span><span class="n">snapshotInProgress</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">OperatorSnapshotFutures</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//3.存储快照过程需要的上下文信息</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">StateSnapshotContextSynchronousImpl</span><span class="w"> </span><span class="n">snapshotContext</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">StateSnapshotContextSynchronousImpl</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">checkpointId</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">timestamp</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">factory</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">keyGroupRange</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">getContainingTask</span><span class="p">().</span><span class="na">getCancelables</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">try</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//执行快照操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">snapshotState</span><span class="p">(</span><span class="n">snapshotContext</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//设置KeyedStateRawFuture&amp;OperatorStateRawFuture，用于处理原生数据快照</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">snapshotInProgress</span><span class="p">.</span><span class="na">setKeyedStateRawFuture</span><span class="p">(</span><span class="n">snapshotContext</span><span class="p">.</span><span class="na">getKeyedStateStreamFuture</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">snapshotInProgress</span><span class="p">.</span><span class="na">setOperatorStateRawFuture</span><span class="p">(</span><span class="n">snapshotContext</span><span class="p">.</span><span class="na">getOperatorStateStreamFuture</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//将operatorStateBackend&amp;keyedStateBackend的状态快照方法注册到snapshotInProgress中，等待执行</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="kc">null</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">operatorStateBackend</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="c1">//设置OperatorState快照的异步future</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">snapshotInProgress</span><span class="p">.</span><span class="na">setOperatorStateManagedFuture</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">operatorStateBackend</span><span class="p">.</span><span class="na">snapshot</span><span class="p">(</span><span class="n">checkpointId</span><span class="p">,</span><span class="w"> </span><span class="n">timestamp</span><span class="p">,</span><span class="w"> </span><span class="n">factory</span><span class="p">,</span><span class="w"> </span><span class="n">checkpointOptions</span><span class="p">));</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="kc">null</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">keyedStateBackend</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="c1">//设置KeyedState快照的异步future</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">snapshotInProgress</span><span class="p">.</span><span class="na">setKeyedStateManagedFuture</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">keyedStateBackend</span><span class="p">.</span><span class="na">snapshot</span><span class="p">(</span><span class="n">checkpointId</span><span class="p">,</span><span class="w"> </span><span class="n">timestamp</span><span class="p">,</span><span class="w"> </span><span class="n">factory</span><span class="p">,</span><span class="w"> </span><span class="n">checkpointOptions</span><span class="p">));</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">Exception</span><span class="w"> </span><span class="n">snapshotException</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//。。。</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//snapshotInProgress中封装了当前算子需要执行的所有快照操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">return</span><span class="w"> </span><span class="n">snapshotInProgress</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>AsyncCheckpointRunnable 线程的定义和执行</p>
+<p>所有的状态快照操作都会被封装到OperatorSnapshotFutures对象中，最终通过AsyncCheckpointRunnable 线程触发执行。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kd">protected</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="kd">class</span> <span class="nc">AsyncCheckpointRunnable</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">Runnable</span><span class="p">,</span><span class="w"> </span><span class="n">Closeable</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="nd">@Override</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">run</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">//1.为当前线程初始化文件系统安全网，确保数据正确写入</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">FileSystemSafetyNet</span><span class="p">.</span><span class="na">initializeSafetyNetForThread</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">try</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//发送给JM的CK数据</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">TaskStateSnapshot</span><span class="w"> </span><span class="n">jobManagerTaskOperatorSubtaskStates</span><span class="w"> </span><span class="o">=</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="k">new</span><span class="w"> </span><span class="n">TaskStateSnapshot</span><span class="p">(</span><span class="n">operatorSnapshotsInProgress</span><span class="p">.</span><span class="na">size</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//TaskExecutor本地的状态数据</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">TaskStateSnapshot</span><span class="w"> </span><span class="n">localTaskOperatorSubtaskStates</span><span class="w"> </span><span class="o">=</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="k">new</span><span class="w"> </span><span class="n">TaskStateSnapshot</span><span class="p">(</span><span class="n">operatorSnapshotsInProgress</span><span class="p">.</span><span class="na">size</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//遍历获取StreamTask中所有算子的OperatorSnapshotFutures对象</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">Map</span><span class="p">.</span><span class="na">Entry</span><span class="o">&lt;</span><span class="n">OperatorID</span><span class="p">,</span><span class="w"> </span><span class="n">OperatorSnapshotFutures</span><span class="o">&gt;</span><span class="w"> </span><span class="n">entry</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">operatorSnapshotsInProgress</span><span class="p">.</span><span class="na">entrySet</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">OperatorID</span><span class="w"> </span><span class="n">operatorID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">entry</span><span class="p">.</span><span class="na">getKey</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">OperatorSnapshotFutures</span><span class="w"> </span><span class="n">snapshotInProgress</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">entry</span><span class="p">.</span><span class="na">getValue</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="c1">// 用于执行所有状态快照线程操作，会执行KeyedState&amp;OperatorState的快照操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">OperatorSnapshotFinalizer</span><span class="w"> </span><span class="n">finalizedSnapshots</span><span class="w"> </span><span class="o">=</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="k">new</span><span class="w"> </span><span class="n">OperatorSnapshotFinalizer</span><span class="p">(</span><span class="n">snapshotInProgress</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">jobManagerTaskOperatorSubtaskStates</span><span class="p">.</span><span class="na">putSubtaskStateByOperatorID</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">operatorID</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">finalizedSnapshots</span><span class="p">.</span><span class="na">getJobManagerOwnedState</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">localTaskOperatorSubtaskStates</span><span class="p">.</span><span class="na">putSubtaskStateByOperatorID</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">operatorID</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">finalizedSnapshots</span><span class="p">.</span><span class="na">getTaskLocalState</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//。。。</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">asyncCheckpointState</span><span class="p">.</span><span class="na">compareAndSet</span><span class="p">(</span><span class="n">CheckpointingOperation</span><span class="p">.</span><span class="na">AsyncCheckpointState</span><span class="p">.</span><span class="na">RUNNING</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">CheckpointingOperation</span><span class="p">.</span><span class="na">AsyncCheckpointState</span><span class="p">.</span><span class="na">COMPLETED</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="c1">//异步快照完成，向JM汇报CK的执行结果，并将状态发送给JM</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">reportCompletedSnapshotStates</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">jobManagerTaskOperatorSubtaskStates</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">localTaskOperatorSubtaskStates</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">asyncDurationMillis</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">LOG</span><span class="p">.</span><span class="na">debug</span><span class="p">(</span><span class="s">&#34;{} - asynchronous part of checkpoint {} could not be completed because it was closed before.&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">owner</span><span class="p">.</span><span class="na">getName</span><span class="p">(),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">checkpointMetaData</span><span class="p">.</span><span class="na">getCheckpointId</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">Exception</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">//。。。</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>算子中托管状态主要借助KeyedStateBackend&amp;OperatorStateBackend管理，两个状态后端都实现了SnapshotStrategy接口，提供了状态快照方法。SnapshotStrategy根据不同的状态后端，主要分为HeapSnapshotStrategy和RocksDBSnapshotStrategy，其中RocksDBSnapshotStrategy又分为增量和全量两种子类实现。</p>
+</li>
+<li>
+<p>发送AcknowledgeCheckpoint消息到CheckpointCoordinator中</p>
+<p>在StreamTask中所有算子都完成状态数据的快照之后，Task实例会将TaskStateSnapshot消息发送给JM的CheckpointCoordinator，并在CheckpointCoordinator中完成后续操作，例如确认接受到所有Task实例的Ack消息以及将当前的PendingCheckpoint转换为CompleteCheckpoint，并将CK元数据写到外部持久化文件系统中等操作。</p>
+<p><img src="/p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/image-20250318175855464-2291937.png"
+	width="3120"
+	height="1508"
+	srcset="/p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/image-20250318175855464-2291937_hu18327255845982501952.png 480w, /p/checkpoint%E6%9C%BA%E5%88%B6%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/image-20250318175855464-2291937_hu10712650068893852824.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250318175855464"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="206"
+		data-flex-basis="496px"
+	
+></p>
+</li>
+</ol>
+<p>Checkpoint的确认过程主要如下：</p>
+<ol>
+<li>StreamTask中所有算子快照完成后，调用StreamTask.reportCompletedSnapshotStates方法将快照等信息发送给TaskStateManager；</li>
+<li>TaskStateManager通过CheckpointCoordinatorGateway将CK的Ack信息发送给CheckpointCoordinator；</li>
+<li>JobMaster收到Ack消息之后，调用SchedulerNG.acknowledgeCheckpoint方法将Ack消息封装为AcknowledgeCheckpoint对象，传递给CheckpointCoordinator；</li>
+<li>CheckpointCoordinator取出对于的PendingCheckpoint，判断是否所有Task实例都Ack消息都收到了，如果所有Task的Ack都已收到，则调用completePendingCheckpoint方法完成当前PendingCheckpoint操作；</li>
+<li>将PendingCheckpoint转化为CompleteCheckpoint，此时会将<strong>该CK的元数据和算子状态数据序列化到外部文件系统或内存中</strong>，并将CompleteCheckpoint添加到集合中；</li>
+<li>CheckpointCoordinator遍历所有Task对于的Execution节点，RPC调用ask实例的notifyCheckpointComplete方法。</li>
+</ol>
+<h3 id="checkpointcoordinator持久化ck元数据和算子状态">CheckpointCoordinator持久化CK元数据和算子状态
+</h3><p>CheckpointCoordinator受到所有Task实例的ACK响应后，会调用PendingCheckpoint.finalizeCheckpoint将PendingCheckpoint转化为CompleteCheckpoint，并将CK的状态数据写到外部文件系统中。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kd">public</span><span class="w"> </span><span class="n">CompletedCheckpoint</span><span class="w"> </span><span class="nf">finalizeCheckpoint</span><span class="p">()</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">IOException</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="kd">synchronized</span><span class="w"> </span><span class="p">(</span><span class="n">lock</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">try</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="c1">// write out the metadata</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="kd">final</span><span class="w"> </span><span class="n">Savepoint</span><span class="w"> </span><span class="n">savepoint</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">SavepointV2</span><span class="p">(</span><span class="n">checkpointId</span><span class="p">,</span><span class="w"> </span><span class="n">operatorStates</span><span class="p">.</span><span class="na">values</span><span class="p">(),</span><span class="w"> </span><span class="n">masterStates</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="kd">final</span><span class="w"> </span><span class="n">CompletedCheckpointStorageLocation</span><span class="w"> </span><span class="n">finalizedLocation</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="k">try</span><span class="w"> </span><span class="p">(</span><span class="n">CheckpointMetadataOutputStream</span><span class="w"> </span><span class="n">out</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">targetLocation</span><span class="p">.</span><span class="na">createMetadataOutputStream</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">Checkpoints</span><span class="p">.</span><span class="na">storeCheckpointMetadata</span><span class="p">(</span><span class="n">savepoint</span><span class="p">,</span><span class="w"> </span><span class="n">out</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">					</span><span class="n">finalizedLocation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">out</span><span class="p">.</span><span class="na">closeAndFinalizeCheckpoint</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">CompletedCheckpoint</span><span class="w"> </span><span class="n">completed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">CompletedCheckpoint</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="n">jobId</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="n">checkpointId</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="n">checkpointTimestamp</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="n">System</span><span class="p">.</span><span class="na">currentTimeMillis</span><span class="p">(),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="n">operatorStates</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="n">masterStates</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="n">props</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">						</span><span class="n">finalizedLocation</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="k">return</span><span class="w"> </span><span class="n">completed</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">Throwable</span><span class="w"> </span><span class="n">t</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">onCompletionPromise</span><span class="p">.</span><span class="na">completeExceptionally</span><span class="p">(</span><span class="n">t</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">ExceptionUtils</span><span class="p">.</span><span class="na">rethrowIOException</span><span class="p">(</span><span class="n">t</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="k">return</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span><span class="w"> </span><span class="c1">// silence the compiler</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">最终会调用SavepointV2Serializer</span><span class="w"> </span><span class="n">将状态序列化后</span><span class="err">，</span><span class="n">写到外部文件系统或内存中</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">SavepointV2Serializer</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">SavepointSerializer</span><span class="o">&lt;</span><span class="n">SavepointV2</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="nd">@Override</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">serialize</span><span class="p">(</span><span class="n">SavepointV2</span><span class="w"> </span><span class="n">checkpointMetadata</span><span class="p">,</span><span class="w"> </span><span class="n">DataOutputStream</span><span class="w"> </span><span class="n">dos</span><span class="p">)</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">IOException</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">// first: checkpoint ID</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">dos</span><span class="p">.</span><span class="na">writeLong</span><span class="p">(</span><span class="n">checkpointMetadata</span><span class="p">.</span><span class="na">getCheckpointId</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">// second: master state</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="kd">final</span><span class="w"> </span><span class="n">Collection</span><span class="o">&lt;</span><span class="n">MasterState</span><span class="o">&gt;</span><span class="w"> </span><span class="n">masterStates</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">checkpointMetadata</span><span class="p">.</span><span class="na">getMasterStates</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">dos</span><span class="p">.</span><span class="na">writeInt</span><span class="p">(</span><span class="n">masterStates</span><span class="p">.</span><span class="na">size</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">MasterState</span><span class="w"> </span><span class="n">ms</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">masterStates</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">serializeMasterState</span><span class="p">(</span><span class="n">ms</span><span class="p">,</span><span class="w"> </span><span class="n">dos</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="c1">// third: operator states</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">Collection</span><span class="o">&lt;</span><span class="n">OperatorState</span><span class="o">&gt;</span><span class="w"> </span><span class="n">operatorStates</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">checkpointMetadata</span><span class="p">.</span><span class="na">getOperatorStates</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">dos</span><span class="p">.</span><span class="na">writeInt</span><span class="p">(</span><span class="n">operatorStates</span><span class="p">.</span><span class="na">size</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">OperatorState</span><span class="w"> </span><span class="n">operatorState</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">operatorStates</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">// Operator ID</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">dos</span><span class="p">.</span><span class="na">writeLong</span><span class="p">(</span><span class="n">operatorState</span><span class="p">.</span><span class="na">getOperatorID</span><span class="p">().</span><span class="na">getLowerPart</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">dos</span><span class="p">.</span><span class="na">writeLong</span><span class="p">(</span><span class="n">operatorState</span><span class="p">.</span><span class="na">getOperatorID</span><span class="p">().</span><span class="na">getUpperPart</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">// Parallelism</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="kt">int</span><span class="w"> </span><span class="n">parallelism</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">operatorState</span><span class="p">.</span><span class="na">getParallelism</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">dos</span><span class="p">.</span><span class="na">writeInt</span><span class="p">(</span><span class="n">parallelism</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">dos</span><span class="p">.</span><span class="na">writeInt</span><span class="p">(</span><span class="n">operatorState</span><span class="p">.</span><span class="na">getMaxParallelism</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">dos</span><span class="p">.</span><span class="na">writeInt</span><span class="p">(</span><span class="n">1</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="c1">// Sub task states</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">Map</span><span class="o">&lt;</span><span class="n">Integer</span><span class="p">,</span><span class="w"> </span><span class="n">OperatorSubtaskState</span><span class="o">&gt;</span><span class="w"> </span><span class="n">subtaskStateMap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">operatorState</span><span class="p">.</span><span class="na">getSubtaskStates</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">dos</span><span class="p">.</span><span class="na">writeInt</span><span class="p">(</span><span class="n">subtaskStateMap</span><span class="p">.</span><span class="na">size</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">Map</span><span class="p">.</span><span class="na">Entry</span><span class="o">&lt;</span><span class="n">Integer</span><span class="p">,</span><span class="w"> </span><span class="n">OperatorSubtaskState</span><span class="o">&gt;</span><span class="w"> </span><span class="n">entry</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">subtaskStateMap</span><span class="p">.</span><span class="na">entrySet</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">dos</span><span class="p">.</span><span class="na">writeInt</span><span class="p">(</span><span class="n">entry</span><span class="p">.</span><span class="na">getKey</span><span class="p">());</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">serializeSubtaskState</span><span class="p">(</span><span class="n">entry</span><span class="p">.</span><span class="na">getValue</span><span class="p">(),</span><span class="w"> </span><span class="n">dos</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div>
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/%E5%9F%BA%E7%A1%80%E7%AE%97%E5%AD%90%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E5%9F%BA%E7%A1%80%E7%AE%97%E5%AD%90%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/gull-8151932_1280.2050c59bb0284804503603eb8e507404_hu6399228128241274359.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 基础算子学习笔记"
+                        
+                        data-hash="md5-IFDFm7AoSARQNgPrjlB0BA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">基础算子学习笔记</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E4%B8%80%E6%96%87%E5%BC%84%E6%98%8E%E7%99%BDkeyedprocessfunction%E5%87%BD%E6%95%B0/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E4%B8%80%E6%96%87%E5%BC%84%E6%98%8E%E7%99%BDkeyedprocessfunction%E5%87%BD%E6%95%B0/grebe-7972183_1280.6dd8a2d7b8cf99148cf7a877d9459ae8_hu10399000877992530385.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 一文弄明白KeyedProcessFunction函数"
+                        
+                        data-hash="md5-bdii17jPmRSM96h32UWa6A==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">一文弄明白KeyedProcessFunction函数</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/flinkcdc%E8%AF%BB%E5%8F%96binlog%E6%A0%B7%E4%BE%8B/">
+        
+        
+            <div class="article-image">
+                <img src="/p/flinkcdc%E8%AF%BB%E5%8F%96binlog%E6%A0%B7%E4%BE%8B/the-creative-exchange-d2zvqp3fpro-unsplash.60116b1ccfc8632e9a65f7d51df3efc2_hu2042364712198079406.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post FlinkCDC读取binlog样例"
+                        
+                        data-hash="md5-YBFrHM/IYy6aZffVHfPvwg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">FlinkCDC读取binlog样例</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/oom%E9%83%BD%E6%98%AF%E8%B0%81%E7%9A%84%E9%94%85/">
+        
+        
+            <div class="article-image">
+                <img src="/p/oom%E9%83%BD%E6%98%AF%E8%B0%81%E7%9A%84%E9%94%85/winter-8433267_1280.1db9e97625db6d61118e6635dc1248b1_hu14689633931296498845.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post OOM都是谁的锅"
+                        
+                        data-hash="md5-HbnpdiXbbWERjmY13BJIsQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">OOM都是谁的锅</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%AF%A6%E8%A7%A3spark%E5%B9%BF%E6%92%AD%E5%8F%98%E9%87%8F/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%AF%A6%E8%A7%A3spark%E5%B9%BF%E6%92%AD%E5%8F%98%E9%87%8F/pawel-czerwinski-8uZPynIu-rQ-unsplash.c514d916917173a48a42e0114b469961_hu7626638945853200361.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 详解Spark广播变量"
+                        
+                        data-hash="md5-xRTZFpFxc6SKQuARS0aZYQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">详解Spark广播变量</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2025 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
