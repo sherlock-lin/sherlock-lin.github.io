@@ -576,7 +576,52 @@ UV：使用 COUNT(DISTINCT user_id) 计算。&lt;/p&gt;
         
         <guid>https://sherlock-lin.github.io/p/spark%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/</guid>
         <description>&lt;img src="https://sherlock-lin.github.io/p/spark%E9%9D%A2%E8%AF%95%E4%B8%80%E6%96%87%E9%80%9A/nevada-8338929_1280.jpg" alt="Featured image of post Spark面试一文通" /&gt;&lt;h2 id=&#34;高频&#34;&gt;高频
-&lt;/h2&gt;&lt;h3 id=&#34;spark-为什么比hive快&#34;&gt;Spark 为什么比hive快
+&lt;/h2&gt;&lt;h3 id=&#34;说说rdddataframedataset三者的区别与联系&#34;&gt;说说RDD、DataFrame、DataSet三者的区别与联系
+&lt;/h3&gt;&lt;p&gt;RDD (Spark1.0) —&amp;gt; Dataframe(Spark1.3) —&amp;gt; Dataset(Spark1.6)&lt;/p&gt;
+&lt;p&gt;Spark最开始只提供了RDD，RDD它是Spark中最基本的数据处理模型，代表了一个弹性、不可变、可分区、里面的元素可进行计算的集合。但它的缺点也很明显，就是无法获取到所存元素的具体结构，因此Spark引入了DataFrame，DataFrame除了记录数据还记录了数据的结构信息schema，可以把它当做数据库中的一张表来对待。相比RDD来说性能更高、API使用更加友好，门槛更低。DataFrame可以基于已有的信息做RBO层面的优化，例如谓词下推也就是filter前置、列裁剪、分区裁剪等，并且数据可以以二进制的方式存在非堆内存，摆脱GC的限制提升性能。但DataFrame只能表示一个表对象，而在业务中会有各种各样的对象，因此Spark又增加了DataSet的支持，DataSet支持任意对象并且具有DataFrame的所有优势，可以把DataFrame看做DataSet的一个特例，RDD、Dataframe、Dataset三者之间可以互相转换。&lt;/p&gt;
+&lt;p&gt;DataFrame 只能做到运行时类型检查, DataSet 能做到编译和运行时都有类型检查。&lt;/p&gt;
+&lt;h3 id=&#34;spark的stage划分&#34;&gt;Spark的Stage划分
+&lt;/h3&gt;&lt;p&gt;Spark会将Job作业根据宽依赖划分为多个Stage，每个Stage包含一组可以并行执行的Task任务。&lt;/p&gt;
+&lt;p&gt;它的划分流程是这样，首先会从最终的RDD开始，根据血缘关系(Lineage)逆向遍历RDD，遇到窄依赖时就继续向上遍历，遇到宽依赖时，将当前已经遍历过的RDD划分为一个Stage，并创建一个新的Stage重复上诉过程，直到遍历完所有的RDD。&lt;/p&gt;
+&lt;p&gt;尽量避免使用 groupByKey 等宽依赖操作，改用 reduceByKey 等窄依赖操作。同时可以通过 Spark UI 查看作业的阶段划分和任务执行情况，以及查看 Driver 和 Executor 的日志，分析阶段划分和任务执行的性能瓶颈。&lt;/p&gt;
+&lt;h3 id=&#34;什么情况下会产生spark-shuffle&#34;&gt;什么情况下会产生Spark Shuffle
+&lt;/h3&gt;&lt;p&gt;宽依赖操作会导致 Shuffle，因为数据需要重新分布到不同的分区，例如groupByKey、reduceByKey、join、cogroup、distinct、repartition、sortByKey。&lt;/p&gt;
+&lt;p&gt;我们应当尽量避免不必要的shuffle或者要对shuffle做些调优，例如使用广播JOIN、使用 reduceByKey 代替 groupByKey(reduceByKey 在 Map 端进行局部聚合，减少了 Shuffle 数据量)、优化分区数、使用缓存等。避免不必要的 Shuffle，是优化 Spark 作业性能的关键，通过合理设计数据处理逻辑和优化配置，可以显著减少 Shuffle 的开销。&lt;/p&gt;
+&lt;h3 id=&#34;spark中lineage的基本原理&#34;&gt;Spark中Lineage的基本原理
+&lt;/h3&gt;&lt;p&gt;在Spark中，Lineage（血统）是一种记录RDD之间依赖关系的机制。每一个 RDD 都是一个不可变的分布式可重算的数据集，它记录着确定性的操作以及继承关系，任意一个 RDD 的分区出错或不可用，都是可以利用原始输入数据通过转换操作而重新算出的，它是Spark实现容错性和数据恢复的关键。&lt;/p&gt;
+&lt;p&gt;Lineage的基本原理如下：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;RDD的创建&lt;/strong&gt; ：当我们创建一个RDD时，Spark会将其初始数据划分为一系列的分区，并将这些分区的元数据保存在Lineage中。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;转换操作&lt;/strong&gt; ：当我们对RDD进行转换操作（如map、filter、reduce等），Spark会根据转换操作的逻辑生成一个新的RDD，并将这个转换操作添加到当前RDD的Lineage中。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;宽依赖和窄依赖&lt;/strong&gt; ：当一个RDD依赖于多个父RDD时，称为宽依赖；当一个RDD只依赖于一个父RDD时，称为窄依赖。Spark通过这种依赖关系来构建RDD之间的有向无环图（DAG）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;容错性和数据恢复&lt;/strong&gt; ：当某个RDD分区数据丢失或节点失败时，Spark可以根据Lineage重新计算丢失的分区。它会遍历RDD的Lineage，根据依赖关系逐级计算缺失的分区，直到达到原始数据的来源。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;通过使用Lineage，Spark可以实现容错性和数据恢复。当节点失败或数据丢失时，Spark可以根据Lineage重新计算丢失的数据，而无需重新计算整个RDD，从而提高了计算效率和可靠性。&lt;/p&gt;
+&lt;p&gt;如果一个分区出错了：对于窄依赖，则只要把丢失的父 RDD 分区重算即可，不依赖于其他分区；对于宽依赖，则父 RDD 的所有分区都需要重算，代价昂贵；所以在长“血统”链特别是有宽依赖的时候，需要在适当的时机设置数据检查点。&lt;/p&gt;
+&lt;h3 id=&#34;介绍一下spark-sql解析过程&#34;&gt;介绍一下Spark SQL解析过程
+&lt;/h3&gt;&lt;p&gt;Spark SQL是Apache Spark中的一个模块，用于处理结构化数据。它提供了一个用于查询数据的统一编程接口，并支持SQL查询和DataFrame API。Spark SQL的解析过程包括以下几个步骤：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;输入SQL查询或DataFrame操作&lt;/strong&gt; ：用户可以使用SQL语句或DataFrame操作来描述他们想要执行的查询或转换操作。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;解析器（Parser）&lt;/strong&gt; ：Spark SQL首先使用解析器将输入的SQL查询或DataFrame操作转换为逻辑计划。解析器负责将输入的查询语句或操作转换为一个抽象语法树（AST）表示。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;语义分析器（Semantic Analyzer）&lt;/strong&gt; ：在解析完成后，Spark SQL使用语义分析器对AST进行处理。语义分析器负责验证查询语句的语法和语义的正确性，包括检查表和列的存在性、解析函数和表达式，并进行类型检查等。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;逻辑优化器（Logical Optimizer）&lt;/strong&gt; ：在语义分析完成后，Spark SQL使用逻辑优化器对逻辑计划进行优化。逻辑优化器通过应用一系列的规则和转换来优化查询计划，以提高查询性能。例如，它可以进行谓词下推、投影消除、常量折叠等优化操作。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;物理优化器（Physical Optimizer）&lt;/strong&gt; ：在逻辑优化完成后，Spark SQL使用物理优化器对逻辑计划进行进一步的优化。物理优化器负责将逻辑计划转换为物理执行计划，选择最优的物理算子和执行策略。它考虑了数据的分布、数据大小、可用的计算资源等因素来选择最佳的执行计划。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;代码生成器（Code Generator）&lt;/strong&gt; ：在物理优化完成后，Spark SQL使用代码生成器将优化后的物理执行计划转换为可执行的Java字节码。代码生成器负责生成高效的执行代码，以提高查询的执行速度。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;执行器（Executor）&lt;/strong&gt; ：最后，Spark SQL将生成的Java字节码交给执行器执行。执行器负责将查询计划分解为一系列的任务，并在集群上执行这些任务。执行器还负责处理数据的读取、计算和输出等操作，以完成整个查询过程。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;总结起来，Spark SQL的解析过程包括解析、语义分析、逻辑优化、物理优化、代码生成和执行等阶段。这些阶段的目标是将用户输入的查询或操作转换为高效的执行计划，并在集群上执行这些计划来处理结构化数据。&lt;/p&gt;
+&lt;h3 id=&#34;raft算法&#34;&gt;Raft算法
+&lt;/h3&gt;&lt;p&gt;分布式系统通常由异步网络连接的多个节点构成，每个节点有独立的计算和存储，节点之间通过网络通信进行协作，分布式一致性是指多个节点对某一变量的取值达成一致。常见的一致性算法包括Paxos算法，Raft算法，ZAB算法等。&lt;/p&gt;
+&lt;p&gt;Raft算法内部采用复制状态机模型，在这个模型中会利用多台服务器构成一个集群，并通过这个集群对外提供一个相对稳定的分布式一致性保证。Raft算法在具体实现中，将分布式一致性问题分解为了Leader选举、日志同步和安全性保证三大子问题。&lt;/p&gt;
+&lt;p&gt;Raft里面有Leader、Follower和Candidate三种角色。集群启动时，所有节点都是Follower角色并且都有一个计时器，如果计时器超时说明当前Follower有一段时间内没有收到 Leader 的消息，那么就可以认为 Leader 已死或者不存在，那么该结点就会转变成 Candidate，意思为准备竞争成为 Leader。成为 Candidate 后结点会向所有其他结点发送请求投票的请求，其他结点在收到请求后会判断是否可以投给他并返回结果。Candidate 如果收到了半数以上的投票就可以成为 Leader，成为Leader之后会立即并在任期内定期发送一个心跳信息通知其他所有结点新的 Leader 信息，并用来重置定时器，避免其他结点再次成为 Candidate。&lt;/p&gt;
+&lt;p&gt;如果 Candidate 在一定时间内没有获得足够的投票，那么就会进行一轮新的选举，直到其成为 Leader,或者其他结点成为了新的 Leader，自己变成 Follower。&lt;/p&gt;
+&lt;p&gt;Raft算法将时间分为一个个的任期（term），每一个term的开始都是Leader选举。每一个任期以一次选举作为起点，所以当一个结点成为 Candidate 并向其他结点请求投票时，会将自己的 Term 加 1，表明新一轮的开始以及旧 Leader 的任期结束。所有结点在收到比自己更新的 Term 之后就会更新自己的 Term 并转成 Follower，而收到过时的消息则拒绝该请求。在成功选举Leader之后，Leader会在整个term内管理整个集群。如果Leader选举失败，该term就会因为没有Leader而结束。&lt;/p&gt;
+&lt;p&gt;在投票时候，所有服务器采用先来先得的原则，在一个任期内只可以投票给一个结点，得到超过半数的投票才可成为 Leader，从而保证了一个任期内只会有一个 Leader 产生（Election Safety）。&lt;/p&gt;
+&lt;p&gt;工作流程：&lt;/p&gt;
+&lt;p&gt;Leader选出后，就开始接收客户端的请求。Leader把请求作为日志条目（Log entries）加入到它的日志中，然后并行的向其他服务器发起 AppendEntries RPC复制日志条目。当这条日志被复制到大多数服务器上，Leader将这条日志应用到它的状态机并向客户端返回执行结果。日志由有序编号（log index）的日志条目组成。每个日志条目包含它被创建时的任期号（term），和用于状态机执行的命令。如果一个日志条目被复制到大多数服务器上，就被认为可以提交（commit）了。&lt;/p&gt;
+&lt;h3 id=&#34;lsm&#34;&gt;LSM
+&lt;/h3&gt;&lt;p&gt;目前HBase,LevelDB,RocksDB、Paimon这些存储都是采用的LSM树。LSM树的核心特点是利用顺序写来提高写性能，但因为分层(此处分层是指的分为内存和文件两部分)的设计会稍微降低读性能，但是通过牺牲小部分读性能换来高性能写，使得LSM树成为非常流行的存储结构。&lt;/p&gt;
+&lt;h3 id=&#34;spark-为什么比hive快&#34;&gt;Spark 为什么比hive快
 &lt;/h3&gt;&lt;p&gt;Spark 相对于 Hive 具有以下几个方面的优势：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;&lt;strong&gt;DAG计算模型&lt;/strong&gt;：Spark 使用自己的DAG执行引擎，通过有向无环图（DAG）来表示任务，优化了任务的调度和执行，避免不必要的中间结果写入磁盘，也就是数据都存在内存中，直接通过算子处理，中间结果不落盘，从而大幅减少磁盘IO开销，而Hive默认使用 MapReduce 作为执行引擎，MapReduce计算模型比较简单，每个算子都会将中间结果写入磁盘，导致大量的磁盘 I/O 操作，所以速度较慢。&lt;/li&gt;
@@ -587,8 +632,8 @@ UV：使用 COUNT(DISTINCT user_id) 计算。&lt;/p&gt;
 &lt;/ol&gt;
 &lt;p&gt;总的来说Spark 之所以比 Hive 快，主要是因为 Spark 采用了DAG计算模型或者说内存计算、延迟计算、Catalyst 优化器等先进技术，减少了磁盘 I/O 和任务调度开销，提高了数据处理效率，因此Spark非常适合像批处理、机器学习这样的场景，当然对于一些传统的批处理场景，Mapreduce仍然是一种可靠的选择。&lt;/p&gt;
 &lt;h3 id=&#34;缓存机制与checkpoint机制的区别&#34;&gt;缓存机制与checkpoint机制的区别
-&lt;/h3&gt;&lt;p&gt;两者都是做RDD持久化的，RDD通过cache方法或者persist方法可以将前面的计算结果缓存，但并不是立即缓存，而是在调用Action算子的时候，这个RDD会被缓存在计算节点的内存中，并供后面使用。缓存既不是transformation也不是action类的算子，并且缓存结束后不会产生新的RDD。&lt;/p&gt;
-&lt;p&gt;缓存有可能丢失，或者存储于内存的数据由于内存不足而被删除，RDD的缓存容错机制保证了即使缓存丢失也能保证计算的正确执行。通过基于RDD的一系列转换，丢失的数据会被重算，由于RDD的各个Partition是相对独立的，因此只需要计算丢失的部分即可，并不需要重算全部Partition。&lt;/p&gt;
+&lt;/h3&gt;&lt;p&gt;两者都是做RDD持久化的，RDD通过cache方法或者persist方法可以将前面的计算结果缓存，这个RDD会被缓存在计算节点的内存中，并供后面使用(但并不是立即缓存，而是在调用Action算子的时候)。缓存既不是transformation也不是action类的算子，并且缓存结束后不会产生新的RDD。&lt;/p&gt;
+&lt;p&gt;缓存有可能丢失，或者存储于内存的数据由于内存不足而被删除，RDD的容错机制保证了即使缓存丢失也能保证计算的正确执行。通过基于RDD的一系列转换，丢失的数据会被重算，由于RDD的各个Partition是相对独立的，因此只需要计算丢失的部分即可，并不需要重算全部Partition。&lt;/p&gt;
 &lt;p&gt;使用缓存的条件：（或者说什么时候进行缓存）&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;要求的计算速度快，对效率要求高的时候&lt;/li&gt;
@@ -694,14 +739,10 @@ UV：使用 COUNT(DISTINCT user_id) 计算。&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h3 id=&#34;spark的stage划分&#34;&gt;Spark的Stage划分
-&lt;/h3&gt;&lt;p&gt;Spark会将Job作业根据宽依赖划分为多个Stage，每个Stage包含一组可以并行执行的Task任务。&lt;/p&gt;
-&lt;p&gt;它的划分流程是这样，首先会从最终的RDD开始，逆向遍历RDD的血缘关系(Lineage)，遇到窄依赖时就继续向上遍历，遇到宽依赖时，将当前已经遍历过的RDD划分为一个Stage，并创建一个新的Stage重复上诉过程，直到遍历完所有的RDD。&lt;/p&gt;
-&lt;p&gt;尽量避免使用 groupByKey 等宽依赖操作，改用 reduceByKey 等窄依赖操作。同时可以通过 Spark UI 查看作业的阶段划分和任务执行情况，以及查看 Driver 和 Executor 的日志，分析阶段划分和任务执行的性能瓶颈。&lt;/p&gt;
 &lt;h3 id=&#34;spark处理数据的具体流程&#34;&gt;Spark处理数据的具体流程
-&lt;/h3&gt;&lt;p&gt;Spark处理数据的流程包括数据加载、任务调度、数据计算、结果输出，这个过程也涉及到资源干礼以及容错等操作。&lt;/p&gt;
+&lt;/h3&gt;&lt;p&gt;Spark处理数据的流程包括数据加载、任务调度、数据计算、结果输出，这个过程也涉及到资源管理以及容错等操作。&lt;/p&gt;
 &lt;p&gt;首先第一步是数据加载，Spark支持多种数据源像HDFS、S3、本地文件系统、Kafka、JDBC等，可以通过textFile、read、parallelize等方法来加载数据，数据加载后会被划分为多个分区，每个分区都是一个独立的数据块。&lt;/p&gt;
-&lt;p&gt;第二步是任务的调度，Spark 根据 RDD 的血缘关系（Lineage）生成有向无环图（DAG），DAG 描述了数据处理的逻辑流程，包括转换操作（Transformation）和行动操作（Action）。然后Spark 会将 DAG 划分为多个阶段（Stage），每个阶段包含一组可以并行执行的任务（Task）。阶段划分的依据是宽依赖（Shuffle Dependency）和窄依赖（Narrow Dependency）。然后Spark 将任务分配给 Executor 执行，任务调度由 Driver 程序负责。&lt;/p&gt;
+&lt;p&gt;第二步是任务的调度，Spark 根据 RDD 的血缘关系（Lineage）生成有向无环图（DAG），DAG 描述了数据处理的逻辑流程，包括转换操作（Transformation）和行动操作（Action）。然后Spark 会将 DAG 划分为多个阶段（Stage），每个Stage包含一组可以并行执行的Task任务。Stage划分的依据是宽依赖（Shuffle Dependency）和窄依赖（Narrow Dependency）。然后Spark 将Task任务分配给 Executor 执行，任务调度由 Driver 程序负责。&lt;/p&gt;
 &lt;p&gt;第三步是任务计算，每个Task任务处理一个分区的数据，执行转换操作如map、filter等，任务在Executor中执行，Executor是运行在集群节点上的进程，在遇到宽依赖比如groupByKey、join的时候，Spark会进行Shuffle操作，Shuffle 操作涉及数据的跨节点传输和重新分区。如果数据需要多次使用，可以将其缓存到内存或磁盘中（如 persist、cache）。&lt;/p&gt;
 &lt;p&gt;最后一步就是结果输出，对于行动操作（如 collect、count），Spark 会将结果返回给 Driver 程序，对于输出操作（如 saveAsTextFile、saveAsTable），Spark 会将结果存储到外部存储系统中。&lt;/p&gt;
 &lt;h3 id=&#34;spark-map-join的实现原理&#34;&gt;Spark map join的实现原理
@@ -738,9 +779,6 @@ UV：使用 COUNT(DISTINCT user_id) 计算。&lt;/p&gt;
 &lt;p&gt;使用高效的序列化库：使用 Kryo 序列化库，减少序列化开销。&lt;/p&gt;
 &lt;p&gt;启用 Shuffle 压缩：通过 spark.shuffle.compress 参数启用压缩，减少网络传输量。&lt;/p&gt;
 &lt;p&gt;数据倾斜处理：对倾斜的 Key 添加随机前缀，分散数据，使用自定义分区器，优化数据分布。&lt;/p&gt;
-&lt;h3 id=&#34;什么情况下会产生spark-shuffle&#34;&gt;什么情况下会产生Spark Shuffle
-&lt;/h3&gt;&lt;p&gt;宽依赖操作会导致 Shuffle，因为数据需要重新分布到不同的分区，例如groupByKey、reduceByKey、join、cogroup、distinct、repartition、sortByKey。&lt;/p&gt;
-&lt;p&gt;我们应当尽量避免不必要的shuffle或者要对shuffle做些调优，例如使用广播JOIN、使用 reduceByKey 代替 groupByKey(reduceByKey 在 Map 端进行局部聚合，减少了 Shuffle 数据量)、优化分区数、使用缓存等。避免不必要的 Shuffle，是优化 Spark 作业性能的关键，通过合理设计数据处理逻辑和优化配置，可以显著减少 Shuffle 的开销。&lt;/p&gt;
 &lt;h3 id=&#34;为什么要spark-shuffle&#34;&gt;为什么要Spark Shuffle
 &lt;/h3&gt;&lt;p&gt;在分布式计算中，数据通常分布在不同的节点上。要对数据进行聚合或连接操作，需要将具有相同 Key 的数据重新分布到同一个节点上进行处理。&lt;/p&gt;
 &lt;h3 id=&#34;说明yarn-cluster模式作业提交流程yarn-cluster与yarn-client的区别&#34;&gt;说明yarn-cluster模式作业提交流程，yarn-cluster与yarn-client的区别
@@ -791,69 +829,8 @@ UV：使用 COUNT(DISTINCT user_id) 计算。&lt;/p&gt;
   3）OtherMemory。给系统预留的，因为程序本身运行也是需要内存的(默认为0.2)。   传统内存管理的不足：
   1）Shuffle占用内存0.2*0.8，内存分配这么少，可能会将数据spill到磁盘，频繁的磁盘IO是很大的负担，Storage内存占用0.6，主要是为了迭代处理。传统的Spark内存分配对操作人的要求非常高。（Shuffle分配内存：ShuffleMemoryManager, TaskMemoryManager, ExecutorMemoryManager）一个Task获得全部的Execution的Memory，其他Task过来就没有内存了，只能等待；
   2）默认情况下，Task在线程中可能会占满整个内存，分片数据&lt;/p&gt;
-&lt;h3 id=&#34;说说rdddataframedataset三者的区别与联系&#34;&gt;说说RDD、DataFrame、DataSet三者的区别与联系
-&lt;/h3&gt;&lt;p&gt;RDD (Spark1.0) —&amp;gt; Dataframe(Spark1.3) —&amp;gt; Dataset(Spark1.6)，如果同样的数据都给到这三个数据结构，他们分别计算之后，都会给出相同的结果。不同是的他们的执行效率和执行方式。在后期的Spark版本中，DataSet会逐步取代RDD和DataFrame成为唯一的API接口。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;RDD&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;RDD叫做弹性分布式数据集，是Spark中最基本的数据处理模型。代码中是一个抽象类，它代表了一个弹性的、不可变的、可分区、里面的元素可进行计算的集合。&lt;/p&gt;
-&lt;p&gt;RDD是一个懒执行的不可变的可以支持Lambda表达式的并行数据集合。
-RDD的最大好处就是简单，API的人性化程度很高。
-RDD的劣势是性能限制，它是一个JVM驻内存对象，这也就决定了存在GC的限制和数据增加时Java序列化成本的升高。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;DataFrame&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;与RDD类似，DataFrame也是一个分布式数据容器。然而DataFrame更像传统数据库的二维表格，除了数据以外，还记录数据的结构信息，即schema。同时，与Hive类似，DataFrame也支持嵌套数据类型（struct、array和map）。从API易用性的角度上看，DataFrame API提供的是一套高层的关系操作，比函数式的RDD API要更加友好，门槛更低。DataFrame多了数据的结构信息，即schema。RDD是分布式的Java对象的集合。DataFrame是分布式的Row对象的集合。DataFrame除了提供了比RDD更丰富的算子以外，更重要的特点是提升执行效率、减少数据读取以及执行计划的优化，比如filter下推、裁剪等。DataFrame是为数据提供了Schema的视图。可以把它当做数据库中的一张表来对待，DataFrame也是懒执行的。&lt;/p&gt;
-&lt;p&gt;DataFrame性能上比RDD要高，主要有两方面原因：&lt;/p&gt;
-&lt;p&gt;定制化内存管理：数据以二进制的方式存在于非堆内存，节省了大量空间之外，还摆脱了GC的限制&lt;/p&gt;
-&lt;p&gt;优化的执行计划：查询计划通过Spark catalyst optimiser进行优化，为了说明查询优化，我们来看上图展示的人口数据分析的示例。图中构造了两个DataFrame，将它们join之后又做了一次filter操作。如果原封不动地执行这个执行计划，最终的执行效率是不高的。因为join是一个代价较大的操作，也可能会产生一个较大的数据集。如果我们能将filter下推到 join下方，先对DataFrame进行过滤，再join过滤后的较小的结果集，便可以有效缩短执行时间。而Spark SQL的查询优化器正是这样做的。简而言之，逻辑查询计划优化就是一个利用基于关系代数的等价变换，将高成本的操作替换为低成本操作的过程。得到的优化执行计划在转换成物 理执行计划的过程中，还可以根据具体的数据源的特性将过滤条件下推至数据源内。最右侧的物理执行计划中Filter之所以消失不见，就是因为溶入了用于执行最终的读取操作的表扫描节点内。对于普通开发者而言，查询优化器的意义在于，即便是经验并不丰富的程序员写出的次优的查询，也可以被尽量转换为高效的形式予以执行。Dataframe的劣势在于在编译期缺少类型安全检查，导致运行时出错.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;DataFrame&lt;/strong&gt;
-&lt;ul&gt;
-&lt;li&gt;带有schema元信息，即 DataFrame 所表示的二维表数据集的每一列都带有名称和类型，便于Spark SQL的操作&lt;/li&gt;
-&lt;li&gt;支持嵌套数据类型（struct、array和Map），从易用性来说，DataFrame提供的是一套高层的关系操作，比函数式的RDD API更加友好&lt;/li&gt;
-&lt;li&gt;因为优化的查询执行计划，导致DataFrame执行效率优于RDD&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;RDD&lt;/strong&gt;
-&lt;ul&gt;
-&lt;li&gt;无法得到所存数据元素的具体结构，SparkCore只能在Stage层面进行简单、通用的流水线优化&lt;/li&gt;
-&lt;li&gt;操作门槛高&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;DataSet&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;1.是Dataframe API的一个扩展，是Spark最新的数据抽象
-2.用户友好的API风格，既具有类型安全检查也具有Dataframe的查询优化特性。
-3.Dataset支持编解码器，当需要访问非堆上的数据时可以避免反序列化整个对象，提高了效率。
-4.样例类被用来在Dataset中定义数据的结构信息，样例类中每个属性的名称直接映射到DataSet中的字段名称。
-5.Dataframe是Dataset的特列，DataFrame=Dataset[Row] ，所以可以通过as方法将Dataframe转换为6.Dataset。Row是一个类型，跟Car、Person这些的类型一样，所有的表结构信息我都用Row来表示。
-6.DataSet是强类型的。比如可以有Dataset[Car]，Dataset[Person].&lt;/p&gt;
-&lt;p&gt;DataFrame只是知道字段，但是不知道字段的类型，所以在执行这些操作的时候是没办法在编译的时候检查是否类型失败的，比如你可以对一个String进行减法操作，在执行的时候才报错，而DataSet不仅仅知道字段，而且知道字段类型，所以有更严格的错误检查。就跟JSON对象和类对象之间的类比。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;三者的共性：&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;1、RDD、DataFrame、Dataset全都是spark平台下的分布式弹性数据集，为处理超大型数据提供便利
-2、三者都有惰性机制，在进行创建、转换，如map方法时，不会立即执行，只有在遇到Action如foreach时，三者才会开始遍历运算，极端情况下，如果代码里面有创建、转换，但是后面没有在Action中使用对应的结果，在执行时会被直接跳过.
-3、三者都会根据spark的内存情况自动缓存运算，这样即使数据量很大，也不用担心会内存溢出
-4、三者都有partition的概念
-5、三者有许多共同的函数，如filter，排序等
-6、在对DataFrame和Dataset进行操作许多操作都需要这个包进行支持
-import spark.implicits._
-7、DataFrame和Dataset均可使用模式匹配获取各个字段的值和类型&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;三者的区别&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;1、RDD一般和spark mlib同时使用
-2、RDD不支持sparksql操作
-3、与RDD和Dataset不同，DataFrame每一行的类型固定为Row，只有通过解析才能获取各个字段的值
-4、DataFrame与Dataset一般不与spark ml同时使用
-5、DataFrame与Dataset均支持sparksql的操作，比如select，groupby之类，还能注册临时表/视窗，进行sql语句操作
-6、DataFrame与Dataset支持一些特别方便的保存方式，比如保存成csv，可以带上表头，这样每一列的字段名一目了然&lt;/p&gt;
-&lt;h3 id=&#34;介绍一下spark-sql解析过程&#34;&gt;介绍一下Spark SQL解析过程
-&lt;/h3&gt;&lt;p&gt;Spark SQL是Apache Spark中的一个模块，用于处理结构化数据。它提供了一个用于查询数据的统一编程接口，并支持SQL查询和DataFrame API。Spark SQL的解析过程包括以下几个步骤：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;输入SQL查询或DataFrame操作&lt;/strong&gt; ：用户可以使用SQL语句或DataFrame操作来描述他们想要执行的查询或转换操作。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;解析器（Parser）&lt;/strong&gt; ：Spark SQL首先使用解析器将输入的SQL查询或DataFrame操作转换为逻辑计划。解析器负责将输入的查询语句或操作转换为一个抽象语法树（AST）表示。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;语义分析器（Semantic Analyzer）&lt;/strong&gt; ：在解析完成后，Spark SQL使用语义分析器对AST进行处理。语义分析器负责验证查询语句的语法和语义的正确性，包括检查表和列的存在性、解析函数和表达式，并进行类型检查等。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;逻辑优化器（Logical Optimizer）&lt;/strong&gt; ：在语义分析完成后，Spark SQL使用逻辑优化器对逻辑计划进行优化。逻辑优化器通过应用一系列的规则和转换来优化查询计划，以提高查询性能。例如，它可以进行谓词下推、投影消除、常量折叠等优化操作。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;物理优化器（Physical Optimizer）&lt;/strong&gt; ：在逻辑优化完成后，Spark SQL使用物理优化器对逻辑计划进行进一步的优化。物理优化器负责将逻辑计划转换为物理执行计划，选择最优的物理算子和执行策略。它考虑了数据的分布、数据大小、可用的计算资源等因素来选择最佳的执行计划。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;代码生成器（Code Generator）&lt;/strong&gt; ：在物理优化完成后，Spark SQL使用代码生成器将优化后的物理执行计划转换为可执行的Java字节码。代码生成器负责生成高效的执行代码，以提高查询的执行速度。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;执行器（Executor）&lt;/strong&gt; ：最后，Spark SQL将生成的Java字节码交给执行器执行。执行器负责将查询计划分解为一系列的任务，并在集群上执行这些任务。执行器还负责处理数据的读取、计算和输出等操作，以完成整个查询过程。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;总结起来，Spark SQL的解析过程包括解析、语义分析、逻辑优化、物理优化、代码生成和执行等阶段。这些阶段的目标是将用户输入的查询或操作转换为高效的执行计划，并在集群上执行这些计划来处理结构化数据。&lt;/p&gt;
+&lt;p&gt;&lt;a class=&#34;link&#34; href=&#34;https://zhuanlan.zhihu.com/p/497268882&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;https://zhuanlan.zhihu.com/p/497268882&lt;/a&gt;&lt;/p&gt;
 &lt;h3 id=&#34;说说spark的动态资源分配&#34;&gt;说说Spark的动态资源分配
 &lt;/h3&gt;&lt;p&gt;对于Spark应用来说，资源是影响Spark应用执行效率的一个重要因素。当一个长期运行的服务，若分配给它多个Executor，可是却没有任何任务分配给它，而此时有其他的应用却资源紧张，这就造成了很大的资源浪费和资源不合理的调度。&lt;/p&gt;
 &lt;h3 id=&#34;简述广播变量和累加器的基本原理和用途&#34;&gt;简述广播变量和累加器的基本原理和用途
@@ -904,28 +881,6 @@ import spark.implicits._
 &lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;Spark做出这些优化的目的是为了提高作业的执行效率和性能，减少资源的浪费和开销。这些优化的原理主要是通过减少磁盘IO、网络传输和计算开销，提高数据的局部性和并行度，充分利用内存和缓存等方式来优化Spark的执行过程，从而提高作业的整体性能。&lt;/p&gt;
-&lt;h3 id=&#34;spark中lineage的基本原理&#34;&gt;Spark中Lineage的基本原理
-&lt;/h3&gt;&lt;p&gt;在Spark中，Lineage（血统）是一种记录RDD（弹性分布式数据集）之间依赖关系的机制。每一个 RDD 都是一个不可变的分布式可重算的数据集，其记录着确定性的操作继承关系（ lineage ），所以只要输入数据是可容错的，那么任意一个 RDD 的分区（ Partition ）出错或不可用，都是可以利用原始输入数据通过转换操作而重新算出的，它是Spark实现容错性和数据恢复的关键。当我们对RDD进行转换操作时，Spark并不会立即执行这些操作，而是将操作添加到RDD的Lineage中。这样做的好处是，当某个RDD分区数据丢失或节点失败时，Spark可以根据Lineage重新计算丢失的分区，而无需重新计算整个RDD。&lt;/p&gt;
-&lt;p&gt;Lineage的基本原理如下：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;RDD的创建&lt;/strong&gt; ：当我们创建一个RDD时，Spark会将其初始数据划分为一系列的分区，并将这些分区的元数据保存在Lineage中。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;转换操作&lt;/strong&gt; ：当我们对RDD进行转换操作（如map、filter、reduce等），Spark会根据转换操作的逻辑生成一个新的RDD，并将这个转换操作添加到当前RDD的Lineage中。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;宽依赖和窄依赖&lt;/strong&gt; ：当一个RDD依赖于多个父RDD时，称为宽依赖；当一个RDD只依赖于一个父RDD时，称为窄依赖。Spark通过这种依赖关系来构建RDD之间的有向无环图（DAG）。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;容错性和数据恢复&lt;/strong&gt; ：当某个RDD分区数据丢失或节点失败时，Spark可以根据Lineage重新计算丢失的分区。它会遍历RDD的Lineage，根据依赖关系逐级计算缺失的分区，直到达到原始数据的来源。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;通过使用Lineage，Spark可以实现容错性和数据恢复。当节点失败或数据丢失时，Spark可以根据Lineage重新计算丢失的数据，而无需重新计算整个RDD，从而提高了计算效率和可靠性。&lt;/p&gt;
-&lt;p&gt;如果一个分区出错了：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;对于窄依赖，则只要把丢失的父 RDD 分区重算即可，不依赖于其他分区&lt;/li&gt;
-&lt;li&gt;对于宽依赖，则父 RDD 的所有分区都需要重算，代价昂贵&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;所以在长“血统”链特别是有宽依赖的时候，需要在适当的时机设置数据检查点&lt;/p&gt;
-&lt;p&gt;首先要明确一下 Spark 中 RDD 的容错机制。每一个 RDD 都是一个不可变的分布式可重算的数据集，其记录着确定性的操作继承关系（ lineage ），所以只要输入数据是可容错的，那么任意一个 RDD 的分区（ Partition ）出错或不可用，都是可以利用原始输入数据通过转换操作而重新算出的。如果一个分区出错了：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;对于窄依赖，则只要把丢失的父 RDD 分区重算即可，不依赖于其他分区&lt;/li&gt;
-&lt;li&gt;对于宽依赖，则父 RDD 的所有分区都需要重算，代价昂贵&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;所以在长“血统”链特别是有宽依赖的时候，需要在适当的时机设置数据检查点&lt;/p&gt;
 &lt;h3 id=&#34;谈一谈spark中的容错机制&#34;&gt;谈一谈Spark中的容错机制
 &lt;/h3&gt;&lt;p&gt;Spark是一个分布式计算框架，具备强大的容错机制，以确保在集群中发生故障时能够保持计算的正确性和可靠性。下面是Spark中的几个主要容错机制：&lt;/p&gt;
 &lt;ol&gt;

@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="概述 广播变量是Spark两种共享变量中的一种，可以让用户在每台计算机上保留一个只读变量，而不是为每个任务复制一份副本。例如，可以使用他们以高效的方式为每个计算节点提供大型输入数据集的副本。Spark也尽量使用有效的广播算法来分发广播变量，以减少通信成本。另外，Spark action操作会被划分成一系列的stage来执行，这些stage根据是否产生shuffle操作来进行划分的。Spark会自动广播每个stage任务需要的通用数据。这些被广播的数据以序列化的形式缓存起来，然后在任务执行前进行反序列化。\n">
+<title>Spark广播机制源码实现</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="Spark广播机制源码实现">
+<meta property='og:description' content="概述 广播变量是Spark两种共享变量中的一种，可以让用户在每台计算机上保留一个只读变量，而不是为每个任务复制一份副本。例如，可以使用他们以高效的方式为每个计算节点提供大型输入数据集的副本。Spark也尽量使用有效的广播算法来分发广播变量，以减少通信成本。另外，Spark action操作会被划分成一系列的stage来执行，这些stage根据是否产生shuffle操作来进行划分的。Spark会自动广播每个stage任务需要的通用数据。这些被广播的数据以序列化的形式缓存起来，然后在任务执行前进行反序列化。\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2025-04-03T20:26:18&#43;08:00'/><meta property='article:modified_time' content='2025-04-03T20:26:18&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/grebe-7972183_1280.jpg' />
+<meta name="twitter:title" content="Spark广播机制源码实现">
+<meta name="twitter:description" content="概述 广播变量是Spark两种共享变量中的一种，可以让用户在每台计算机上保留一个只读变量，而不是为每个任务复制一份副本。例如，可以使用他们以高效的方式为每个计算节点提供大型输入数据集的副本。Spark也尽量使用有效的广播算法来分发广播变量，以减少通信成本。另外，Spark action操作会被划分成一系列的stage来执行，这些stage根据是否产生shuffle操作来进行划分的。Spark会自动广播每个stage任务需要的通用数据。这些被广播的数据以序列化的形式缓存起来，然后在任务执行前进行反序列化。\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/grebe-7972183_1280.jpg' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/cs_hu10005534405353342465.jpg" width="300"
+                            height="294" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">🥳</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#概述">概述</a></li>
+    <li><a href="#使用方式">使用方式</a></li>
+    <li><a href="#创建读取流程">创建读取流程</a></li>
+    <li><a href="#源码">源码</a>
+      <ol>
+        <li><a href="#广播变量创建流程">广播变量创建流程</a></li>
+        <li><a href="#广播变量读取流程">广播变量读取流程</a></li>
+        <li><a href="#executor怎么知道broadcastid">executor怎么知道broadcastId</a></li>
+      </ol>
+    </li>
+    <li><a href="#参考">参考</a></li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/">
+                <img src="/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/grebe-7972183_1280_hu10036112678181982524.jpg"
+                        srcset="/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/grebe-7972183_1280_hu10036112678181982524.jpg 800w, /p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/grebe-7972183_1280_hu257361407954776588.jpg 1600w"
+                        width="800" 
+                        height="533" 
+                        loading="lazy"
+                        alt="Featured image of post Spark广播机制源码实现" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/spark/" style="background-color: #2a9d8f; color: #fff;">
+                Spark
+            </a>
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/">Spark广播机制源码实现</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2025-04-03</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 12 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="概述">概述
+</h2><p>广播变量是Spark两种共享变量中的一种，可以让用户在每台计算机上保留一个只读变量，而不是为每个任务复制一份副本。例如，可以使用他们以高效的方式为每个计算节点提供大型输入数据集的副本。Spark也尽量使用有效的广播算法来分发广播变量，以减少通信成本。另外，Spark action操作会被划分成一系列的stage来执行，这些stage根据是否产生shuffle操作来进行划分的。Spark会自动广播每个stage任务需要的通用数据。这些被广播的数据以序列化的形式缓存起来，然后在任务执行前进行反序列化。</p>
+<h2 id="使用方式">使用方式
+</h2><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">scala</span><span class="o">&gt;</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Array</span><span class="p">(</span><span class="n">1</span><span class="p">,</span><span class="n">2</span><span class="p">,</span><span class="n">3</span><span class="p">,</span><span class="n">4</span><span class="p">,</span><span class="n">5</span><span class="p">,</span><span class="n">6</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nl">v</span><span class="p">:</span><span class="w"> </span><span class="n">Array</span><span class="o">[</span><span class="n">Int</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Array</span><span class="p">(</span><span class="n">1</span><span class="p">,</span><span class="w"> </span><span class="n">2</span><span class="p">,</span><span class="w"> </span><span class="n">3</span><span class="p">,</span><span class="w"> </span><span class="n">4</span><span class="p">,</span><span class="w"> </span><span class="n">5</span><span class="p">,</span><span class="w"> </span><span class="n">6</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">scala</span><span class="o">&gt;</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="n">bv</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sc</span><span class="p">.</span><span class="na">broadcast</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nl">res1</span><span class="p">:</span><span class="w"> </span><span class="n">org</span><span class="p">.</span><span class="na">apache</span><span class="p">.</span><span class="na">spark</span><span class="p">.</span><span class="na">broadcast</span><span class="p">.</span><span class="na">Broadcast</span><span class="o">[</span><span class="n">Array</span><span class="o">[</span><span class="n">Int</span><span class="o">]]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Broadcast</span><span class="p">(</span><span class="n">1</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">scala</span><span class="o">&gt;</span><span class="w"> </span><span class="n">bv</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nl">res9</span><span class="p">:</span><span class="w"> </span><span class="n">org</span><span class="p">.</span><span class="na">apache</span><span class="p">.</span><span class="na">spark</span><span class="p">.</span><span class="na">broadcast</span><span class="p">.</span><span class="na">Broadcast</span><span class="o">[</span><span class="n">Array</span><span class="o">[</span><span class="n">Int</span><span class="o">]]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Broadcast</span><span class="p">(</span><span class="n">2</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">// 获取广播变量的值</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">scala</span><span class="o">&gt;</span><span class="w"> </span><span class="n">bv</span><span class="p">.</span><span class="na">value</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nl">res10</span><span class="p">:</span><span class="w"> </span><span class="n">Array</span><span class="o">[</span><span class="n">Int</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Array</span><span class="p">(</span><span class="n">1</span><span class="p">,</span><span class="w"> </span><span class="n">2</span><span class="p">,</span><span class="w"> </span><span class="n">3</span><span class="p">,</span><span class="w"> </span><span class="n">4</span><span class="p">,</span><span class="w"> </span><span class="n">5</span><span class="p">,</span><span class="w"> </span><span class="n">6</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">// 销毁广播变量</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">scala</span><span class="o">&gt;</span><span class="w"> </span><span class="n">bv</span><span class="p">.</span><span class="na">destory</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意，在创建广播变量时，广播变量的值必须是本地的可序列化的值，不能是RDD。另外，广播变量一旦被创建就不应该再修改，这样可以保证所有的worker的节点的值都是一致的，这是因为，现有worker将看不到更新的值，新的worker才可能会看到新的值。</p>
+<h2 id="创建读取流程">创建读取流程
+</h2><p>广播变量的创建发生在Driver端，如图2所示，当调用SparkContext#broadcast来创建广播变量时，会把
+该变量的数据切分成多个数据块，保存到driver端的BlockManger中，使用的存储级别是：
+MEMORY_AND_DISK_SER。所以，广播变量的读取也是懒加载的，只有在Executor端需要获取广播变量时才会去获取。此时广播变量的数据只在Driver端存在。</p>
+<p><img src="/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/image-20250402110927320.png"
+	width="775"
+	height="552"
+	srcset="/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/image-20250402110927320_hu11089042149711844848.png 480w, /p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/image-20250402110927320_hu2874450761571246914.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250402110927320"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="140"
+		data-flex-basis="336px"
+	
+></p>
+<p>从上图可以看出，此时广播变量被保存在本地，并会把广播变量的值切分成多个数据块进行保存。广播变量数据块的默认大小是4m。</p>
+<p>当要使用广播变量时，需要先获取广播变量的值，其实现流程如下图所示。获取广播变量调用的是bv.value。</p>
+<p><img src="/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/image-20250402111145399.png"
+	width="973"
+	height="324"
+	srcset="/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/image-20250402111145399_hu18264402294054971471.png 480w, /p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/image-20250402111145399_hu6786980316937788657.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250402111145399"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="300"
+		data-flex-basis="720px"
+	
+></p>
+<p>逻辑如下：</p>
+<ul>
+<li>第一步（红色线1）：首先Executor本地的BlockManager中读取广播变量的数据，若存在就直接获取，并返回。不再执行第2步和第3步。若不存在，则执行第2步。</li>
+<li>第2步（红色线2）：从Driver端获取广播变量的状态和位置信息（由于所有的BlockManager slave端）都会向Master端汇报数据块状态</li>
+<li>第3步：优先从本地目录（数据块就在本地），或者相同主机的其他Executor中读取广播变量数据块。若再本地Exeuctor和同主机其他Executor中都不存在，则只能从远端获取数据。从远端获取数据的原则是：先从同一机架（rack）的主机和Executor端获取。若不能从其他Executor中获取广播变量，则会直接从Driver端获取。</li>
+</ul>
+<p>从以上获取流程可以看出，在执行spark应用时，只要有一个worker节点的executor从driver端获取到了广播变量的数据，则其他的executor就不需要从driver端获取了。当某个executor上的某个数据块被删除，可以从其他executor直接获取该数据块，然后把数据块保存到自己的executor的blockmanager中。</p>
+<p><img src="/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/image-20250402111323521.png"
+	width="944"
+	height="486"
+	srcset="/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/image-20250402111323521_hu10395672604462837006.png 480w, /p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/image-20250402111323521_hu14131045317196772483.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250402111323521"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="194"
+		data-flex-basis="466px"
+	
+></p>
+<p>从上图可以看出，executor4中的任务需要使用广播变量，但它只有该变量的b4数据块。此时，它首先从同主机（worker2节点）的中获取数据，获取到数据块b3；然后分别从不同主机的executor1和executor2中读取数据块b1和b2.此时，executor4就获取到变量b的全部数据块了，然后把这些数据块在自己的blockmanager中保存一份。此时，其他executor就可以从executor4中读取数据了。当完成这些操作后，各个executor端的blockmanager（worker端）会向driver端的blockmanager（masetr端）汇报这些数据块的状态。</p>
+<h2 id="源码">源码
+</h2><p>来看看Spark自带的官方样例</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">def</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="n">args</span><span class="p">:</span><span class="w"> </span><span class="n">Array</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">):</span><span class="w"> </span><span class="n">Unit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">spark</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SparkSession</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">.</span><span class="na">builder</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">.</span><span class="na">appName</span><span class="p">(</span><span class="s">&#34;Multi-Broadcast Test&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">.</span><span class="na">master</span><span class="p">(</span><span class="s">&#34;local[*]&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">.</span><span class="na">getOrCreate</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">slices</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">args</span><span class="p">.</span><span class="na">length</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">0</span><span class="p">)</span><span class="w"> </span><span class="n">args</span><span class="p">(</span><span class="n">0</span><span class="p">).</span><span class="na">toInt</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="n">2</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">num</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">args</span><span class="p">.</span><span class="na">length</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">1</span><span class="p">)</span><span class="w"> </span><span class="n">args</span><span class="p">(</span><span class="n">1</span><span class="p">).</span><span class="na">toInt</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="n">1000000</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">arr1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Array</span><span class="o">[</span><span class="n">Int</span><span class="o">]</span><span class="p">(</span><span class="n">num</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">0</span><span class="w"> </span><span class="n">until</span><span class="w"> </span><span class="n">arr1</span><span class="p">.</span><span class="na">length</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">arr1</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">arr2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Array</span><span class="o">[</span><span class="n">Int</span><span class="o">]</span><span class="p">(</span><span class="n">num</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">0</span><span class="w"> </span><span class="n">until</span><span class="w"> </span><span class="n">arr2</span><span class="p">.</span><span class="na">length</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">arr2</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">barr1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">spark</span><span class="p">.</span><span class="na">sparkContext</span><span class="p">.</span><span class="na">broadcast</span><span class="p">(</span><span class="n">arr1</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">barr2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">spark</span><span class="p">.</span><span class="na">sparkContext</span><span class="p">.</span><span class="na">broadcast</span><span class="p">(</span><span class="n">arr2</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">observedSizes</span><span class="p">:</span><span class="w"> </span><span class="n">RDD</span><span class="o">[</span><span class="p">(</span><span class="n">Int</span><span class="p">,</span><span class="w"> </span><span class="n">Int</span><span class="p">)</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">spark</span><span class="p">.</span><span class="na">sparkContext</span><span class="p">.</span><span class="na">parallelize</span><span class="p">(</span><span class="n">1</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">10</span><span class="p">,</span><span class="w"> </span><span class="n">slices</span><span class="p">).</span><span class="na">map</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="o">=&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">(</span><span class="n">barr1</span><span class="p">.</span><span class="na">value</span><span class="p">.</span><span class="na">length</span><span class="p">,</span><span class="w"> </span><span class="n">barr2</span><span class="p">.</span><span class="na">value</span><span class="p">.</span><span class="na">length</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c1">// Collect the small RDD so we can print the observed sizes locally.</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">observedSizes</span><span class="p">.</span><span class="na">collect</span><span class="p">().</span><span class="na">foreach</span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">println</span><span class="p">(</span><span class="n">i</span><span class="p">))</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">spark</span><span class="p">.</span><span class="na">stop</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>在这个程序中，首先定义了arr1和arr2，随后采用了spark.sparkContext.broadcast将这两个数组给广播起来，并通过map遍历两个广播变量的长度，最后collect输出结果。</p>
+<h3 id="广播变量创建流程">广播变量创建流程
+</h3><p>在val barr1 = spark.sparkContext.broadcast(arr1)点进去bradcast(arr1)的时候</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">def</span><span class="w"> </span><span class="n">broadcast</span><span class="o">[</span><span class="n">T</span><span class="p">:</span><span class="w"> </span><span class="n">ClassTag</span><span class="o">]</span><span class="p">(</span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="n">T</span><span class="p">):</span><span class="w"> </span><span class="n">Broadcast</span><span class="o">[</span><span class="n">T</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">assertNotStopped</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">require</span><span class="p">(</span><span class="o">!</span><span class="n">classOf</span><span class="o">[</span><span class="n">RDD</span><span class="o">[</span><span class="n">_</span><span class="o">]]</span><span class="p">.</span><span class="na">isAssignableFrom</span><span class="p">(</span><span class="n">classTag</span><span class="o">[</span><span class="n">T</span><span class="o">]</span><span class="p">.</span><span class="na">runtimeClass</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;Can not directly broadcast RDDs; instead, call collect() and broadcast the result.&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c1">// 在这里创建了TorrentBroadcastFactory</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c1">// Spark 2.0版本中的TorrentBroadcast方式：数据开始在Driver中，A节点如果使用了数据，A就成为供应源，这时Driver节点、</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c1">// A节点两个节点成为供应源，如第三个节点B访问的时候，第三个节点B也成了供应源，同样地，第四个节点、第五个节点……</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c1">// 都成了供应源，这些都被BlockManager管理，这样不会导致一个节点压力太大，从理论上讲，数据使用的节点越多，</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c1">// 网络速度就越快。</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">bc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">env</span><span class="p">.</span><span class="na">broadcastManager</span><span class="p">.</span><span class="na">newBroadcast</span><span class="o">[</span><span class="n">T</span><span class="o">]</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="n">isLocal</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">callSite</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">getCallSite</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nf">logInfo</span><span class="p">(</span><span class="s">&#34;Created broadcast &#34;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">bc</span><span class="p">.</span><span class="na">id</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&#34; from &#34;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">callSite</span><span class="p">.</span><span class="na">shortForm</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">cleaner</span><span class="p">.</span><span class="na">foreach</span><span class="p">(</span><span class="n">_</span><span class="p">.</span><span class="na">registerBroadcastForCleanup</span><span class="p">(</span><span class="n">bc</span><span class="p">))</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">bc</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>再进去env.broadcastManager.newBroadcast，最终执行的是broadcastFactory.newBroadcast，在这里实际上创建的就是TorrentBroadcast，TorrentBroadcast按照BLOCK_SIZE（默认是4MB）将Broadcast中的数据划分成为不同的Block，然后将分块信息 （也就是Meta信息）存放到Driver的BlockManager中，同时会告诉BlockManagerMaster，说明Meta信息存放 完毕 。 TorrentBroadcast将元数据信息存放到BlockManager，然后汇报给BlockManagerMaster。数据存放到BlockManagerMaster中就变成了全局数据， BlockManagerMaster具有所有的信息，Driver、Executor就可以访问这些内容。Executor运行具体的TASK的时候， 通过TorrentBroadcast的方式readBlocks，如果本地有数据，就从本地读取，如果本地没有数据，就从远程读取数据。 Executor读取信息以后，通过TorrentBroadcast的机制通知BlockManagerMaster数据多了一份副本，下一个Task读取数据的时候， 就有两个选择，分享的节点越多， 下载的供应源就越多，最终变成点到点的方式。</p>
+<p>点进去TorrentBroadcast类中，在里面执行了writeBlocks方法，实际上就是将对象划分为多个块，并将这些块放在块管理器中。方法如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kd">private</span><span class="w"> </span><span class="n">def</span><span class="w"> </span><span class="nf">writeBlocks</span><span class="p">(</span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="n">T</span><span class="p">):</span><span class="w"> </span><span class="n">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="kn">import</span><span class="w"> </span><span class="nn">StorageLevel._</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c1">// Store a copy of the broadcast variable in the driver so that tasks run on the driver</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c1">// do not create a duplicate copy of the broadcast variable&#39;s value.</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c1">// 将广播变量的副本存储在driver中，以便在驱动程序上运行的任务</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c1">// 不会创建广播变量值的重复副本。</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">blockManager</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SparkEnv</span><span class="p">.</span><span class="na">get</span><span class="p">.</span><span class="na">blockManager</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nf">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">blockManager</span><span class="p">.</span><span class="na">putSingle</span><span class="p">(</span><span class="n">broadcastId</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="n">MEMORY_AND_DISK</span><span class="p">,</span><span class="w"> </span><span class="n">tellMaster</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">SparkException</span><span class="p">(</span><span class="n">s</span><span class="s">&#34;Failed to store $broadcastId in BlockManager&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">try</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">blocks</span><span class="w"> </span><span class="o">=</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">TorrentBroadcast</span><span class="p">.</span><span class="na">blockifyObject</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="n">blockSize</span><span class="p">,</span><span class="w"> </span><span class="n">SparkEnv</span><span class="p">.</span><span class="na">get</span><span class="p">.</span><span class="na">serializer</span><span class="p">,</span><span class="w"> </span><span class="n">compressionCodec</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">checksumEnabled</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">checksums</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Array</span><span class="o">[</span><span class="n">Int</span><span class="o">]</span><span class="p">(</span><span class="n">blocks</span><span class="p">.</span><span class="na">length</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">blocks</span><span class="p">.</span><span class="na">zipWithIndex</span><span class="p">.</span><span class="na">foreach</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">case</span><span class="w"> </span><span class="p">(</span><span class="n">block</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">checksumEnabled</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">checksums</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">calcChecksum</span><span class="p">(</span><span class="n">block</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">val</span><span class="w"> </span><span class="n">pieceId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">BroadcastBlockId</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;piece&#34;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">i</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">val</span><span class="w"> </span><span class="n">bytes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ChunkedByteBuffer</span><span class="p">(</span><span class="n">block</span><span class="p">.</span><span class="na">duplicate</span><span class="p">())</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">blockManager</span><span class="p">.</span><span class="na">putBytes</span><span class="p">(</span><span class="n">pieceId</span><span class="p">,</span><span class="w"> </span><span class="n">bytes</span><span class="p">,</span><span class="w"> </span><span class="n">MEMORY_AND_DISK_SER</span><span class="p">,</span><span class="w"> </span><span class="n">tellMaster</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">SparkException</span><span class="p">(</span><span class="n">s</span><span class="s">&#34;Failed to store $pieceId of $broadcastId &#34;</span><span class="w"> </span><span class="o">+</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="n">s</span><span class="s">&#34;in local BlockManager&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">blocks</span><span class="p">.</span><span class="na">length</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="n">t</span><span class="p">:</span><span class="w"> </span><span class="n">Throwable</span><span class="w"> </span><span class="o">=&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">logError</span><span class="p">(</span><span class="n">s</span><span class="s">&#34;Store broadcast $broadcastId fail, remove all pieces of the broadcast&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">blockManager</span><span class="p">.</span><span class="na">removeBroadcast</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">tellMaster</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="k">throw</span><span class="w"> </span><span class="n">t</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>总结来说就是执行了以下几步：</p>
+<ol>
+<li>blockManager.putSingle(broadcastId, value, MEMORY_AND_DISK, tellMaster = false)，这里将value的广播变量存放进去blockManager，存储级别是MEMORY_AND_DISK。那么这个方法继续往下点会发现最终会调用BlockManager#putIterator的方法。大概的步骤即先存放至内存空间，如果内存空间不够就用磁盘空间来存储，最后返回是否存储成功。</li>
+<li>将广播的变量内切片，默认大小为4MB。blockManager.putBytes(pieceId, bytes, MEMORY_AND_DISK_SER, tellMaster = true)然后将这些切片后的内容存储到Driver的BlockManager中，同时BlockManager#reportBlockStatus会告诉BlockManagerMaster，说明Meta信息存放完毕 。 TorrentBroadcast将元数据信息存放到BlockManager，然后汇报给BlockManagerMaster。</li>
+</ol>
+<h3 id="广播变量读取流程">广播变量读取流程
+</h3><p>Executor运行具体的TASK的时候， 通过TorrentBroadcast的方式readBlocks，如果本地有数据，就从本地读取，如果本地没有数据，就从远程读取数据。 Executor读取信息以后，通过TorrentBroadcast的机制通知BlockManagerMaster数据多了一份副本，下一个Task读取数据的时候， 就有两个选择，分享的节点越多， 下载的供应源就越多，最终变成点到点的方式。</p>
+<p>返回MulitiBroadcastTest中的</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">observedSizes</span><span class="p">:</span><span class="w"> </span><span class="n">RDD</span><span class="o">[</span><span class="p">(</span><span class="n">Int</span><span class="p">,</span><span class="w"> </span><span class="n">Int</span><span class="p">)</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">spark</span><span class="p">.</span><span class="na">sparkContext</span><span class="p">.</span><span class="na">parallelize</span><span class="p">(</span><span class="n">1</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">10</span><span class="p">,</span><span class="w"> </span><span class="n">slices</span><span class="p">).</span><span class="na">map</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="o">=&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="p">(</span><span class="n">barr1</span><span class="p">.</span><span class="na">value</span><span class="p">.</span><span class="na">length</span><span class="p">,</span><span class="w"> </span><span class="n">barr2</span><span class="p">.</span><span class="na">value</span><span class="p">.</span><span class="na">length</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>点进去barr1.value，里面主要有这些方法</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="w">  </span><span class="n">override</span><span class="w"> </span><span class="kd">protected</span><span class="w"> </span><span class="n">def</span><span class="w"> </span><span class="nf">getValue</span><span class="p">()</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kd">synchronized</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">memoized</span><span class="p">:</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">_value</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="kc">null</span><span class="p">.</span><span class="na">asInstanceOf</span><span class="o">[</span><span class="n">T</span><span class="o">]</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="n">_value</span><span class="p">.</span><span class="na">get</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nf">if</span><span class="w"> </span><span class="p">(</span><span class="n">memoized</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">memoized</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">val</span><span class="w"> </span><span class="n">newlyRead</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">readBroadcastBlock</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">_value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">SoftReference</span><span class="o">[</span><span class="n">T</span><span class="o">]</span><span class="p">(</span><span class="n">newlyRead</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">newlyRead</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>意味着当Executor执行map算子的过程中，里面需要用到broadcast的内容，其中如果获取不到_value值，执行了TorrentBroadcast#getValue()方法。</p>
+<p>在这个方法中主要看到了val newlyRead = readBroadcastBlock()，点进去看一下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kd">private</span><span class="w"> </span><span class="n">def</span><span class="w"> </span><span class="nf">readBroadcastBlock</span><span class="p">():</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Utils</span><span class="p">.</span><span class="na">tryOrIOException</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">TorrentBroadcast</span><span class="p">.</span><span class="na">torrentBroadcastLock</span><span class="p">.</span><span class="na">withLock</span><span class="p">(</span><span class="n">broadcastId</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// As we only lock based on `broadcastId`, whenever using `broadcastCache`, we should only</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// touch `broadcastId`.</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">broadcastCache</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SparkEnv</span><span class="p">.</span><span class="na">get</span><span class="p">.</span><span class="na">broadcastManager</span><span class="p">.</span><span class="na">cachedValues</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nf">Option</span><span class="p">(</span><span class="n">broadcastCache</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">broadcastId</span><span class="p">)).</span><span class="na">map</span><span class="p">(</span><span class="n">_</span><span class="p">.</span><span class="na">asInstanceOf</span><span class="o">[</span><span class="n">T</span><span class="o">]</span><span class="p">).</span><span class="na">getOrElse</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">setConf</span><span class="p">(</span><span class="n">SparkEnv</span><span class="p">.</span><span class="na">get</span><span class="p">.</span><span class="na">conf</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">val</span><span class="w"> </span><span class="n">blockManager</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SparkEnv</span><span class="p">.</span><span class="na">get</span><span class="p">.</span><span class="na">blockManager</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">blockManager</span><span class="p">.</span><span class="na">getLocalValues</span><span class="p">(</span><span class="n">broadcastId</span><span class="p">)</span><span class="w"> </span><span class="n">match</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="n">Some</span><span class="p">(</span><span class="n">blockResult</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">blockResult</span><span class="p">.</span><span class="na">data</span><span class="p">.</span><span class="na">hasNext</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">val</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">blockResult</span><span class="p">.</span><span class="na">data</span><span class="p">.</span><span class="na">next</span><span class="p">().</span><span class="na">asInstanceOf</span><span class="o">[</span><span class="n">T</span><span class="o">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nf">releaseBlockManagerLock</span><span class="p">(</span><span class="n">broadcastId</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">              </span><span class="n">broadcastCache</span><span class="p">.</span><span class="na">put</span><span class="p">(</span><span class="n">broadcastId</span><span class="p">,</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">x</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">SparkException</span><span class="p">(</span><span class="n">s</span><span class="s">&#34;Failed to get locally stored broadcast data: $broadcastId&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="n">None</span><span class="w"> </span><span class="o">=&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="n">val</span><span class="w"> </span><span class="n">estimatedTotalSize</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Utils</span><span class="p">.</span><span class="na">bytesToString</span><span class="p">(</span><span class="n">numBlocks</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">blockSize</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="n">logInfo</span><span class="p">(</span><span class="n">s</span><span class="s">&#34;Started reading broadcast variable $id with $numBlocks pieces &#34;</span><span class="w"> </span><span class="o">+</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">s</span><span class="s">&#34;(estimated total size $estimatedTotalSize)&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="n">val</span><span class="w"> </span><span class="n">startTimeNs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">System</span><span class="p">.</span><span class="na">nanoTime</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="n">val</span><span class="w"> </span><span class="n">blocks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">readBlocks</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="n">logInfo</span><span class="p">(</span><span class="n">s</span><span class="s">&#34;Reading broadcast variable $id took ${Utils.getUsedTimeNs(startTimeNs)}&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="k">try</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">val</span><span class="w"> </span><span class="n">obj</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TorrentBroadcast</span><span class="p">.</span><span class="na">unBlockifyObject</span><span class="o">[</span><span class="n">T</span><span class="o">]</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">              </span><span class="n">blocks</span><span class="p">.</span><span class="na">map</span><span class="p">(</span><span class="n">_</span><span class="p">.</span><span class="na">toInputStream</span><span class="p">()),</span><span class="w"> </span><span class="n">SparkEnv</span><span class="p">.</span><span class="na">get</span><span class="p">.</span><span class="na">serializer</span><span class="p">,</span><span class="w"> </span><span class="n">compressionCodec</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="c1">// Store the merged copy in BlockManager so other tasks on this executor don&#39;t</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="c1">// need to re-fetch it.</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">val</span><span class="w"> </span><span class="n">storageLevel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">StorageLevel</span><span class="p">.</span><span class="na">MEMORY_AND_DISK</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nf">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">blockManager</span><span class="p">.</span><span class="na">putSingle</span><span class="p">(</span><span class="n">broadcastId</span><span class="p">,</span><span class="w"> </span><span class="n">obj</span><span class="p">,</span><span class="w"> </span><span class="n">storageLevel</span><span class="p">,</span><span class="w"> </span><span class="n">tellMaster</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">              </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">SparkException</span><span class="p">(</span><span class="n">s</span><span class="s">&#34;Failed to store $broadcastId in BlockManager&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">obj</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">              </span><span class="n">broadcastCache</span><span class="p">.</span><span class="na">put</span><span class="p">(</span><span class="n">broadcastId</span><span class="p">,</span><span class="w"> </span><span class="n">obj</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">obj</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="p">}</span><span class="w"> </span><span class="k">finally</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">blocks</span><span class="p">.</span><span class="na">foreach</span><span class="p">(</span><span class="n">_</span><span class="p">.</span><span class="na">dispose</span><span class="p">())</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>具体实现如下：</p>
+<ol>
+<li>从broadcastCache获取，如果获取不到，就开始下面的步骤</li>
+<li>blockManager.getLocalValues(broadcastId)来获取executor本地block。如果获取到block，就返回这个block，并且把这个block放到缓存里面。</li>
+<li>如果executor本地获取不到block，那么执行如下操作：
+<ol>
+<li>readBlocks()。从driver 或者其他exeuctor获取block。遍历blocks分片，如果本地有分片就获取分片，否则根据pieceId远程获取序列化block切片。使用getRemoteBlock来获取远程切片。Spark会自动识别这个切片的远近来获取的，这样尽可能减少网络消耗。具体是locationsAndStatusOption = master.getLocationsAndStatus(blockId, blockManagerId.host)来获取这个blockId的存放的位置。如果在同一主机不同exeuctor上存在block，那么执行readDiskBlockFromSameHostExecutor，通过读取文件的形式来获取block；否则fetchRemoteManagedBuffer按距离优先（同一节点&gt;同一机架-&gt;~~~）向远处获取的。</li>
+<li>校验checksum来判断这个远处获取的block是否损坏。</li>
+<li>如果获取到了这个分片，那么就将这个分片block存储到本地blockmanager中bm.putBytes(pieceId, b, StorageLevel.MEMORY_AND_DISK_SER, tellMaster = true)，并告诉driver端本地的blockmanager已经存储了这个分片。</li>
+<li>存放broadcast缓存。</li>
+</ol>
+</li>
+<li>赋值_value。这个值是由readBroadcastBlock重建的，在driver，如果需要该值，则会从blockamnager延迟读取该值。这个_value是一个软引用对象，随时会进行垃圾回收。</li>
+</ol>
+<p>由此，broadcast的变量就可以被Executor读取成功了，整体流程还算简单。但是这个TorrentBroadcast的延迟获取的思想设计的非常棒，值得去深究！！</p>
+<h3 id="executor怎么知道broadcastid">executor怎么知道broadcastId
+</h3><p>当executor在执行获取xxx.value()的时候，实际上执行的是TorrentBroadcast#getValue。我们都知道TorrentBroadcast由driver创建，那么这个TorrentBroadcast是怎么传输至executor的呢？</p>
+<p>实际上这个broadcast的信息是由BroadcastManager管理的，其中在broadcastFactory.newBroadcast[T](value_, isLocal, bid)创建完成。而BroadcastManager就是SparkEnv的类变量。SparkEnv是由启动Executor通过传参传进来的。</p>
+<p>那么Exeuctor又怎么启动呢？？？</p>
+<p>具体表示就是：SparkContext启动后，StandaloneSchedulerBackend中会调用new()函数创建一个StandaloneAppClient， StandaloneAppClient中有一个名叫ClientEndPoint的内部类， 在创建ClientEndpoint时会传入Command来指定具体为当前应用程序启动的Executor进行的入口类的名称 为CoarseGrainedExecutorBackend。 ClientEndPoint继承自ThreadSafeRpcEndpoint，其通过RPC机制完成和Master的通信。 在ClientEndPoint的start方法中，会通过registerWithMaster方法向Master发送RegisterApplication请求， Master收到该请求消息后，首先通过registerApplication方法完成信息登记，之后将会调用schedule方法，在Worker上启动Executor。</p>
+<p>所以，executor在执行的时候就可以知道broadcast的信息了。</p>
+<p>除此之外，exeuctor还可以从SparkEnv中获取到driver的blockmanager、serializer、mapOutputTracker等。</p>
+<p>这么一解释，好像又有点明白了是不是~~</p>
+<h2 id="参考">参考
+</h2><ol>
+<li><a class="link" href="https://blog.csdn.net/weixin_41841496/article/details/132570777"  target="_blank" rel="noopener"
+    >【读懂面经中的源码】SPARK源码解析——broadcast原理</a></li>
+<li><a class="link" href="https://blog.csdn.net/nazeniwaresakini/article/details/104220220"  target="_blank" rel="noopener"
+    >Spark Core源码精读计划#11：Spark广播机制的实现</a></li>
+</ol>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/oom%E9%83%BD%E6%98%AF%E8%B0%81%E7%9A%84%E9%94%85/">
+        
+        
+            <div class="article-image">
+                <img src="/p/oom%E9%83%BD%E6%98%AF%E8%B0%81%E7%9A%84%E9%94%85/winter-8433267_1280.1db9e97625db6d61118e6635dc1248b1_hu14689633931296498845.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post OOM都是谁的锅"
+                        
+                        data-hash="md5-HbnpdiXbbWERjmY13BJIsQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">OOM都是谁的锅</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%AF%A6%E8%A7%A3spark%E5%B9%BF%E6%92%AD%E5%8F%98%E9%87%8F/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%AF%A6%E8%A7%A3spark%E5%B9%BF%E6%92%AD%E5%8F%98%E9%87%8F/pawel-czerwinski-8uZPynIu-rQ-unsplash.c514d916917173a48a42e0114b469961_hu7626638945853200361.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 详解Spark广播变量"
+                        
+                        data-hash="md5-xRTZFpFxc6SKQuARS0aZYQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">详解Spark广播变量</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/">
+        
+        
+            <div class="article-image">
+                <img src="/p/rdd%E5%92%8Cdataframe%E5%92%8Cdataset%E4%B8%89%E8%80%85%E9%97%B4%E7%9A%84%E5%8C%BA%E5%88%AB/trees-8136806_1280.357dd549ed51f498bcbf5425f76e0416_hu9173719500181869714.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post RDD和DataFrame和DataSet三者间的区别"
+                        
+                        data-hash="md5-NX3VSe1R9Ji8v1Ql924EFg==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">RDD和DataFrame和DataSet三者间的区别</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%AF%A6%E8%A7%A3joinhints%E7%89%B9%E6%80%A7/pawel-czerwinski-8uZPynIu-rQ-unsplash.c514d916917173a48a42e0114b469961_hu7626638945853200361.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 详解JoinHints特性"
+                        
+                        data-hash="md5-xRTZFpFxc6SKQuARS0aZYQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">详解JoinHints特性</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%AF%A6%E8%A7%A3aqe%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/paddle-boat-8253274_1280.f75fabdedeae0941d378faac2224d26d_hu17172630445701689797.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 详解AQE三大特性"
+                        
+                        data-hash="md5-91&#43;r3t6uCUHTePqsIiTSbQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">详解AQE三大特性</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2025 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
