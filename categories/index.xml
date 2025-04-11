@@ -7,7 +7,15 @@
         <generator>Hugo -- gohugo.io</generator>
         <language>zh-cn</language>
         <copyright>sherlock-lin</copyright>
-        <lastBuildDate>Sat, 05 Apr 2025 12:09:22 +0800</lastBuildDate><atom:link href="https://sherlock-lin.github.io/categories/index.xml" rel="self" type="application/rss+xml" /><item>
+        <lastBuildDate>Fri, 11 Apr 2025 18:39:07 +0800</lastBuildDate><atom:link href="https://sherlock-lin.github.io/categories/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>职业生涯</title>
+        <link>https://sherlock-lin.github.io/categories/%E8%81%8C%E4%B8%9A%E7%94%9F%E6%B6%AF/</link>
+        <pubDate>Fri, 11 Apr 2025 18:39:07 +0800</pubDate>
+        
+        <guid>https://sherlock-lin.github.io/categories/%E8%81%8C%E4%B8%9A%E7%94%9F%E6%B6%AF/</guid>
+        <description>&lt;img src="https://sherlock-lin.github.io/categories/%E8%81%8C%E4%B8%9A%E7%94%9F%E6%B6%AF/hutomo-abrianto-l2jk-uxb1BY-unsplash.jpg" alt="Featured image of post 职业生涯" /&gt;</description>
+        </item>
+        <item>
         <title>Spark</title>
         <link>https://sherlock-lin.github.io/categories/spark/</link>
         <pubDate>Sat, 05 Apr 2025 12:09:22 +0800</pubDate>
@@ -38,14 +46,6 @@
         
         <guid>https://sherlock-lin.github.io/categories/flink/</guid>
         <description>&lt;img src="https://sherlock-lin.github.io/categories/flink/flink_img.jpg" alt="Featured image of post Flink" /&gt;</description>
-        </item>
-        <item>
-        <title>职业生涯</title>
-        <link>https://sherlock-lin.github.io/categories/%E8%81%8C%E4%B8%9A%E7%94%9F%E6%B6%AF/</link>
-        <pubDate>Sun, 09 Mar 2025 13:38:13 +0800</pubDate>
-        
-        <guid>https://sherlock-lin.github.io/categories/%E8%81%8C%E4%B8%9A%E7%94%9F%E6%B6%AF/</guid>
-        <description>&lt;img src="https://sherlock-lin.github.io/categories/%E8%81%8C%E4%B8%9A%E7%94%9F%E6%B6%AF/hutomo-abrianto-l2jk-uxb1BY-unsplash.jpg" alt="Featured image of post 职业生涯" /&gt;</description>
         </item>
         <item>
         <title>数据湖</title>
