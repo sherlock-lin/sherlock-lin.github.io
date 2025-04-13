@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="概述 现象 绝大多数 task 任务运行速度很快，但是就是有那么几个 task 任务运行极其缓慢，慢慢的可能就接着报内存溢出的问题。\n原因 数据倾斜一般是发生在 shuffle 类的算子，比如 distinct、groupByKey、reduceByKey、aggregateByKey、join、cogroup 等，涉及到数据重分区，如果其中某一个 key 数量特别大，就发生了数据倾斜。\n">
+<title>性能调优之数据倾斜</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="性能调优之数据倾斜">
+<meta property='og:description' content="概述 现象 绝大多数 task 任务运行速度很快，但是就是有那么几个 task 任务运行极其缓慢，慢慢的可能就接着报内存溢出的问题。\n原因 数据倾斜一般是发生在 shuffle 类的算子，比如 distinct、groupByKey、reduceByKey、aggregateByKey、join、cogroup 等，涉及到数据重分区，如果其中某一个 key 数量特别大，就发生了数据倾斜。\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2025-04-13T14:48:52&#43;08:00'/><meta property='article:modified_time' content='2025-04-13T14:48:52&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/gannet-9003524_1280.jpg' />
+<meta name="twitter:title" content="性能调优之数据倾斜">
+<meta name="twitter:description" content="概述 现象 绝大多数 task 任务运行速度很快，但是就是有那么几个 task 任务运行极其缓慢，慢慢的可能就接着报内存溢出的问题。\n原因 数据倾斜一般是发生在 shuffle 类的算子，比如 distinct、groupByKey、reduceByKey、aggregateByKey、join、cogroup 等，涉及到数据重分区，如果其中某一个 key 数量特别大，就发生了数据倾斜。\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/gannet-9003524_1280.jpg' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/cs_hu10005534405353342465.jpg" width="300"
+                            height="294" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">🥳</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#概述">概述</a>
+      <ol>
+        <li><a href="#现象">现象</a></li>
+        <li><a href="#原因">原因</a></li>
+      </ol>
+    </li>
+    <li><a href="#大key定位">大key定位</a></li>
+    <li><a href="#单表数据倾斜优化">单表数据倾斜优化</a></li>
+    <li><a href="#join数据倾斜">Join数据倾斜</a>
+      <ol>
+        <li><a href="#广播join">广播Join</a></li>
+        <li><a href="#拆分大key打散大表扩容小表">拆分大key打散大表，扩容小表</a></li>
+      </ol>
+    </li>
+    <li><a href="#总结">总结</a></li>
+    <li><a href="#参考">参考</a></li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/">
+                <img src="/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/gannet-9003524_1280_hu2533167316015730957.jpg"
+                        srcset="/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/gannet-9003524_1280_hu2533167316015730957.jpg 800w, /p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/gannet-9003524_1280_hu7415990742289172679.jpg 1600w"
+                        width="800" 
+                        height="533" 
+                        loading="lazy"
+                        alt="Featured image of post 性能调优之数据倾斜" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/spark/" style="background-color: #2a9d8f; color: #fff;">
+                Spark
+            </a>
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/">性能调优之数据倾斜</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2025-04-13</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 7 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="概述">概述
+</h2><h3 id="现象">现象
+</h3><p>绝大多数 task 任务运行速度很快，但是就是有那么几个 task 任务运行极其缓慢，慢慢的可能就接着报内存溢出的问题。</p>
+<h3 id="原因">原因
+</h3><p>数据倾斜一般是发生在 shuffle 类的算子，比如 distinct、groupByKey、reduceByKey、aggregateByKey、join、cogroup 等，涉及到数据重分区，如果其中某一个 key 数量特别大，就发生了数据倾斜。</p>
+<h2 id="大key定位">大key定位
+</h2><p>从所有 key 中，把其中每一个 key 随机取出来一部分，然后进行一个百分比的推算，这是用局部取推算整体，这样可以大概定位哪个key最多使用</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">def</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="w"> </span><span class="n">args</span><span class="p">:</span><span class="w"> </span><span class="n">Array</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="w"> </span><span class="p">):</span><span class="w"> </span><span class="n">Unit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">sparkConf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">SparkConf</span><span class="p">().</span><span class="na">setAppName</span><span class="p">(</span><span class="s">&#34;BigJoinDemo&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">&#34;spark.sql.shuffle.partitions&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;36&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">.</span><span class="na">setMaster</span><span class="p">(</span><span class="s">&#34;local[*]&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">sparkSession</span><span class="p">:</span><span class="w"> </span><span class="n">SparkSession</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">InitUtil</span><span class="p">.</span><span class="na">initSparkSession</span><span class="p">(</span><span class="n">sparkConf</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">println</span><span class="p">(</span><span class="s">&#34;=============================================csc courseid sample=============================================&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">cscTopKey</span><span class="p">:</span><span class="w"> </span><span class="n">Array</span><span class="o">[</span><span class="p">(</span><span class="n">Int</span><span class="p">,</span><span class="w"> </span><span class="n">Row</span><span class="p">)</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sampleTopKey</span><span class="p">(</span><span class="n">sparkSession</span><span class="p">,</span><span class="s">&#34;sparktuning.course_shopping_cart&#34;</span><span class="p">,</span><span class="s">&#34;courseid&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">println</span><span class="p">(</span><span class="n">cscTopKey</span><span class="p">.</span><span class="na">mkString</span><span class="p">(</span><span class="s">&#34;\n&#34;</span><span class="p">))</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">println</span><span class="p">(</span><span class="s">&#34;=============================================sc courseid sample=============================================&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">scTopKey</span><span class="p">:</span><span class="w"> </span><span class="n">Array</span><span class="o">[</span><span class="p">(</span><span class="n">Int</span><span class="p">,</span><span class="w"> </span><span class="n">Row</span><span class="p">)</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sampleTopKey</span><span class="p">(</span><span class="n">sparkSession</span><span class="p">,</span><span class="s">&#34;sparktuning.sale_course&#34;</span><span class="p">,</span><span class="s">&#34;courseid&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">println</span><span class="p">(</span><span class="n">scTopKey</span><span class="p">.</span><span class="na">mkString</span><span class="p">(</span><span class="s">&#34;\n&#34;</span><span class="p">))</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">println</span><span class="p">(</span><span class="s">&#34;=============================================cp orderid sample=============================================&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">cpTopKey</span><span class="p">:</span><span class="w"> </span><span class="n">Array</span><span class="o">[</span><span class="p">(</span><span class="n">Int</span><span class="p">,</span><span class="w"> </span><span class="n">Row</span><span class="p">)</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sampleTopKey</span><span class="p">(</span><span class="n">sparkSession</span><span class="p">,</span><span class="s">&#34;sparktuning.course_pay&#34;</span><span class="p">,</span><span class="s">&#34;orderid&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">println</span><span class="p">(</span><span class="n">cpTopKey</span><span class="p">.</span><span class="na">mkString</span><span class="p">(</span><span class="s">&#34;\n&#34;</span><span class="p">))</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">println</span><span class="p">(</span><span class="s">&#34;=============================================csc orderid sample=============================================&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">cscTopOrderKey</span><span class="p">:</span><span class="w"> </span><span class="n">Array</span><span class="o">[</span><span class="p">(</span><span class="n">Int</span><span class="p">,</span><span class="w"> </span><span class="n">Row</span><span class="p">)</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sampleTopKey</span><span class="p">(</span><span class="n">sparkSession</span><span class="p">,</span><span class="s">&#34;sparktuning.course_shopping_cart&#34;</span><span class="p">,</span><span class="s">&#34;orderid&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">println</span><span class="p">(</span><span class="n">cscTopOrderKey</span><span class="p">.</span><span class="na">mkString</span><span class="p">(</span><span class="s">&#34;\n&#34;</span><span class="p">))</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">def</span><span class="w"> </span><span class="nf">sampleTopKey</span><span class="p">(</span><span class="w"> </span><span class="n">sparkSession</span><span class="p">:</span><span class="w"> </span><span class="n">SparkSession</span><span class="p">,</span><span class="w"> </span><span class="n">tableName</span><span class="p">:</span><span class="w"> </span><span class="n">String</span><span class="p">,</span><span class="w"> </span><span class="n">keyColumn</span><span class="p">:</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="p">):</span><span class="w"> </span><span class="n">Array</span><span class="o">[</span><span class="p">(</span><span class="n">Int</span><span class="p">,</span><span class="w"> </span><span class="n">Row</span><span class="p">)</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">df</span><span class="p">:</span><span class="w"> </span><span class="n">DataFrame</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sparkSession</span><span class="p">.</span><span class="na">sql</span><span class="p">(</span><span class="s">&#34;select &#34;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">keyColumn</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&#34; from &#34;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tableName</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">val</span><span class="w"> </span><span class="n">top10Key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">df</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">.</span><span class="na">select</span><span class="p">(</span><span class="n">keyColumn</span><span class="p">).</span><span class="na">sample</span><span class="p">(</span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="n">0</span><span class="p">.</span><span class="na">1</span><span class="p">).</span><span class="na">rdd</span><span class="w"> </span><span class="c1">// 对key不放回采样</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">.</span><span class="na">map</span><span class="p">(</span><span class="n">k</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">(</span><span class="n">k</span><span class="p">,</span><span class="w"> </span><span class="n">1</span><span class="p">)).</span><span class="na">reduceByKey</span><span class="p">(</span><span class="n">_</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">_</span><span class="p">)</span><span class="w"> </span><span class="c1">// 统计不同key出现的次数</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">.</span><span class="na">map</span><span class="p">(</span><span class="n">k</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">(</span><span class="n">k</span><span class="p">.</span><span class="na">_2</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="p">.</span><span class="na">_1</span><span class="p">)).</span><span class="na">sortByKey</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span><span class="w"> </span><span class="c1">// 统计的key进行排序</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">.</span><span class="na">take</span><span class="p">(</span><span class="n">10</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">top10Key</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里运用了<code>.select(keyColumn).sample(false, 0.1).rdd</code>，这里就可以随机取样0.1的数据。</p>
+<img src="image-20250413124138066-4519299.png" alt="image-20250413124138066" style="zoom:50%;" />
+<p>通过这种办法，可以观察到[101]、[103]的key量最大，因此也可以对这两个key特殊处理一下</p>
+<h2 id="单表数据倾斜优化">单表数据倾斜优化
+</h2><p>为了减少 shuffle 数据量以及 reduce 端的压力，通常 Spark SQL 在 map 端会做一个partial aggregate（通常叫做预聚合或者偏聚合），即在 shuffle 前将同一分区内所属同 key 的记录先进行一个预结算，再将结果进行 shuffle，发送到 reduce 端做一个汇总，类似 MR 的提前 Combiner，所以执行计划中 HashAggregate 通常成对出现。</p>
+<ol>
+<li><strong>适用场景</strong>：聚合类的 shuffle 操作，部分 key 数据量较大，且大 key 的数据分布在很多不同的切片</li>
+<li><strong>解决逻辑</strong>：两阶段聚合（加盐局部聚合+去盐全局聚合）</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">def</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="w"> </span><span class="n">args</span><span class="p">:</span><span class="w"> </span><span class="n">Array</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="w"> </span><span class="p">):</span><span class="w"> </span><span class="n">Unit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">sparkConf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">SparkConf</span><span class="p">().</span><span class="na">setAppName</span><span class="p">(</span><span class="s">&#34;SkewAggregationTuning&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">&#34;spark.sql.shuffle.partitions&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;36&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//      .setMaster(&#34;local[*]&#34;)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">sparkSession</span><span class="p">:</span><span class="w"> </span><span class="n">SparkSession</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">InitUtil</span><span class="p">.</span><span class="na">initSparkSession</span><span class="p">(</span><span class="n">sparkConf</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">sparkSession</span><span class="p">.</span><span class="na">udf</span><span class="p">.</span><span class="na">register</span><span class="p">(</span><span class="s">&#34;random_prefix&#34;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="n">Int</span><span class="p">,</span><span class="w"> </span><span class="n">num</span><span class="p">:</span><span class="w"> </span><span class="n">Int</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">randomPrefixUDF</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="n">num</span><span class="p">))</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">sparkSession</span><span class="p">.</span><span class="na">udf</span><span class="p">.</span><span class="na">register</span><span class="p">(</span><span class="s">&#34;remove_random_prefix&#34;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">removeRandomPrefixUDF</span><span class="p">(</span><span class="n">value</span><span class="p">))</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">val</span><span class="w"> </span><span class="n">sql1</span><span class="o">=</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="s">&#34;&#34;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s">        |select
+</span></span></span><span class="line"><span class="cl"><span class="s">        |  courseid,
+</span></span></span><span class="line"><span class="cl"><span class="s">        |  sum(sellmoney)
+</span></span></span><span class="line"><span class="cl"><span class="s">        |from sparktuning.course_shopping_cart
+</span></span></span><span class="line"><span class="cl"><span class="s">        |group by courseid
+</span></span></span><span class="line"><span class="cl"><span class="s">      &#34;&#34;&#34;</span><span class="p">.</span><span class="na">stripMargin</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">sql2</span><span class="w"> </span><span class="o">=</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="s">&#34;&#34;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s">        |select
+</span></span></span><span class="line"><span class="cl"><span class="s">        |  courseid,
+</span></span></span><span class="line"><span class="cl"><span class="s">        |  sum(course_sell) totalSell
+</span></span></span><span class="line"><span class="cl"><span class="s">        |from
+</span></span></span><span class="line"><span class="cl"><span class="s">        |  (
+</span></span></span><span class="line"><span class="cl"><span class="s">        |    select
+</span></span></span><span class="line"><span class="cl"><span class="s">        |      remove_random_prefix(random_courseid) courseid,
+</span></span></span><span class="line"><span class="cl"><span class="s">        |      course_sell
+</span></span></span><span class="line"><span class="cl"><span class="s">        |    from
+</span></span></span><span class="line"><span class="cl"><span class="s">        |      (
+</span></span></span><span class="line"><span class="cl"><span class="s">        |        select
+</span></span></span><span class="line"><span class="cl"><span class="s">        |          random_courseid,
+</span></span></span><span class="line"><span class="cl"><span class="s">        |          sum(sellmoney) course_sell
+</span></span></span><span class="line"><span class="cl"><span class="s">        |        from
+</span></span></span><span class="line"><span class="cl"><span class="s">        |          (
+</span></span></span><span class="line"><span class="cl"><span class="s">        |            select
+</span></span></span><span class="line"><span class="cl"><span class="s">        |              random_prefix(courseid, 6) random_courseid,
+</span></span></span><span class="line"><span class="cl"><span class="s">        |              sellmoney
+</span></span></span><span class="line"><span class="cl"><span class="s">        |            from
+</span></span></span><span class="line"><span class="cl"><span class="s">        |              sparktuning.course_shopping_cart
+</span></span></span><span class="line"><span class="cl"><span class="s">        |          ) t1
+</span></span></span><span class="line"><span class="cl"><span class="s">        |        group by random_courseid
+</span></span></span><span class="line"><span class="cl"><span class="s">        |      ) t2
+</span></span></span><span class="line"><span class="cl"><span class="s">        |  ) t3
+</span></span></span><span class="line"><span class="cl"><span class="s">        |group by
+</span></span></span><span class="line"><span class="cl"><span class="s">        |  courseid
+</span></span></span><span class="line"><span class="cl"><span class="s">      &#34;&#34;&#34;</span><span class="p">.</span><span class="na">stripMargin</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">sparkSession</span><span class="p">.</span><span class="na">sql</span><span class="p">(</span><span class="n">sql1</span><span class="p">).</span><span class="na">show</span><span class="p">(</span><span class="n">10000</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//    while(true){}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>SQL1分析</strong></p>
+<p>SQL1虽然没有优化，但SparkSQL已经提前进行了<strong>HashAggregate</strong>，即已经完成了一部分的预聚合。</p>
+<p><strong>SQL2分析</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">select</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="nf">random_prefix</span><span class="p">(</span><span class="n">courseid</span><span class="p">,</span><span class="w"> </span><span class="n">6</span><span class="p">)</span><span class="w"> </span><span class="n">random_courseid</span><span class="p">,</span><span class="w"> </span><span class="n">sellmoney</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">from</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">sparktuning</span><span class="p">.</span><span class="na">course_shopping_cart</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>首先对courseId取6以内的随机数，这个操作可以将courseid打散</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">select</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">random_courseid</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">sum</span><span class="p">(</span><span class="n">sellmoney</span><span class="p">)</span><span class="w"> </span><span class="n">course_sell</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nf">from</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">select</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="nf">random_prefix</span><span class="p">(</span><span class="n">courseid</span><span class="p">,</span><span class="w"> </span><span class="n">6</span><span class="p">)</span><span class="w"> </span><span class="n">random_courseid</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">sellmoney</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">from</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">sparktuning</span><span class="p">.</span><span class="na">course_shopping_cart</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="n">t1</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">group</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="n">random_courseid</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里的操作对随机打散后的random_courseid局部聚合</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">select</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">courseid</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">sum</span><span class="p">(</span><span class="n">course_sell</span><span class="p">)</span><span class="w"> </span><span class="n">totalSell</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nf">from</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="n">select</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="nf">remove_random_prefix</span><span class="p">(</span><span class="n">random_courseid</span><span class="p">)</span><span class="w"> </span><span class="n">courseid</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">course_sell</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="nf">from</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">select</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">random_courseid</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">sum</span><span class="p">(</span><span class="n">sellmoney</span><span class="p">)</span><span class="w"> </span><span class="n">course_sell</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="nf">from</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">select</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="nf">random_prefix</span><span class="p">(</span><span class="n">courseid</span><span class="p">,</span><span class="w"> </span><span class="n">6</span><span class="p">)</span><span class="w"> </span><span class="n">random_courseid</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">sellmoney</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="n">from</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">				</span><span class="n">sparktuning</span><span class="p">.</span><span class="na">course_shopping_cart</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">)</span><span class="w"> </span><span class="n">t1</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="n">group</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="n">random_courseid</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">)</span><span class="w"> </span><span class="n">t2</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="n">t3</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">group</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="n">courseid</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>最后再进行全局聚合。</p>
+<p>这种办法虽然执行的步骤更多了，但可以对大数据量的情况下优化更大，因为可以通过加盐随机分散掉一些大key带来的坏处</p>
+<h2 id="join数据倾斜">Join数据倾斜
+</h2><h3 id="广播join">广播Join
+</h3><p>适用于小表 join 大表。小表足够小，可被加载进 Driver 并通过 Broadcast 方法广播到各个 Executor中。上一章节已经讲过。</p>
+<p><strong>倾斜案例</strong></p>
+<p>首先先关闭自动广播</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="s">&#34;spark.sql.autoBroadcastJoinThreshold&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;-1&#34;</span><span class="p">)</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后写sql运行</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="n">saleCourse</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">.</span><span class="na">join</span><span class="p">(</span><span class="n">courseShoppingCart</span><span class="p">,</span><span class="w"> </span><span class="n">Seq</span><span class="p">(</span><span class="s">&#34;courseid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dt&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dn&#34;</span><span class="p">),</span><span class="w"> </span><span class="s">&#34;right&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">.</span><span class="na">join</span><span class="p">(</span><span class="n">coursePay</span><span class="p">,</span><span class="w"> </span><span class="n">Seq</span><span class="p">(</span><span class="s">&#34;orderid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dt&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dn&#34;</span><span class="p">),</span><span class="w"> </span><span class="s">&#34;left&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">.</span><span class="na">select</span><span class="p">(</span><span class="s">&#34;courseid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;coursename&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;status&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;pointlistid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;majorid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;chapterid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;chaptername&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;edusubjectid&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="p">,</span><span class="w"> </span><span class="s">&#34;edusubjectname&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;teacherid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;teachername&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;coursemanager&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;money&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;orderid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;cart_discount&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;sellmoney&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="s">&#34;cart_createtime&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;pay_discount&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;paymoney&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;pay_createtime&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dt&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dn&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">.</span><span class="na">write</span><span class="p">.</span><span class="na">mode</span><span class="p">(</span><span class="n">SaveMode</span><span class="p">.</span><span class="na">Overwrite</span><span class="p">).</span><span class="na">saveAsTable</span><span class="p">(</span><span class="s">&#34;sparktuning.salecourse_detail&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>从前面分析得到courseid有两个key[101]、[103]是特别大的。接下来就看看倾斜的情况是怎么样的。</p>
+<p>这里可以看到有些task执行的时间特别长</p>
+<p><img src="/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/image-20250413144050893-4526452.png"
+	width="1884"
+	height="732"
+	srcset="/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/image-20250413144050893-4526452_hu9998344587301449519.png 480w, /p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/image-20250413144050893-4526452_hu13616092835851075540.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250413144050893"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="257"
+		data-flex-basis="617px"
+	
+></p>
+<p>下图很明显可以看到两个任务的shuffle write时间特别长，说明确实发生了数据倾斜</p>
+<p><img src="/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/image-20250413144117976-4526479.png"
+	width="1934"
+	height="922"
+	srcset="/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/image-20250413144117976-4526479_hu16506166782093855049.png 480w, /p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/image-20250413144117976-4526479_hu16046458589801130150.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250413144117976"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="209"
+		data-flex-basis="503px"
+	
+></p>
+<p><strong>广播join案例</strong></p>
+<p>打开自动广播</p>
+<p>然后再SPARK WEB UI可以看到shuffle已经避免掉了</p>
+<p><img src="/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/image-20250413144155664.png"
+	width="1956"
+	height="168"
+	srcset="/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/image-20250413144155664_hu5098638903416798229.png 480w, /p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/image-20250413144155664_hu14486231116301041525.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250413144155664"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1164"
+		data-flex-basis="2794px"
+	
+></p>
+<p>执行时间上从<strong>3.2min</strong>减少到<strong>2.0min</strong>，可以见到有明显效果。</p>
+<h3 id="拆分大key打散大表扩容小表">拆分大key打散大表，扩容小表
+</h3><p><strong>适用场景</strong>：适用于 join 时出现数据倾斜</p>
+<p><strong>解决逻辑</strong>：</p>
+<ol>
+<li>将存在倾斜的表，根据抽样结果，拆分为倾斜 key（skew 表）和没有倾斜key（common）的两个数据集。</li>
+<li>将 skew 表的 key 全部加上随机前缀，然后对另外一个不存在严重数据倾斜的数据集（old 表）整体与随机前缀集作笛卡尔乘积（即将数据量扩大 N 倍，得到 new 表）。</li>
+<li>打散的 skew 表 join 扩容的 new 表
+union
+Common 表 join old 表</li>
+</ol>
+<p>以下为打散大 key 和扩容小表的实现思路：</p>
+<ul>
+<li>打散大表：实际就是数据一进一出进行处理，对大 key 前拼上随机前缀实现打散</li>
+<li>扩容小表：实际就是将 DataFrame 中每一条数据，转成一个集合，并往这个集合里循环添加 10 条数据，最后使用 flatmap 压平此集合，达到扩容的效果</li>
+</ul>
+<p>使用流程</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kn">import</span><span class="w"> </span><span class="nn">sparkSession.implicits._</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">saleCourse</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sparkSession</span><span class="p">.</span><span class="na">sql</span><span class="p">(</span><span class="s">&#34;select *from sparktuning.sale_course&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">coursePay</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sparkSession</span><span class="p">.</span><span class="na">sql</span><span class="p">(</span><span class="s">&#34;select * from sparktuning.course_pay&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">.</span><span class="na">withColumnRenamed</span><span class="p">(</span><span class="s">&#34;discount&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;pay_discount&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">.</span><span class="na">withColumnRenamed</span><span class="p">(</span><span class="s">&#34;createtime&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;pay_createtime&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">courseShoppingCart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sparkSession</span><span class="p">.</span><span class="na">sql</span><span class="p">(</span><span class="s">&#34;select * from sparktuning.course_shopping_cart&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">.</span><span class="na">withColumnRenamed</span><span class="p">(</span><span class="s">&#34;discount&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;cart_discount&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">.</span><span class="na">withColumnRenamed</span><span class="p">(</span><span class="s">&#34;createtime&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;cart_createtime&#34;</span><span class="p">)</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>读取表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="c1">// TODO 1、拆分 倾斜的key</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">commonCourseShoppingCart</span><span class="p">:</span><span class="w"> </span><span class="n">Dataset</span><span class="o">[</span><span class="n">Row</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">courseShoppingCart</span><span class="p">.</span><span class="na">filter</span><span class="p">(</span><span class="n">item</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">Long</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;courseid&#34;</span><span class="p">)</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">101</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">Long</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;courseid&#34;</span><span class="p">)</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">103</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">skewCourseShoppingCart</span><span class="p">:</span><span class="w"> </span><span class="n">Dataset</span><span class="o">[</span><span class="n">Row</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">courseShoppingCart</span><span class="p">.</span><span class="na">filter</span><span class="p">(</span><span class="n">item</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">Long</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;courseid&#34;</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">101</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">Long</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;courseid&#34;</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">103</span><span class="p">)</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>由于已经知道了101和103的key数量比较大，所以在这里根据这个key切分成两个表，一个是不带101和103的common表，另外一个是带101和103的skew表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="c1">//TODO 2、将倾斜的key打散  打散36份</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">newCourseShoppingCart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">skewCourseShoppingCart</span><span class="p">.</span><span class="na">mapPartitions</span><span class="p">((</span><span class="w"> </span><span class="n">partitions</span><span class="p">:</span><span class="w"> </span><span class="n">Iterator</span><span class="o">[</span><span class="n">Row</span><span class="o">]</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">partitions</span><span class="p">.</span><span class="na">map</span><span class="p">(</span><span class="n">item</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">courseid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">Long</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;courseid&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">randInt</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Random</span><span class="p">.</span><span class="na">nextInt</span><span class="p">(</span><span class="n">36</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">CourseShoppingCart</span><span class="p">(</span><span class="n">courseid</span><span class="p">,</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;orderid&#34;</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;coursename&#34;</span><span class="p">),</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;cart_discount&#34;</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;sellmoney&#34;</span><span class="p">),</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;cart_createtime&#34;</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;dt&#34;</span><span class="p">),</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;dn&#34;</span><span class="p">),</span><span class="w"> </span><span class="n">randInt</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&#34;_&#34;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">courseid</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">})</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">})</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>对skew表，打散成36份（并行度为36，处理效率可以高一点），每个courseId都修改成randInt + &ldquo;_&rdquo; + courseid</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="c1">//TODO 3、小表进行扩容 扩大36倍</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">newSaleCourse</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">saleCourse</span><span class="p">.</span><span class="na">flatMap</span><span class="p">(</span><span class="n">item</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ArrayBuffer</span><span class="o">[</span><span class="n">SaleCourse</span><span class="o">]</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">courseid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">Long</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;courseid&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">coursename</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;coursename&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;status&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">pointlistid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">Long</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;pointlistid&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">majorid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">Long</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;majorid&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">chapterid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">Long</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;chapterid&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">chaptername</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;chaptername&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">edusubjectid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">Long</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;edusubjectid&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">edusubjectname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;edusubjectname&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">teacherid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">Long</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;teacherid&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">teachername</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;teachername&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">coursemanager</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;coursemanager&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">money</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;money&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">dt</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;dt&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">dn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">.</span><span class="na">getAs</span><span class="o">[</span><span class="n">String</span><span class="o">]</span><span class="p">(</span><span class="s">&#34;dn&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">0</span><span class="w"> </span><span class="n">until</span><span class="w"> </span><span class="n">36</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">list</span><span class="p">.</span><span class="na">append</span><span class="p">(</span><span class="n">SaleCourse</span><span class="p">(</span><span class="n">courseid</span><span class="p">,</span><span class="w"> </span><span class="n">coursename</span><span class="p">,</span><span class="w"> </span><span class="n">status</span><span class="p">,</span><span class="w"> </span><span class="n">pointlistid</span><span class="p">,</span><span class="w"> </span><span class="n">majorid</span><span class="p">,</span><span class="w"> </span><span class="n">chapterid</span><span class="p">,</span><span class="w"> </span><span class="n">chaptername</span><span class="p">,</span><span class="w"> </span><span class="n">edusubjectid</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                               </span><span class="n">edusubjectname</span><span class="p">,</span><span class="w"> </span><span class="n">teacherid</span><span class="p">,</span><span class="w"> </span><span class="n">teachername</span><span class="p">,</span><span class="w"> </span><span class="n">coursemanager</span><span class="p">,</span><span class="w"> </span><span class="n">money</span><span class="p">,</span><span class="w"> </span><span class="n">dt</span><span class="p">,</span><span class="w"> </span><span class="n">dn</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&#34;_&#34;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">courseid</span><span class="p">))</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">list</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">})</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>小表直接扩容36倍</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="c1">// TODO 4、倾斜的大key 与  扩容后的表 进行join</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">df1</span><span class="p">:</span><span class="w"> </span><span class="n">DataFrame</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">newSaleCourse</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">.</span><span class="na">join</span><span class="p">(</span><span class="n">newCourseShoppingCart</span><span class="p">.</span><span class="na">drop</span><span class="p">(</span><span class="s">&#34;courseid&#34;</span><span class="p">).</span><span class="na">drop</span><span class="p">(</span><span class="s">&#34;coursename&#34;</span><span class="p">),</span><span class="w"> </span><span class="n">Seq</span><span class="p">(</span><span class="s">&#34;rand_courseid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dt&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dn&#34;</span><span class="p">),</span><span class="w"> </span><span class="s">&#34;right&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">.</span><span class="na">join</span><span class="p">(</span><span class="n">coursePay</span><span class="p">,</span><span class="w"> </span><span class="n">Seq</span><span class="p">(</span><span class="s">&#34;orderid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dt&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dn&#34;</span><span class="p">),</span><span class="w"> </span><span class="s">&#34;left&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">.</span><span class="na">select</span><span class="p">(</span><span class="s">&#34;courseid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;coursename&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;status&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;pointlistid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;majorid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;chapterid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;chaptername&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;edusubjectid&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">,</span><span class="w"> </span><span class="s">&#34;edusubjectname&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;teacherid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;teachername&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;coursemanager&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;money&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;orderid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;cart_discount&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;sellmoney&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;cart_createtime&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;pay_discount&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;paymoney&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;pay_createtime&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dt&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dn&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">// TODO 5、没有倾斜大key的部分 与 原来的表 进行join</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">df2</span><span class="p">:</span><span class="w"> </span><span class="n">DataFrame</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">saleCourse</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">.</span><span class="na">join</span><span class="p">(</span><span class="n">commonCourseShoppingCart</span><span class="p">.</span><span class="na">drop</span><span class="p">(</span><span class="s">&#34;coursename&#34;</span><span class="p">),</span><span class="w"> </span><span class="n">Seq</span><span class="p">(</span><span class="s">&#34;courseid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dt&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dn&#34;</span><span class="p">),</span><span class="w"> </span><span class="s">&#34;right&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">.</span><span class="na">join</span><span class="p">(</span><span class="n">coursePay</span><span class="p">,</span><span class="w"> </span><span class="n">Seq</span><span class="p">(</span><span class="s">&#34;orderid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dt&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dn&#34;</span><span class="p">),</span><span class="w"> </span><span class="s">&#34;left&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">.</span><span class="na">select</span><span class="p">(</span><span class="s">&#34;courseid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;coursename&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;status&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;pointlistid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;majorid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;chapterid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;chaptername&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;edusubjectid&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">,</span><span class="w"> </span><span class="s">&#34;edusubjectname&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;teacherid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;teachername&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;coursemanager&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;money&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;orderid&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;cart_discount&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;sellmoney&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s">&#34;cart_createtime&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;pay_discount&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;paymoney&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;pay_createtime&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dt&#34;</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;dn&#34;</span><span class="p">)</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>分别对倾斜的大key与扩容后的表进行join、没有倾斜的大key部分与原来的表进行join</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="c1">// TODO 6、将 倾斜key join后的结果 与 普通key join后的结果，uinon起来</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">df1</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">.</span><span class="na">union</span><span class="p">(</span><span class="n">df2</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">.</span><span class="na">write</span><span class="p">.</span><span class="na">mode</span><span class="p">(</span><span class="n">SaveMode</span><span class="p">.</span><span class="na">Overwrite</span><span class="p">).</span><span class="na">insertInto</span><span class="p">(</span><span class="s">&#34;sparktuning.salecourse_detail&#34;</span><span class="p">)</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>最后将倾斜key join后的结果与普通key join后的结果，uinon起来。如此就可以得到解决倾斜key的结果了。</p>
+<p>中间需要注意的是，另外创建一个名为SaleCourse、CourseShoppingCart的case class，SaleCourse它的类结构如下</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="k">case</span><span class="w"> </span><span class="kd">class</span> <span class="nf">SaleCourse</span><span class="p">(</span><span class="w"> </span><span class="n">courseid</span><span class="p">:</span><span class="w"> </span><span class="n">Long</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                       </span><span class="n">coursename</span><span class="p">:</span><span class="w"> </span><span class="n">String</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                       </span><span class="n">status</span><span class="p">:</span><span class="w"> </span><span class="n">String</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                       </span><span class="n">pointlistid</span><span class="p">:</span><span class="w"> </span><span class="n">Long</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                       </span><span class="n">majorid</span><span class="p">:</span><span class="w"> </span><span class="n">Long</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                       </span><span class="n">chapterid</span><span class="p">:</span><span class="w"> </span><span class="n">Long</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                       </span><span class="n">chaptername</span><span class="p">:</span><span class="w"> </span><span class="n">String</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                       </span><span class="n">edusubjectid</span><span class="p">:</span><span class="w"> </span><span class="n">Long</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                       </span><span class="n">edusubjectname</span><span class="p">:</span><span class="w"> </span><span class="n">String</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                       </span><span class="n">teacherid</span><span class="p">:</span><span class="w"> </span><span class="n">Long</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                       </span><span class="n">teachername</span><span class="p">:</span><span class="w"> </span><span class="n">String</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                       </span><span class="n">coursemanager</span><span class="p">:</span><span class="w"> </span><span class="n">String</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                       </span><span class="n">money</span><span class="p">:</span><span class="w"> </span><span class="n">String</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                       </span><span class="n">dt</span><span class="p">:</span><span class="w"> </span><span class="n">String</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                       </span><span class="n">dn</span><span class="p">:</span><span class="w"> </span><span class="n">String</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                       </span><span class="n">rand_courseid</span><span class="p">:</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="p">)</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到这里额外加了rand_courseid这个字段，两个表join完之后直接取消这个字段就可以了。</p>
+<h2 id="总结">总结
+</h2><p>数据倾斜常见优化手段如下</p>
+<ol>
+<li>数据倾斜现象：数据倾斜一般是发生在 shuffle 类的算子，比如 distinct、groupByKey、reduceByKey、aggregateByKey、join、cogroup 等，涉及到数据重分区，如果其中某一个 key 数量特别大，就发生了数据倾斜。</li>
+<li>数据倾斜大 key 定位：从所有 key 中，把其中每一个 key 随机取出来一部分，然后进行一个百分比的推算，这是用局部取推算整体，这样可以大概定位哪个key最多使用</li>
+<li>单表数据倾斜优化：分为两阶段聚合，首先先对key取随机前缀，局部聚合；然后移除随机前缀；最后完成全局聚合</li>
+<li>Join数据倾斜：</li>
+<li>广播Join：默认开启了广播Join，这样的话，在表少于一定阈值情况下，会进行广播Join，能够减少shuffle的次数</li>
+<li>拆分大key打散大表，扩容小表：将存在倾斜的表，根据抽样结果，拆分为倾斜 key（skew 表）和没有倾斜key（common）的两个数据集。将 skew 表的 key 全部加上随机前缀，然后对另外一个不存在严重数据倾斜的数据集（old 表）整体与随机前缀集作笛卡尔乘积（即将数据量扩大 N 倍，得到 new 表）。这样的话同样也可以减少数据倾斜，通常可以作为最后的终极杀手锏来使用的。</li>
+</ol>
+<h2 id="参考">参考
+</h2><ol>
+<li><a class="link" href="https://blog.csdn.net/weixin_41841496/article/details/130639578"  target="_blank" rel="noopener"
+    >Spark3性能调优（二）&mdash;数据倾斜</a></li>
+<li>SparkSQL自身有针对数据倾斜提供什么参数调优吗？</li>
+</ol>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/%E6%89%8B%E6%8A%8A%E6%89%8B%E5%B8%A6%E4%BD%A0%E6%8F%90%E5%8D%87%E5%BA%94%E7%94%A8%E7%9A%84%E6%89%A7%E8%A1%8C%E6%80%A7%E8%83%BD/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E6%89%8B%E6%8A%8A%E6%89%8B%E5%B8%A6%E4%BD%A0%E6%8F%90%E5%8D%87%E5%BA%94%E7%94%A8%E7%9A%84%E6%89%A7%E8%A1%8C%E6%80%A7%E8%83%BD/image-20250413100248830-4509770.6f1911fd3beb675b76ba13231345e168_hu10809216258361846087.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 手把手带你提升应用的执行性能"
+                        
+                        data-hash="md5-bxkR/TvrZ1t2uhMjE0XhaA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">手把手带你提升应用的执行性能</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/blockmanager%E7%AE%A1%E7%90%86%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">
+        
+        
+            <div class="article-image">
+                <img src="/p/blockmanager%E7%AE%A1%E7%90%86%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/dolphin-8949505_1280.b851b2721acfbb3b660cb93a718d57d3_hu5252129146125328555.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post BlockManager管理源码解析"
+                        
+                        data-hash="md5-uFGychrPuztmDLk6cY1X0w==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">BlockManager管理源码解析</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/">
+        
+        
+            <div class="article-image">
+                <img src="/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/grebe-7972183_1280.6dd8a2d7b8cf99148cf7a877d9459ae8_hu10399000877992530385.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Spark广播机制源码实现"
+                        
+                        data-hash="md5-bdii17jPmRSM96h32UWa6A==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Spark广播机制源码实现</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/oom%E9%83%BD%E6%98%AF%E8%B0%81%E7%9A%84%E9%94%85/">
+        
+        
+            <div class="article-image">
+                <img src="/p/oom%E9%83%BD%E6%98%AF%E8%B0%81%E7%9A%84%E9%94%85/winter-8433267_1280.1db9e97625db6d61118e6635dc1248b1_hu14689633931296498845.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post OOM都是谁的锅"
+                        
+                        data-hash="md5-HbnpdiXbbWERjmY13BJIsQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">OOM都是谁的锅</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E8%AF%A6%E8%A7%A3spark%E5%B9%BF%E6%92%AD%E5%8F%98%E9%87%8F/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E8%AF%A6%E8%A7%A3spark%E5%B9%BF%E6%92%AD%E5%8F%98%E9%87%8F/pawel-czerwinski-8uZPynIu-rQ-unsplash.c514d916917173a48a42e0114b469961_hu7626638945853200361.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 详解Spark广播变量"
+                        
+                        data-hash="md5-xRTZFpFxc6SKQuARS0aZYQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">详解Spark广播变量</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2025 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
