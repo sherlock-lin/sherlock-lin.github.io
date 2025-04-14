@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="概述 在日常的开发与调优工作中，为了充分利用硬件资源，我们往往需要手工调节任务并行度来提升CPU利用率，控制任务并行度的参数是Spark的配置项：spark.default.parallelism。增加并行度确实能够充分利用闲置的CPU线程，但是，parallelism数值也不宜过大，过大反而会引入过多的调度开销，得不偿失。\n">
+<title>调度系统入门讲解</title>
+
+<link rel='canonical' href='https://sherlock-lin.github.io/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/'>
+
+<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="调度系统入门讲解">
+<meta property='og:description' content="概述 在日常的开发与调优工作中，为了充分利用硬件资源，我们往往需要手工调节任务并行度来提升CPU利用率，控制任务并行度的参数是Spark的配置项：spark.default.parallelism。增加并行度确实能够充分利用闲置的CPU线程，但是，parallelism数值也不宜过大，过大反而会引入过多的调度开销，得不偿失。\n">
+<meta property='og:url' content='https://sherlock-lin.github.io/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/'>
+<meta property='og:site_name' content='夏洛克-林'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2025-04-14T20:39:03&#43;08:00'/><meta property='article:modified_time' content='2025-04-14T20:39:03&#43;08:00'/><meta property='og:image' content='https://sherlock-lin.github.io/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/lizard-8007238_1280.jpg' />
+<meta name="twitter:title" content="调度系统入门讲解">
+<meta name="twitter:description" content="概述 在日常的开发与调优工作中，为了充分利用硬件资源，我们往往需要手工调节任务并行度来提升CPU利用率，控制任务并行度的参数是Spark的配置项：spark.default.parallelism。增加并行度确实能够充分利用闲置的CPU线程，但是，parallelism数值也不宜过大，过大反而会引入过多的调度开销，得不偿失。\n"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='https://sherlock-lin.github.io/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/lizard-8007238_1280.jpg' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/cs_hu10005534405353342465.jpg" width="300"
+                            height="294" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">🥳</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">夏洛克-林</a></h1>
+            <h2 class="site-description">欢迎来到一个读书狂魔、偏执狂的博客~</h2>
+        </div>
+    </header><ol class="menu-social">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%8F%8B%E6%83%85%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>友情链接</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#概述">概述</a></li>
+    <li><a href="#案例对用户兴趣特征做label-encoding">案例：对用户兴趣特征做Label Encoding</a></li>
+    <li><a href="#spark的调度系统是如何工作的">Spark的调度系统是如何工作的？</a>
+      <ol>
+        <li><a href="#土豆工坊流水线升级">土豆工坊流水线升级</a></li>
+        <li><a href="#调度系统中的核心组件有哪些">调度系统中的核心组件有哪些？</a>
+          <ol>
+            <li><a href="#1-dagscheduler">1. DAGScheduler</a></li>
+            <li><a href="#2-schedulerbackend">2. SchedulerBackend</a></li>
+            <li><a href="#3-taskscheduler">3. TaskScheduler</a></li>
+          </ol>
+        </li>
+      </ol>
+    </li>
+    <li><a href="#性能调优案例回顾">性能调优案例回顾</a></li>
+    <li><a href="#总结">总结</a></li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/">
+                <img src="/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/lizard-8007238_1280_hu5417393534990166681.jpg"
+                        srcset="/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/lizard-8007238_1280_hu5417393534990166681.jpg 800w, /p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/lizard-8007238_1280_hu1539845558952584090.jpg 1600w"
+                        width="800" 
+                        height="534" 
+                        loading="lazy"
+                        alt="Featured image of post 调度系统入门讲解" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/spark/" style="background-color: #2a9d8f; color: #fff;">
+                Spark
+            </a>
+        
+            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" style="background-color: #2a9d8f; color: #fff;">
+                大数据
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/">调度系统入门讲解</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">2025-04-14</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 16 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="概述">概述
+</h2><p>在日常的开发与调优工作中，为了充分利用硬件资源，我们往往需要手工调节任务并行度来提升CPU利用率，控制任务并行度的参数是Spark的配置项：spark.default.parallelism。增加并行度确实能够充分利用闲置的CPU线程，但是，parallelism数值也不宜过大，过大反而会引入过多的调度开销，得不偿失。</p>
+<p>这个调优技巧可以说是老生常谈了，网上到处都可以搜得到。那你知道为什么parallelism数值过大调度开销会呈指数级增长吗？调度开销具体又是指什么呢？以及，如果不想一个数值一个数值的尝试，parallelism数值究竟该怎么设置，才能以最少的时间获得最好的效果？如果你还没有答案，或者说还没有把握答对，接下来你就要好好听我讲。</p>
+<h2 id="案例对用户兴趣特征做label-encoding">案例：对用户兴趣特征做Label Encoding
+</h2><p>在机器学习应用中，特征工程几乎占据了算法同学80%的时间和精力，毕竟，一份质量优良的训练样本限定了模型效果的上限和天花板，我们要讲的案例就来自特征工程中一个典型的处理场景：Label Encoding（标签编码）。</p>
+<p>什么是Label encoding呢？模型特征按照是否连续可以分为两类：连续性数值特征和离散型特征，离散型特征往往以字符串的形式存在，比如用户兴趣特征就包括体育、政治、军事和娱乐等。对于很多机器学习算法来说，字符串类型的数据是不能直接消费的，需要转换为数值才行，例如把体育、政治、军事、娱乐映射为0、1、2、3，这个过程在机器学习领域有个术语就叫Label encoding。</p>
+<p>我们这一讲的案例，就是要对用户兴趣特征做Label encoding，简单来说就是以固定的模板把字符串转换为数值，然后将千亿条样本中的用户兴趣转换为对应的索引值。固定模板是离线模型训练与线上模型服务之间的文件接口，内容仅包含用户兴趣这一列，字符串已按事先约定好的规则进行排序。我们需要注意的是，用户兴趣包含4个层级，因此这个模板文件较大，记录数达到万级别。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="c1">//模板文件</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//用户兴趣</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">体育</span><span class="o">-</span><span class="n">篮球</span><span class="o">-</span><span class="n">NBA</span><span class="o">-</span><span class="n">湖人</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">军事</span><span class="o">-</span><span class="n">武器</span><span class="o">-</span><span class="n">步枪</span><span class="o">-</span><span class="n">AK47</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>那具体怎么转换呢？例如，我们可以将用户兴趣“体育-篮球-NBA-湖人”映射为0，将兴趣“军事-武器-步枪-AK47”映射为1，以此类推。应该说，需求还是相当明确的，我身边的同学们拿到需求之后，奔儿都没打，以迅雷不及掩耳之势就实现了如下的处理函数。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="cm">/**
+</span></span></span><span class="line"><span class="cl"><span class="cm">实现方式1
+</span></span></span><span class="line"><span class="cl"><span class="cm">输入参数：模板文件路径，用户兴趣字符串
+</span></span></span><span class="line"><span class="cl"><span class="cm">返回值：用户兴趣字符串对应的索引值
+</span></span></span><span class="line"><span class="cl"><span class="cm">*/</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//函数定义</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">def</span><span class="w"> </span><span class="nf">findIndex</span><span class="p">(</span><span class="n">templatePath</span><span class="p">:</span><span class="w"> </span><span class="n">String</span><span class="p">,</span><span class="w"> </span><span class="n">interest</span><span class="p">:</span><span class="w"> </span><span class="n">String</span><span class="p">):</span><span class="w"> </span><span class="n">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">source</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Source</span><span class="p">.</span><span class="na">fromFile</span><span class="p">(</span><span class="n">filePath</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;UTF-8&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">lines</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">source</span><span class="p">.</span><span class="na">getLines</span><span class="p">().</span><span class="na">toArray</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">source</span><span class="p">.</span><span class="na">close</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">searchMap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lines</span><span class="p">.</span><span class="na">zip</span><span class="p">(</span><span class="n">0</span><span class="w"> </span><span class="n">until</span><span class="w"> </span><span class="n">lines</span><span class="p">.</span><span class="na">size</span><span class="p">).</span><span class="na">toMap</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">searchMap</span><span class="p">.</span><span class="na">getOrElse</span><span class="p">(</span><span class="n">interest</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="n">1</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//Dataset中的函数调用</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">findIndex</span><span class="p">(</span><span class="n">filePath</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;体育-篮球-NBA-湖人&#34;</span><span class="p">)</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们可以看到这个函数有两个形参，一个是模板文件路径，另一个是训练样本中的用户兴趣。处理函数首先读取模板文件，然后根据文件中排序的字符串构建一个从兴趣到索引的Map映射，最后在这个Map中查找第二个形参传入的用户兴趣，如果能找到则返回对应的索引，找不到的话则返回-1。</p>
+<p>这段代码看上去似乎没什么问题，同学们基于上面的函数对千亿样本做Label encoding，在20台机型为C5.4xlarge AWS EC2的分布式集群中花费了5个小时。坦白说，这样的执行性能，我是不能接受的。你可能会说：“需求就是这个样子，还能有什么别的办法呢？”我们不妨来看另外一种实现方式。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="cm">/**
+</span></span></span><span class="line"><span class="cl"><span class="cm">实现方式2
+</span></span></span><span class="line"><span class="cl"><span class="cm">输入参数：模板文件路径，用户兴趣字符串
+</span></span></span><span class="line"><span class="cl"><span class="cm">返回值：用户兴趣字符串对应的索引值
+</span></span></span><span class="line"><span class="cl"><span class="cm">*/</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//函数定义</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">findIndex</span><span class="p">:</span><span class="w"> </span><span class="p">(</span><span class="n">String</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">(</span><span class="n">String</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">source</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Source</span><span class="p">.</span><span class="na">fromFile</span><span class="p">(</span><span class="n">filePath</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;UTF-8&#34;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">lines</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">source</span><span class="p">.</span><span class="na">getLines</span><span class="p">().</span><span class="na">toArray</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">source</span><span class="p">.</span><span class="na">close</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">searchMap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lines</span><span class="p">.</span><span class="na">zip</span><span class="p">(</span><span class="n">0</span><span class="w"> </span><span class="n">until</span><span class="w"> </span><span class="n">lines</span><span class="p">.</span><span class="na">size</span><span class="p">).</span><span class="na">toMap</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">(</span><span class="n">interest</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">searchMap</span><span class="p">.</span><span class="na">getOrElse</span><span class="p">(</span><span class="n">interest</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="n">1</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">val</span><span class="w"> </span><span class="n">partFunc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">findIndex</span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">//Dataset中的函数调用</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">partFunc</span><span class="p">(</span><span class="s">&#34;体育-篮球-NBA-湖人&#34;</span><span class="p">)</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>同学们基于第二种方式对相同的数据集做Label encoding之后，在10台同样机型的分布式集群中花了不到20分钟就把任务跑完了。可以说，执行性能的提升是显而易见的。那么，两份代码有什么区别呢？</p>
+<p>我们可以看到，相比于第一份代码，第二份代码的函数体内没有任何变化，还是先读取模板文件、构建Map映射、查找用户兴趣，最后返回索引。最大的区别就是第二份代码对高阶函数的使用，具体来说有2点：</p>
+<ol>
+<li>处理函数定义为高阶函数，形参是模板文件路径，返回结果是从用户兴趣到索引的函数；</li>
+<li>封装千亿样本的Dataset所调用的函数，不是第一份代码中的findIndex，而是用模板文件调用findIndex得到的partFunc，partFunc是形参为兴趣、结果为索引的普通标量函数。</li>
+</ol>
+<p>那么，高阶函数真有这么神奇吗？其实，性能的提升并不是高阶函数的功劳，而是调度系统在起作用。</p>
+<h2 id="spark的调度系统是如何工作的">Spark的调度系统是如何工作的？
+</h2><p>Spark调度系统的核心职责是，先将用户构建的DAG转化为分布式任务，结合分布式集群资源的可用性，基于调度规则依序把分布式任务分发到执行器。这个过程听上去就够复杂的了，为了方便你理解，我们还是先来讲一个小故事。</p>
+<h3 id="土豆工坊流水线升级">土豆工坊流水线升级
+</h3><p>在学完了内存计算的第二层含义之后，土豆工坊的老板决定对土豆加工流水线做升级，来提高工坊的生产效率和灵活性。</p>
+<p>这里，我们先对内存计算的第二层含义做个简单地回顾，它指的是同一Stage中的所有操作会被捏合为一个函数，这个函数一次性会被地应用到输入数据上，并且一次性地产生计算结果。</p>
+<p>升级之前的土豆加工流程DAG被切分为3个执行阶段Stage，它们分别是Stage 0、Stage 1、Stage 2。其中，Stage 0产出即食薯片，Stage 1分发调味品，Stage 2则产出不同尺寸、不同风味的薯片。我们重点关注Stage 0，Stage 0有3个加工环节，分别是清洗、切片和烘焙。这3个环节需要3种不同的设备，即清洗机、切片机和烤箱。</p>
+<p><img src="/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203301088.png"
+	width="1540"
+	height="512"
+	srcset="/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203301088_hu16179890022204151543.png 480w, /p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203301088_hu8944963411401565688.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250414203301088"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="300"
+		data-flex-basis="721px"
+	
+></p>
+<p>工坊有3条流水线，每种设备都需要3套，在成本方面要花不少钱呢，因此工坊老板一直绞尽脑汁想把设备方面的成本降下来。</p>
+<p>此时，工头儿建议：“老板，我听说市场上有一种可编程的土豆加工设备，它是个黑盒子并且只有输入口和输出口，从外面看不见里面的操作流程。不过黑盒子受程序控制，给定输入口的食材，我们可以编写程序控制黑盒子的输出。有了这个可编程设备，咱们不但省了钱，将来还可以灵活地扩充产品线。比方想生产各种风味的薯条或是土豆泥，只需要更换一份程序加载到黑盒子里就行啦！”</p>
+<p>老板听后大喜，决定花钱购入可编程土豆加工设备，替换并淘汰现有的清洗机、切片机和烤箱。</p>
+<p>于是，工坊的加工流水线就变成了如下的样子。工人们的工作也从按照DAG流程图的关键步骤，在流水线上安装相应的设备，变成了把关键步骤编写相应的程序加载到黑盒内。这样一来，这家工坊的生产力也从作坊式的生产方式，升级到了现代化流水线的作业模式。</p>
+<p><img src="/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203336893.png"
+	width="1640"
+	height="690"
+	srcset="/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203336893_hu5435076710361373563.png 480w, /p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203336893_hu16771700275144989786.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250414203336893"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="237"
+		data-flex-basis="570px"
+	
+></p>
+<p>那么，这个故事跟我们今天要讲的调度系统有什么关系呢？事实上，Spark调度系统的工作流程包含如下5个步骤：</p>
+<ol>
+<li>将DAG拆分为不同的运行阶段Stages；- 2. 创建分布式任务Tasks和任务组TaskSet；- 3. 获取集群内可用的硬件资源情况；- 4. 按照调度规则决定优先调度哪些任务/组；- 5. 依序将分布式任务分发到执行器Executor。</li>
+</ol>
+<p>除了第4步以外，其他几步和土豆工坊流水线上的关键步骤都是一一对应的，它们的对应关系如下：</p>
+<p><img src="/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203402849.png"
+	width="1516"
+	height="398"
+	srcset="/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203402849_hu7398723189003215252.png 480w, /p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203402849_hu12794986302356978585.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250414203402849"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="380"
+		data-flex-basis="914px"
+	
+></p>
+<p>现在，你可能会觉得用故事来记这几个步骤好像多此一举，但当我们学完了所有的原理之后，再回过头来把故事的主线串联起来，你就会惊喜地发现，所有的原理你都能轻松地记住和理解，这可比死记硬背的效率要高得多。</p>
+<h3 id="调度系统中的核心组件有哪些">调度系统中的核心组件有哪些？
+</h3><p>接下来，我们深入到流程中的每一步去探究Spark调度系统是如何工作的。不过在此之前，我们得先弄清楚调度系统都包含哪些关键组件，不同组件之间如何交互，它们分别担任了什么角色，才能更好地理解流程中的每一步。</p>
+<p>Spark调度系统包含3个核心组件，分别是DAGScheduler、TaskScheduler和SchedulerBackend。这3个组件都运行在Driver进程中，它们通力合作将用户构建的DAG转化为分布式任务，再把这些任务分发给集群中的Executors去执行。不过，它们的名字都包含Scheduler，光看名字还真是丈二和尚摸不着头脑，所以我把它们和调度系统流程中5个步骤的对应关系总结在了下表中，你可以看一看。</p>
+<p><img src="/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203434742-4634077.png"
+	width="1486"
+	height="768"
+	srcset="/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203434742-4634077_hu14469470863531968993.png 480w, /p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203434742-4634077_hu18086351561037720726.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250414203434742"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="193"
+		data-flex-basis="464px"
+	
+></p>
+<h4 id="1-dagscheduler">1. DAGScheduler
+</h4><p>DAGScheduler的主要职责有二：一是把用户DAG拆分为Stages，如果你不记得这个过程可以回顾一下上一讲的内容；二是在Stage内创建计算任务Tasks，这些任务囊括了用户通过组合不同算子实现的数据转换逻辑。然后，执行器Executors接收到Tasks，会将其中封装的计算函数应用于分布式数据分片，去执行分布式的计算过程。</p>
+<p>不过，如果我们给集群中处于繁忙或者是饱和状态的Executors分发了任务，执行效果会大打折扣。因此，在分发任务之前，调度系统得先判断哪些节点的计算资源空闲，然后再把任务分发过去。那么，调度系统是怎么判断节点是否空闲的呢？</p>
+<h4 id="2-schedulerbackend">2. SchedulerBackend
+</h4><p>SchedulerBackend就是用来干这个事的，它是对于资源调度器的封装与抽象，为了支持多样的资源调度模式如Standalone、YARN和Mesos，SchedulerBackend提供了对应的实现类。在运行时，Spark根据用户提供的MasterURL，来决定实例化哪种实现类的对象。MasterURL就是你通过各种方式指定的资源管理器，如–master spark://ip:host（Standalone 模式）、–master yarn（YARN 模式）。</p>
+<p>对于集群中可用的计算资源，SchedulerBackend会用一个叫做ExecutorDataMap的数据结构，来记录每一个计算节点中Executors的资源状态。ExecutorDataMap是一种HashMap，它的Key是标记Executor的字符串，Value是一种叫做ExecutorData的数据结构，ExecutorData用于封装Executor的资源状态，如RPC地址、主机地址、可用CPU核数和满配CPU核数等等，它相当于是对Executor做的“资源画像”。</p>
+<p><img src="/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203545377.png"
+	width="1608"
+	height="764"
+	srcset="/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203545377_hu17414770927725591742.png 480w, /p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203545377_hu15811393128175039066.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250414203545377"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="210"
+		data-flex-basis="505px"
+	
+></p>
+<p>总的来说，对内，SchedulerBackend用ExecutorData对Executor进行资源画像；对外，SchedulerBackend以WorkerOffer为粒度提供计算资源，WorkerOffer封装了Executor ID、主机地址和CPU核数，用来表示一份可用于调度任务的空闲资源。显然，基于Executor资源画像，SchedulerBackend可以同时提供多个WorkerOffer用于分布式任务调度。WorkerOffer这个名字起得蛮有意思，Offer的字面意思是公司给你提供的工作机会，结合Spark调度系统的上下文，就变成了使用硬件资源的机会。</p>
+<p>好了，到此为止，要调度的计算任务有了，就是DAGScheduler通过Stages创建的Tasks；可用于调度任务的计算资源也有了，即SchedulerBackend提供的一个又一个WorkerOffer。如果从供需的角度看待任务调度，DAGScheduler就是需求端，SchedulerBackend就是供给端。</p>
+<h4 id="3-taskscheduler">3. TaskScheduler
+</h4><p>左边有需求，右边有供给，如果把Spark调度系统看作是一个交易市场的话，那么中间还需要有个中介来帮它们对接意愿、撮合交易，从而最大限度地提升资源配置的效率。在Spark调度系统中，这个中介就是TaskScheduler。TaskScheduler的职责是，基于既定的规则与策略达成供需双方的匹配与撮合。</p>
+<p><img src="/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203622271.png"
+	width="1520"
+	height="500"
+	srcset="/p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203622271_hu13705514126225866092.png 480w, /p/%E8%B0%83%E5%BA%A6%E7%B3%BB%E7%BB%9F%E5%85%A5%E9%97%A8%E8%AE%B2%E8%A7%A3/image-20250414203622271_hu4447374108541683866.png 1024w"
+	loading="lazy"
+	
+		alt="image-20250414203622271"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="304"
+		data-flex-basis="729px"
+	
+></p>
+<p>显然，TaskScheduler的核心是任务调度的规则和策略，TaskScheduler的调度策略分为两个层次，一个是不同Stages之间的调度优先级，一个是Stages内不同任务之间的调度优先级。</p>
+<p>首先，对于两个或多个Stages，如果它们彼此之间不存在依赖关系、互相独立，在面对同一份可用计算资源的时候，它们之间就会存在竞争关系。这个时候，先调度谁、或者说谁优先享受这份计算资源，大家就得基于既定的规则和协议照章办事了。</p>
+<p>对于这种Stages之间的任务调度，TaskScheduler提供了2种调度模式，分别是FIFO（先到先得）和FAIR（公平调度）。 FIFO非常好理解，在这种模式下，Stages按照被创建的时间顺序来依次消费可用计算资源。这就好比在二手房交易市场中，两个人同时看中一套房子，不管两个人各自愿意出多少钱，谁最先交定金，中介就优先给谁和卖家撮合交易。</p>
+<p>你可能会说：“这不合常理啊！如果第二个人愿意出更多的钱，卖家自然更乐意和他成交。”没错，考虑到开发者的意愿度，TaskScheduler提供了FAIR公平调度模式。在这种模式下，哪个Stages优先被调度，取决于用户在配置文件fairscheduler.xml中的定义。</p>
+<p>在配置文件中，Spark允许用户定义不同的调度池，每个调度池可以指定不同的调度优先级，用户在开发过程中可以关联不同作业与调度池的对应关系，这样不同Stages的调度就直接和开发者的意愿挂钩，也就能享受不同的优先级待遇。对应到二手房交易的例子中，如果第二个人乐意付30%的高溢价，中介自然乐意优先撮合他与卖家的交易。</p>
+<p>说完了不同Stages之间的调度优先级，我们再来说说同一个Stages内部不同任务之间的调度优先级，Stages内部的任务调度相对来说简单得多。当TaskScheduler接收到来自SchedulerBackend的WorkerOffer后，TaskScheduler会优先挑选那些满足本地性级别要求的任务进行分发。众所周知，本地性级别有4种：Process local &lt; Node local &lt; Rack local &lt; Any。从左到右分别是进程本地性、节点本地性、机架本地性和跨机架本地性。从左到右，计算任务访问所需数据的效率越来越差。</p>
+<p>进程本地性表示计算任务所需的输入数据就在某一个Executor进程内，因此把这样的计算任务调度到目标进程内最划算。同理，如果数据源还未加载到Executor进程，而是存储在某一计算节点的磁盘中，那么把任务调度到目标节点上去，也是一个不错的选择。再次，如果我们无法确定输入源在哪台机器，但可以肯定它一定在某个机架上，本地性级别就会退化到Rack local。</p>
+<p>DAGScheduler划分Stages、创建分布式任务的过程中，会为每一个任务指定本地性级别，本地性级别中会记录该任务有意向的计算节点地址，甚至是Executor进程ID。换句话说，任务自带调度意愿，它通过本地性级别告诉TaskScheduler自己更乐意被调度到哪里去。</p>
+<p>既然计算任务的个人意愿这么强烈，TaskScheduler作为中间商，肯定要优先满足人家的意愿。这就像一名码农想要租西二旗的房子，但是房产中介App推送的结果都是东三环国贸的房子，那么这个中介的匹配算法肯定有问题。</p>
+<p>由此可见，Spark调度系统的原则是尽可能地让数据呆在原地、保持不动，同时尽可能地把承载计算任务的代码分发到离数据最近的地方，从而最大限度地降低分布式系统中的网络开销。毕竟，分发代码的开销要比分发数据的代价低太多，这也正是“数据不动代码动”这个说法的由来。</p>
+<p>总的来说，TaskScheduler根据本地性级别遴选出待计算任务之后，先对这些任务进行序列化。然后，交给SchedulerBackend，SchedulerBackend根据ExecutorData中记录的RPC地址和主机地址，再将序列化的任务通过网络分发到目的主机的Executor中去。最后，Executor接收到任务之后，把任务交由内置的线程池，线程池中的多线程则并发地在不同数据分片之上执行任务中封装的数据处理函数，从而实现分布式计算。</p>
+<h2 id="性能调优案例回顾">性能调优案例回顾
+</h2><p>知道了调度系统是如何工作的，我们就可以回过头来说说开头Label encoding的开发案例中，2种实现方式的差别到底在哪儿了。我们先来回顾案例中处理函数的主要计算步骤：</p>
+<ol>
+<li>读取并遍历模板文件内容，建立从字符串到数值的字典；</li>
+<li>根据样本中的用户兴趣，查找字典并返回兴趣字符串对应的数值索引。</li>
+</ol>
+<p>2种实现方式的本质区别在于，函数中2个计算步骤的分布式计算过程不同。在第1种实现方式中，函数是一个接收两个形参的普通标量函数，Dataset调用这个函数在千亿级样本上做Label encoding。</p>
+<p>在Spark任务调度流程中，该函数在Driver端交由DAGScheduler打包为Tasks，经过TaskScheduler调度给SchedulerBackend，最后由SchedulerBackend分发到集群中的Executors中去执行。这意味着集群中的每一个Executors都需要执行函数中封装的两个计算步骤，要知道，第一个步骤中遍历文件内容并建立字典的计算开销还是相当大的。</p>
+<p>反观第2种实现方式，2个计算步骤被封装到一个高阶函数中。用户代码先在Driver端用模板文件调用这个高阶函数，完成第一步计算建立字典的过程，同时输出一个只带一个形参的标量函数，这个标量函数内携带了刚刚建好的映射字典。最后，Dataset将这个标量函数作用于千亿样本之上做Label encoding。</p>
+<p>发现区别了吗？在第2种实现中，函数的第一步计算只在Driver端计算一次，分发给集群中所有Executors的任务中封装的是携带了字典的标量函数。然后在Executors端，Executors在各自的数据分片上调用该函数，省去了扫描模板文件、建立字典的开销。最后，我们只需要把样本中的用户兴趣传递进去，函数就能以O(1)的查询效率返回数值结果。</p>
+<p>对于一个有着成百上千Executors的分布式集群来说，这2种不同的实现方式带来的性能差异还是相当可观的。因此，如果你能把Spark调度系统的工作原理牢记于心，我相信在代码开发或是review的过程中，你都能够意识到第一个计算步骤会带来的性能问题。这种开发过程中的反思，其实就是在潜移默化地建立以性能为导向的开发习惯。</p>
+<h2 id="总结">总结
+</h2><p>今天这一讲，我们先通过一个机器学的案例对比了2种实现方式的性能差异，知道了对于调度系统一知半解，很有可能在开发过程中引入潜在的性能隐患。为此，我梳理了调度系统工作流程的5个主要步骤：</p>
+<ol>
+<li>将DAG拆分为不同的运行阶段Stages；</li>
+<li>创建分布式任务Tasks和任务组TaskSet；</li>
+<li>获取集群内可用硬件资源情况；</li>
+<li>按照调度规则决定优先调度哪些任务/组；</li>
+<li>依序将分布式任务分发到执行器Executor；</li>
+</ol>
+<p>结合这5个步骤，我们深入分析了Spark调度系统的工作原理，我们可以从核心职责和核心原则这两方面来归纳：</p>
+<ol>
+<li>Spark调度系统的核心职责是，先将用户构建的DAG转化为分布式任务，结合分布式集群资源的可用性，基于调度规则依序把分布式任务分发到执行器Executors；</li>
+<li>Spark调度系统的核心原则是，尽可能地让数据呆在原地、保持不动，同时尽可能地把承载计算任务的代码分发到离数据最近的地方（Executors或计算节点），从而最大限度地降低分布式系统中的网络开销。</li>
+</ol>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8Bjob%E4%BC%98%E5%8C%96/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8Bjob%E4%BC%98%E5%8C%96/paddle-boat-8253274_1280.f75fabdedeae0941d378faac2224d26d_hu17172630445701689797.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 性能调优之Job优化"
+                        
+                        data-hash="md5-91&#43;r3t6uCUHTePqsIiTSbQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">性能调优之Job优化</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E4%B9%8B%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C/gannet-9003524_1280.aa511a7310cfa3385af52b3a0fffbbde_hu3687632605550775934.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 性能调优之数据倾斜"
+                        
+                        data-hash="md5-qlEacxDPozha9Ss6D/&#43;73g==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">性能调优之数据倾斜</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/%E6%89%8B%E6%8A%8A%E6%89%8B%E5%B8%A6%E4%BD%A0%E6%8F%90%E5%8D%87%E5%BA%94%E7%94%A8%E7%9A%84%E6%89%A7%E8%A1%8C%E6%80%A7%E8%83%BD/">
+        
+        
+            <div class="article-image">
+                <img src="/p/%E6%89%8B%E6%8A%8A%E6%89%8B%E5%B8%A6%E4%BD%A0%E6%8F%90%E5%8D%87%E5%BA%94%E7%94%A8%E7%9A%84%E6%89%A7%E8%A1%8C%E6%80%A7%E8%83%BD/image-20250413100248830-4509770.6f1911fd3beb675b76ba13231345e168_hu10809216258361846087.png" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post 手把手带你提升应用的执行性能"
+                        
+                        data-hash="md5-bxkR/TvrZ1t2uhMjE0XhaA==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">手把手带你提升应用的执行性能</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/blockmanager%E7%AE%A1%E7%90%86%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">
+        
+        
+            <div class="article-image">
+                <img src="/p/blockmanager%E7%AE%A1%E7%90%86%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/dolphin-8949505_1280.b851b2721acfbb3b660cb93a718d57d3_hu5252129146125328555.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post BlockManager管理源码解析"
+                        
+                        data-hash="md5-uFGychrPuztmDLk6cY1X0w==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">BlockManager管理源码解析</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="has-image">
+    <a href="/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/">
+        
+        
+            <div class="article-image">
+                <img src="/p/spark%E5%B9%BF%E6%92%AD%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0/grebe-7972183_1280.6dd8a2d7b8cf99148cf7a877d9459ae8_hu10399000877992530385.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post Spark广播机制源码实现"
+                        
+                        data-hash="md5-bdii17jPmRSM96h32UWa6A==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">Spark广播机制源码实现</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <script src="https://utteranc.es/client.js" 
+        repo="sherlock-lin/utterances-comments"
+        issue-term="pathname"
+        
+        crossorigin="anonymous"
+        async
+        >
+</script>
+
+<style>
+    .utterances {
+        max-width: unset;
+    }
+</style>
+
+<script>
+    let utterancesLoaded = false;
+
+    function setUtterancesTheme(theme) {
+        let utterances = document.querySelector('.utterances iframe');
+        if (utterances) {
+            utterances.contentWindow.postMessage(
+                {
+                    type: 'set-theme',
+                    theme: `github-${theme}`
+                },
+                'https://utteranc.es'
+            );
+        }
+    }
+
+    addEventListener('message', event => {
+        if (event.origin !== 'https://utteranc.es') return;
+
+        
+        utterancesLoaded = true;
+        setUtterancesTheme(document.documentElement.dataset.scheme)
+    });
+
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (!utterancesLoaded) return;
+        setUtterancesTheme(e.detail)
+    })
+</script>
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2022 - 
+        
+        2025 sherlock-lin
+    </section>
+    
+    <section class="powerby">
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.27.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<span id="busuanzi_container_site_pv">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次 · </span>
+<span id="busuanzi_container_site_uv">您是本站第 <span id="busuanzi_value_site_uv"></span> 位访问者</span>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
